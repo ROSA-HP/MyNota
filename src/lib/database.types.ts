@@ -147,6 +147,10 @@ export type SourceRow = {
   storage_path: string | null
   pages: number | null
   paragraphs: SourceParagraph[]
+  /** Book uploads: the original stays on the device; these find it again for page previews. */
+  file_name: string | null
+  file_size: number | null
+  file_hash: string | null
   created_by: string | null
   created_at: string
 }
@@ -222,7 +226,19 @@ export type Database = {
       sources: Table<
         SourceRow,
         Pick<SourceRow, 'map_id' | 'paragraphs'> &
-          Partial<Pick<SourceRow, 'id' | 'chapter_node_id' | 'kind' | 'storage_path' | 'pages'>>,
+          Partial<
+            Pick<
+              SourceRow,
+              | 'id'
+              | 'chapter_node_id'
+              | 'kind'
+              | 'storage_path'
+              | 'pages'
+              | 'file_name'
+              | 'file_size'
+              | 'file_hash'
+            >
+          >,
         never
       >
       ai_jobs: Table<

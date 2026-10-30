@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { Link, useLocation, useNavigate, useParams } from 'react-router'
 import { Alert, Badge, IconButton, Logo, Spinner, buttonClasses } from '@/components/ui'
 import { useAuth } from '@/features/auth/authStore'
-import type { BuildRequest } from '@/features/new-map/buildRequest'
+import type { BookBuildRequest, BuildRequest } from '@/features/new-map/buildRequest'
 import { useKeyFor } from '@/features/settings/aiKeyStore'
 import { cn } from '@/lib/cn'
 import { BuildBanner } from './BuildBanner'
@@ -61,6 +61,7 @@ function Workspace() {
     selectRelation,
   } = useWorkspace()
   const startBuild = useBuild((s) => s.start)
+  const startBook = useBuild((s) => s.startBook)
   const buildMapId = useBuild((s) => s.mapId)
   const [outlineOpen, setOutlineOpen] = useState(false)
   const started = useRef(false)
@@ -71,7 +72,7 @@ function Workspace() {
 
   // Coming from the new-map flow: start building once the map is open, then drop the router
   // state so a refresh never starts a second run.
-  const request = (location.state as { build?: BuildRequest } | null)?.build
+  const request = (location.state as { build?: BuildRequest | BookBuildRequest } | null)?.build
   const key = useKeyFor(request?.provider)
   useEffect(() => {
     if (
@@ -84,9 +85,43 @@ function Workspace() {
     )
       return
     started.current = true
-    void startBuild({ mapId, ...request }, key)
+    if ('book' in request) {
+      // Chapters already have their saved paragraphs (one source per chapter).
+      const { nodes: allNodes, sources } = useWorkspace.getState()
+      const jobs = request.chapterIds.flatMap((chapterId) => {
+        const chapter = allNodes[chapterId]
+        const source = sources.find((src) => src.chapter_node_id === chapterId)
+        if (!chapter || !source) return []
+        return [
+          {
+            mapId,
+            rootId: chapterId,
+            title: chapter.title,
+            paragraphs: source.paragraphs.map((p) => ({ n: p.n, text: p.text })),
+            sourceLanguage: request.sourceLanguage,
+            explanationLanguage: request.explanationLanguage,
+            detailLevel: request.detailLevel,
+            bookTitle: request.bookTitle,
+          },
+        ]
+      })
+      void startBook(jobs, key)
+    } else {
+      void startBuild({ mapId, ...request }, key)
+    }
     navigate(location.pathname, { replace: true, state: null })
-  }, [request, status, fromCache, key, mapId, buildMapId, startBuild, navigate, location.pathname])
+  }, [
+    request,
+    status,
+    fromCache,
+    key,
+    mapId,
+    buildMapId,
+    startBuild,
+    startBook,
+    navigate,
+    location.pathname,
+  ])
 
   useEffect(() => () => useBuild.getState().clear(), [mapId])
 

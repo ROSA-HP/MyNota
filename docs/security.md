@@ -33,7 +33,8 @@ Permissions are enforced in the database, not the UI, and the user's API key nev
 ## Uploads
 
 - Allowed types: PDF, images (PNG, JPEG, WebP), plain text.
-- Size limits per file and per-user storage quota.
+- Limits (decided 2026-10-30): up to **300 pages and 50 MB per book**; photos up to 20 MB each, at most 300 per upload. Checked in the browser before reading and by a database check on `sources.file_size`. Map counts per user are part of the Phase 7 rate limits.
+- PDFs and photos are parsed in the browser. pdf.js and the OCR engine come from our own origin; the CSP adds only `'wasm-unsafe-eval'` (WebAssembly for OCR), never JS `eval`.
 - Original files stay on the device (IndexedDB) and are parsed in the browser (pdf.js, Tesseract). Only extracted text and page numbers reach Postgres (decided 2026-10-30). If Storage is ever used: private buckets and short-lived signed URLs.
 
 ## Rate limiting

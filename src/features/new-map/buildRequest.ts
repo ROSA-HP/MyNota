@@ -12,3 +12,17 @@ export interface BuildRequest {
   /** The provider chosen for this map; its key comes from this device's key store. */
   provider: AiProvider
 }
+
+/**
+ * A book: chapters to build now, by chapter node id. Their paragraphs are read from the map's
+ * sources when the workspace opens (they are already saved), so nothing large goes in router state.
+ */
+export interface BookBuildRequest {
+  book: true
+  chapterIds: string[]
+  bookTitle: string
+  sourceLanguage: string | null
+  explanationLanguage: string | null
+  detailLevel: 'brief' | 'standard' | 'detailed'
+  provider: AiProvider
+}

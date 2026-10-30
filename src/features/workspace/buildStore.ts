@@ -37,7 +37,11 @@ export interface BuildOptions {
   sourceLanguage: string | null
   explanationLanguage: string | null
   detailLevel: 'brief' | 'standard' | 'detailed'
+  /** Book maps: the book's title for the prompts (each chapter is built under its own node). */
+  bookTitle?: string
 }
+
+export type ChapterBuildState = 'queued' | 'running' | 'done' | 'failed' | 'stopped'
 
 interface BuildState {
   mapId: string | null
@@ -49,7 +53,12 @@ interface BuildState {
   sections: Record<string, SectionStatus>
   order: string[]
   failure: AiErrorKind | null
+  /** Book builds: chapters run one after another; each chapter's sections run in parallel. */
+  chapters: Record<string, ChapterBuildState>
+  chapterOrder: string[]
+  currentChapter: string | null
   start: (opts: BuildOptions, key: ActiveKey) => Promise<void>
+  startBook: (jobs: BuildOptions[], key: ActiveKey) => Promise<void>
   retrySection: (sectionId: string, key: ActiveKey) => Promise<void>
   retryOutline: (key: ActiveKey) => Promise<void>
   stop: () => void
@@ -58,6 +67,8 @@ interface BuildState {
 
 // Run context outside React state (abort controller, outline, options).
 let controller: AbortController | null = null
+/** Set by stop(): the book queue does not start further chapters. */
+let bookStopped = false
 let ctx: {
   opts: BuildOptions
   outline: OutlineResponse | null
@@ -214,7 +225,7 @@ export const useBuild = create<BuildState>((set, get) => {
             adapter,
             system: SYSTEM_PROMPT,
             prompt: detailsPrompt({
-              bookTitle: opts.title,
+              bookTitle: opts.bookTitle ?? opts.title,
               chapterTitle: opts.title,
               outline: outlineText(outline),
               sectionTitle: range.title,
@@ -286,9 +297,44 @@ export const useBuild = create<BuildState>((set, get) => {
     sections: {},
     order: [],
     failure: null,
+    chapters: {},
+    chapterOrder: [],
+    currentChapter: null,
+
+    startBook: async (jobs, key) => {
+      bookStopped = false
+      set({
+        chapters: Object.fromEntries(jobs.map((j) => [j.rootId, 'queued' as const])),
+        chapterOrder: jobs.map((j) => j.rootId),
+        currentChapter: null,
+      })
+      for (const job of jobs) {
+        if (bookStopped) break
+        set({
+          currentChapter: job.rootId,
+          chapters: { ...get().chapters, [job.rootId]: 'running' },
+        })
+        await get().start(job, key)
+        const phase = get().phase
+        const state: ChapterBuildState =
+          phase === 'done' ? 'done' : phase === 'stopped' ? 'stopped' : 'failed'
+        set({ chapters: { ...get().chapters, [job.rootId]: state } })
+        if (state === 'stopped') bookStopped = true
+      }
+      if (bookStopped)
+        set({
+          chapters: Object.fromEntries(
+            Object.entries(get().chapters).map(([id, st]) => [
+              id,
+              st === 'queued' ? 'stopped' : st,
+            ]),
+          ),
+        })
+      set({ currentChapter: null })
+    },
 
     start: async (opts, key) => {
-      get().stop()
+      controller?.abort() // a previous run of this store, if any (not a book stop)
       ctx = { opts, outline: null, sectionRanges: {} }
       controller = new AbortController()
       set({
@@ -321,6 +367,7 @@ export const useBuild = create<BuildState>((set, get) => {
     },
 
     stop: () => {
+      bookStopped = true
       controller?.abort()
       controller = null
       if (get().phase === 'outline' || get().phase === 'details') set({ phase: 'stopped' })
@@ -329,7 +376,17 @@ export const useBuild = create<BuildState>((set, get) => {
     clear: () => {
       get().stop()
       ctx = null
-      set({ mapId: null, provider: null, phase: 'idle', sections: {}, order: [], failure: null })
+      set({
+        mapId: null,
+        provider: null,
+        phase: 'idle',
+        sections: {},
+        order: [],
+        failure: null,
+        chapters: {},
+        chapterOrder: [],
+        currentChapter: null,
+      })
     },
   }
 })

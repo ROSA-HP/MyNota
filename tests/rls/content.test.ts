@@ -274,6 +274,35 @@ describe('sources', () => {
       ),
     ).toBe(PERMISSION_DENIED)
   })
+
+  it('stores book file details (never the file) and rejects bad values', async () => {
+    const hash = 'a'.repeat(64)
+    const pageParas = JSON.stringify([{ n: 1, text: 'Cells are units of life.', page: 7 }])
+    await asUser(owner, async (db) => {
+      const r = await db.query(
+        `insert into public.sources (map_id, kind, pages, paragraphs, file_name, file_size, file_hash)
+         values ($1, 'pdf', 40, $2, 'biology.pdf', 1048576, $3) returning file_hash`,
+        [mapId, pageParas, hash],
+      )
+      expect(r.rows[0]?.file_hash).toBe(hash)
+    })
+    for (const [col, val] of [
+      ['file_hash', 'not-a-hash'],
+      ['file_size', 60 * 1024 * 1024],
+      ['file_name', ''],
+    ] as const) {
+      expect(
+        await errorCode(
+          asUser(owner, (db) =>
+            db.query(
+              `insert into public.sources (map_id, kind, paragraphs, ${col}) values ($1, 'pdf', '[]', $2)`,
+              [mapId, val],
+            ),
+          ),
+        ),
+      ).toBe('23514')
+    }
+  })
 })
 
 describe('ai_jobs', () => {

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import type { ParseKeys } from 'i18next'
 import {
   ArrowLeft,
@@ -21,33 +21,32 @@ import {
   MAX_PASTE_CHARS,
   splitParagraphs,
 } from '@/ai/pipeline/prepare'
-import { estimateCost, type CostEstimate } from '@/ai/pricing'
+import { estimateCost } from '@/ai/pricing'
 import { PROVIDERS, testProvider } from '@/ai/providers'
-import {
-  Alert,
-  Badge,
-  Button,
-  Logo,
-  Panel,
-  SelectField,
-  TextField,
-  buttonClasses,
-} from '@/components/ui'
+import { Alert, Badge, Button, Logo, Panel, TextField, buttonClasses } from '@/components/ui'
 import { useAiKey } from '@/features/settings/aiKeyStore'
 import { createMap } from '@/features/workspace/mapRepo'
 import { cn } from '@/lib/cn'
 import type { AiProvider, MapRow } from '@/lib/database.types'
 import type { BuildRequest } from './buildRequest'
+import type { Extracted, ExtractProgress } from '@/ai/pipeline/extract'
+import type { OcrLanguage } from '@/ai/pipeline/extract/ocr'
+import { BookReview, type BookFile } from './BookReview'
+import { DetailPicker, EstimateBox, LanguageFields, ModelSelect } from './options'
+import {
+  DevicePrivacyNote,
+  ExtractProgressPanel,
+  OcrLanguageSelect,
+  PdfPicker,
+  PhotoPicker,
+  SourceTabs,
+  type SourceKind,
+} from './SourcePicker'
 
 type Kind = MapRow['type']
 type Detail = BuildRequest['detailLevel']
 
 const LANG_LABEL: Record<string, string> = { en: 'English', ar: 'العربية', de: 'Deutsch' }
-const DETAIL_LABEL: Record<Detail, ParseKeys> = {
-  brief: 'newMap.detailBrief',
-  standard: 'newMap.detailStandard',
-  detailed: 'newMap.detailDetailed',
-}
 
 function Steps({ step }: { step: 1 | 2 }) {
   const { t } = useTranslation()
@@ -146,7 +145,17 @@ export function NewMapPage() {
   const [providerChoice, setProviderChoice] = useState<AiProvider | null>(null)
   const key = (providerChoice && keys[providerChoice]) || defaultKey
   const configured = PROVIDERS.filter((p) => keys[p])
-  const [step, setStep] = useState<1 | 2>(1)
+  const [step, setStep] = useState<1 | 2 | 'book'>(1)
+  const [sourceChoice, setSource] = useState<SourceKind | null>(null)
+  const [pdfFile, setPdfFile] = useState<File | null>(null)
+  const [photos, setPhotos] = useState<File[]>([])
+  const [ocrLanguage, setOcrLanguage] = useState<OcrLanguage>(
+    i18n.language.startsWith('ar') ? 'ar' : i18n.language.startsWith('de') ? 'de' : 'en',
+  )
+  const [progress, setProgress] = useState<ExtractProgress | null>(null)
+  const [extracted, setExtracted] = useState<Extracted | null>(null)
+  const [bookFile, setBookFile] = useState<BookFile | null>(null)
+  const extractCtrl = useRef<AbortController | null>(null)
   const [kind, setKind] = useState<Kind>('notes')
   const [title, setTitle] = useState('')
   const [text, setText] = useState('')
@@ -178,6 +187,67 @@ export function NewMapPage() {
       .catch(() => undefined)
     return () => ctrl.abort()
   }, [step, key])
+
+  // Books start from a PDF, notes from pasted text; the student can switch.
+  const source: SourceKind = sourceChoice ?? (kind === 'book' ? 'pdf' : 'paste')
+
+  /** Reads the PDF or photos on this device, then opens the right review step. */
+  async function readFile() {
+    const next: typeof errors = {}
+    const fileTitle = (pdfFile?.name ?? photos[0]?.name ?? '').replace(/\.[a-z0-9]+$/i, '')
+    if (!title.trim() && !fileTitle) next.title = t('newMap.errTitle')
+    if (source === 'pdf' && !pdfFile) next.text = t('newMap.source.errNoPdf')
+    if (source === 'photos' && !photos.length) next.text = t('newMap.source.errNoPhotos')
+    setErrors(next)
+    if (Object.keys(next).length) return
+    if (!title.trim()) setTitle(fileTitle.slice(0, 200))
+    const ctrl = new AbortController()
+    extractCtrl.current = ctrl
+    setProgress({ read: 0, total: source === 'pdf' ? 0 : photos.length, ocrTotal: 0, ocrDone: 0 })
+    try {
+      const { extractPdf, extractImages, fileHash } = await import('@/ai/pipeline/extract')
+      const opts = { ocrLanguage, signal: ctrl.signal, onProgress: setProgress }
+      const result =
+        source === 'pdf' && pdfFile
+          ? await extractPdf(pdfFile, opts)
+          : await extractImages(photos, opts)
+      const blobs: Blob[] = source === 'pdf' && pdfFile ? [pdfFile] : photos
+      const hash = await fileHash(source === 'pdf' && pdfFile ? pdfFile : new Blob(photos))
+      setExtracted(result)
+      setBookFile({
+        name: (pdfFile?.name ?? `${fileTitle || 'photos'} (${photos.length})`).slice(0, 255),
+        size: blobs.reduce((n, b) => n + b.size, 0),
+        hash,
+        type: source === 'pdf' ? 'application/pdf' : 'image/*',
+        blobs,
+      })
+      if (kind === 'book') setStep('book')
+      else {
+        // Notes from a file: its paragraphs go through the same paragraph review as pasted text.
+        setText(
+          result.paragraphs
+            .map((p) => p.text)
+            .join('\n\n')
+            .slice(0, MAX_PASTE_CHARS),
+        )
+        setSkipped(new Set())
+        setStep(2)
+      }
+    } catch (e) {
+      if (!(e instanceof DOMException && e.name === 'AbortError')) {
+        const kindOf = (e as { kind?: string }).kind
+        setErrors({
+          form: t(`newMap.source.errors.${kindOf ?? 'unreadable'}` as ParseKeys, {
+            pages: 300,
+            mb: 50,
+          }),
+        })
+      }
+    } finally {
+      setProgress(null)
+      extractCtrl.current = null
+    }
+  }
 
   function validateStep1(): boolean {
     const next: typeof errors = {}
@@ -244,7 +314,6 @@ export function NewMapPage() {
   }
 
   const visible = showAll ? paragraphs : paragraphs.slice(0, 60)
-  const numberFmt = new Intl.NumberFormat(i18n.language)
 
   return (
     <div className="min-h-dvh bg-paper">
@@ -267,7 +336,7 @@ export function NewMapPage() {
           step === 1 ? 'max-w-3xl' : 'max-w-6xl',
         )}
       >
-        <Steps step={step} />
+        <Steps step={step === 'book' ? 2 : step} />
 
         {step === 1 && (
           <>
@@ -313,6 +382,15 @@ export function NewMapPage() {
             />
 
             {kind !== 'blank' && (
+              <SourceTabs
+                value={source}
+                onChange={(v) => {
+                  setSource(v)
+                  setErrors({})
+                }}
+              />
+            )}
+            {kind !== 'blank' && source === 'paste' && (
               <div className="flex flex-col gap-1.5">
                 <div className="flex items-baseline justify-between gap-2">
                   <label htmlFor="paste" className="text-sm font-semibold">
@@ -345,6 +423,35 @@ export function NewMapPage() {
                   </p>
                 )}
               </div>
+            )}
+
+            {kind !== 'blank' && source !== 'paste' && (
+              <div className="flex flex-col gap-4">
+                {source === 'pdf' ? (
+                  <PdfPicker file={pdfFile} onFile={setPdfFile} />
+                ) : (
+                  <PhotoPicker photos={photos} onPhotos={setPhotos} />
+                )}
+                {errors.text && (
+                  <p role="alert" className="text-sm font-medium text-danger">
+                    {errors.text}
+                  </p>
+                )}
+                <OcrLanguageSelect
+                  value={ocrLanguage}
+                  onChange={setOcrLanguage}
+                  forPhotos={source === 'photos'}
+                />
+                <DevicePrivacyNote />
+              </div>
+            )}
+
+            {progress && (
+              <ExtractProgressPanel
+                progress={progress}
+                photos={source === 'photos'}
+                onCancel={() => extractCtrl.current?.abort()}
+              />
             )}
 
             {kind !== 'blank' &&
@@ -388,15 +495,28 @@ export function NewMapPage() {
               ) : (
                 <Button
                   size="lg"
-                  disabled={!key}
+                  disabled={!key || Boolean(progress)}
+                  loading={Boolean(progress)}
                   iconEnd={<ArrowRight size={18} aria-hidden className="rtl:-scale-x-100" />}
-                  onClick={() => validateStep1() && setStep(2)}
+                  onClick={() =>
+                    source === 'paste' ? validateStep1() && setStep(2) : void readFile()
+                  }
                 >
                   {t('newMap.continue')}
                 </Button>
               )}
             </div>
           </>
+        )}
+
+        {step === 'book' && extracted && bookFile && (
+          <BookReview
+            extracted={extracted}
+            title={title}
+            file={bookFile}
+            photos={photos}
+            onBack={() => setStep(1)}
+          />
         )}
 
         {step === 2 && (
@@ -485,90 +605,25 @@ export function NewMapPage() {
             >
               <h2 className="text-lg font-bold">{t('newMap.options')}</h2>
 
-              <div className="flex flex-col gap-1.5">
-                <span className="text-sm font-semibold">{t('newMap.detail')}</span>
-                <div
-                  role="radiogroup"
-                  aria-label={t('newMap.detail')}
-                  className="flex rounded-neo border-2 border-line p-0.5"
-                >
-                  {(['brief', 'standard', 'detailed'] as const).map((d) => (
-                    <button
-                      key={d}
-                      type="button"
-                      role="radio"
-                      aria-checked={detail === d}
-                      onClick={() => setDetail(d)}
-                      className={cn(
-                        'min-h-10 flex-1 cursor-pointer rounded-[7px] text-sm font-semibold',
-                        detail === d ? 'bg-ink text-paper' : 'hover:bg-paper-sunken',
-                      )}
-                    >
-                      {t(DETAIL_LABEL[d])}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <SelectField
-                label={t('newMap.textLanguage')}
-                value={language}
-                onChange={(e) => setLanguage(e.target.value)}
-                options={[
-                  { value: 'en', label: 'English', lang: 'en' },
-                  { value: 'ar', label: 'العربية', lang: 'ar' },
-                  { value: 'de', label: 'Deutsch', lang: 'de' },
-                  { value: 'other', label: t('newMap.otherLanguage') },
-                ]}
+              <DetailPicker value={detail} onChange={setDetail} />
+              <LanguageFields
+                language={language}
+                onLanguage={setLanguage}
+                explanations={explanations}
+                onExplanations={setExplanations}
               />
-              <SelectField
-                label={t('newMap.explanationsIn')}
-                value={explanations}
-                onChange={(e) => setExplanations(e.target.value)}
-                options={[
-                  { value: 'same', label: t('newMap.sameAsText') },
-                  { value: 'en', label: 'English', lang: 'en' },
-                  { value: 'ar', label: 'العربية', lang: 'ar' },
-                  { value: 'de', label: 'Deutsch', lang: 'de' },
-                ]}
+              <ModelSelect
+                activeKey={key}
+                configured={configured}
+                keys={keys}
+                onChange={setProviderChoice}
               />
-
-              {configured.length > 0 && key && (
-                <SelectField
-                  label={t('newMap.aiModel')}
-                  value={key.provider}
-                  onChange={(e) => setProviderChoice(e.target.value as AiProvider)}
-                  options={configured.map((p) => ({
-                    value: p,
-                    label: `${t(`settings.providers.${p}.name`)} · ${keys[p]?.model ?? ''}`,
-                  }))}
-                  hint={configured.length === 1 ? t('newMap.aiModelHint') : undefined}
-                />
-              )}
-
-              <div className="flex flex-col gap-2 rounded-neo border-2 border-line bg-surface-muted p-3">
-                <span className="text-sm font-bold">{t('newMap.estimate')}</span>
-                <dl className="grid grid-cols-2 gap-3">
-                  <div>
-                    <dt className="text-xs text-ink-muted">{t('newMap.estTokens')}</dt>
-                    <dd className="font-mono text-lg font-bold">
-                      ~{numberFmt.format(Math.round(estimate.tokensSent / 100) * 100)}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-xs text-ink-muted">{t('newMap.estRequests')}</dt>
-                    <dd className="font-mono text-lg font-bold" dir="ltr">
-                      {estimate.requestsMin}–{estimate.requestsMax}
-                    </dd>
-                  </div>
-                  <div className="col-span-2">
-                    <dt className="text-xs text-ink-muted">{t('newMap.estCost')}</dt>
-                    <dd className="text-sm font-bold">
-                      {key ? <CostLabel cost={costOf(key.provider, key.model)} /> : null}
-                    </dd>
-                  </div>
-                </dl>
-              </div>
+              <EstimateBox
+                title={t('newMap.estimate')}
+                tokens={estimate.tokensSent}
+                requests={`${estimate.requestsMin}–${estimate.requestsMax}`}
+                cost={key ? costOf(key.provider, key.model) : null}
+              />
 
               <p className="text-xs leading-relaxed text-ink-muted">
                 {t('newMap.privacy', {
@@ -602,17 +657,4 @@ export function NewMapPage() {
       </main>
     </div>
   )
-}
-
-function CostLabel({ cost }: { cost: CostEstimate }) {
-  const { t, i18n } = useTranslation()
-  if (cost.kind === 'free') return <span className="text-success">{t('newMap.costFree')}</span>
-  if (cost.kind === 'unknown')
-    return <span className="text-ink-muted">{t('newMap.costUnknown')}</span>
-  const usd = new Intl.NumberFormat(i18n.language, {
-    style: 'currency',
-    currency: 'USD',
-    maximumFractionDigits: cost.usd < 1 ? 3 : 2,
-  }).format(cost.usd)
-  return <span>{t('newMap.costPaid', { usd })}</span>
 }

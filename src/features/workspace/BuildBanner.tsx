@@ -6,6 +6,7 @@ import { Link } from 'react-router'
 import { Button, Spinner } from '@/components/ui'
 import { useKeyFor } from '@/features/settings/aiKeyStore'
 import { useBuild, type SectionStatus } from './buildStore'
+import { useWorkspace } from './workspaceStore'
 
 function useNow(active: boolean) {
   const [now, setNow] = useState(() => Date.now())
@@ -20,7 +21,24 @@ function useNow(active: boolean) {
 /** "Building your map" banner: progress, rate-limit countdown, stop and retry. */
 export function BuildBanner() {
   const { t } = useTranslation()
-  const { phase, outlineStatus, sections, order, failure, stop, retryOutline, clear } = useBuild()
+  const {
+    phase: chapterPhase,
+    outlineStatus,
+    sections,
+    order,
+    failure,
+    stop,
+    retryOutline,
+    clear,
+    chapters,
+    chapterOrder,
+    currentChapter,
+  } = useBuild()
+  const chapterTitle = useWorkspace((s) => (currentChapter ? s.nodes[currentChapter]?.title : null))
+  // A book builds chapter after chapter: between two chapters the run is still going.
+  const phase = currentChapter && chapterPhase === 'done' ? 'details' : chapterPhase
+  const chapterIndex = currentChapter ? chapterOrder.indexOf(currentChapter) + 1 : 0
+  const failedChapters = chapterOrder.filter((id) => chapters[id] === 'failed').length
   const key = useKeyFor(useBuild((s) => s.provider))
   const statuses: SectionStatus[] = [outlineStatus, ...Object.values(sections)]
   const waiting = statuses.find(
@@ -49,15 +67,17 @@ export function BuildBanner() {
       <div className="flex items-center gap-2.5">
         {busy ? <Sparkles size={18} aria-hidden className="text-brand" /> : null}
         <strong className="text-[15px]">
-          {phase === 'done'
+          {phase === 'done' && failedChapters === 0
             ? t('ws.build.done')
-            : phase === 'stopped'
-              ? t('ws.build.stopped')
-              : phase === 'failed'
-                ? failure && outlineStatus.state === 'failed'
-                  ? t(`ai.errors.${failure}` as ParseKeys)
-                  : t('ws.build.someFailed')
-                : t('ws.build.title')}
+            : phase === 'done'
+              ? t('ws.build.someFailed')
+              : phase === 'stopped'
+                ? t('ws.build.stopped')
+                : phase === 'failed'
+                  ? failure && outlineStatus.state === 'failed'
+                    ? t(`ai.errors.${failure}` as ParseKeys)
+                    : t('ws.build.someFailed')
+                  : t('ws.build.title')}
         </strong>
         {total > 0 && (
           <span className="font-mono text-xs font-bold text-ink-muted">
@@ -91,6 +111,15 @@ export function BuildBanner() {
           )}
         </span>
       </div>
+      {busy && chapterOrder.length > 1 && chapterIndex > 0 && (
+        <p dir="auto" className="mt-1 truncate text-sm font-semibold text-ink-muted">
+          {t('ws.build.chapterOf', {
+            n: chapterIndex,
+            total: chapterOrder.length,
+            title: chapterTitle ?? '',
+          })}
+        </p>
+      )}
       {busy && (
         <>
           <div

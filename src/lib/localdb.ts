@@ -17,6 +17,21 @@ export interface StoredKey {
   testedAt: string
 }
 
+/** An uploaded book or set of photos, kept only on this device (for page previews). */
+export interface StoredFile {
+  /** `${userId}:${sha256}` */
+  id: string
+  userId: string
+  hash: string
+  name: string
+  type: string
+  size: number
+  /** One blob for a PDF, one per page for photos. */
+  blobs: Blob[]
+  mapId: string | null
+  savedAt: string
+}
+
 /** Small per-user device settings, e.g. `${userId}:defaultProvider`. */
 export interface DeviceSetting {
   id: string
@@ -37,6 +52,7 @@ class LocalDb extends Dexie {
   keys!: EntityTable<StoredKey, 'id'>
   maps!: EntityTable<CachedMap, 'mapId'>
   settings!: EntityTable<DeviceSetting, 'id'>
+  files!: EntityTable<StoredFile, 'id'>
 
   constructor() {
     super('mynota')
@@ -48,6 +64,12 @@ class LocalDb extends Dexie {
       keys: 'id',
       maps: 'mapId, userId',
       settings: 'id',
+    })
+    this.version(3).stores({
+      keys: 'id',
+      maps: 'mapId, userId',
+      settings: 'id',
+      files: 'id, userId, mapId',
     })
   }
 }

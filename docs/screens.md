@@ -14,7 +14,7 @@
 | 3 | Onboarding | UI language + study field → get free AI Studio key (illustrated guide, paste, live test with green check) → sample chapter becomes a map → home |
 | 4 | Home | Continue studying, due today + "Study now", streak and weekly activity, subjects, recent maps, shared with me |
 | 5 | Subject | Maps in the subject, combined card stats, "New map in this subject" |
-| 6 | New map flow | Type (book / notes / blank) → upload PDF, photos, or paste → review extraction (fix chapter splits, skip pages) → options (language, bilingual, detail level brief/standard/detailed, provider + model) → cost and time estimate → start, jump to workspace |
+| 6 | New map flow | Type (book / notes / blank) → PDF, photos of pages (reorderable) or paste; OCR language for scanned pages; progress for reading and OCR → books: chapter review (rename, merge, split at a page, tap pages to skip, tick chapters to build now, others wait on the map) / notes: paragraph review → options (language, explanations, detail level, provider + model) → estimate (tokens, requests, cost) → build, jump to workspace. The file stays on the device. |
 | 7 | Workspace | See below |
 | 8 | Deck overview | Due, new, mastered per chapter; study all / chapter / due only |
 | 9 | Study session | Big card, tap/space to flip, Again / Hard / Good / Easy, swipe on tablet, "Show on map", end summary |
