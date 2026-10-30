@@ -12,6 +12,8 @@ export type AiErrorKind =
   | 'invalid_output'
   | 'too_long'
   | 'network'
+  /** A custom endpoint that can't be reached from the browser (CORS, wrong URL, server down). */
+  | 'unreachable'
   | 'aborted'
   | 'bad_request'
   | 'unknown'

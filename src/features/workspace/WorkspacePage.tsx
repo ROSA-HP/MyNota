@@ -6,7 +6,7 @@ import { Link, useLocation, useNavigate, useParams } from 'react-router'
 import { Alert, Badge, IconButton, Logo, Spinner, buttonClasses } from '@/components/ui'
 import { useAuth } from '@/features/auth/authStore'
 import type { BuildRequest } from '@/features/new-map/buildRequest'
-import { useAiKey } from '@/features/settings/aiKeyStore'
+import { useKeyFor } from '@/features/settings/aiKeyStore'
 import { cn } from '@/lib/cn'
 import { BuildBanner } from './BuildBanner'
 import { useBuild } from './buildStore'
@@ -46,7 +46,6 @@ function Workspace() {
   const location = useLocation()
   const navigate = useNavigate()
   const userId = useAuth((s) => s.session?.user.id)
-  const key = useAiKey((s) => s.key)
   const {
     status,
     map,
@@ -72,6 +71,7 @@ function Workspace() {
   // Coming from the new-map flow: start building once the map is open, then drop the router
   // state so a refresh never starts a second run.
   const request = (location.state as { build?: BuildRequest } | null)?.build
+  const key = useKeyFor(request?.provider)
   useEffect(() => {
     if (
       !request ||

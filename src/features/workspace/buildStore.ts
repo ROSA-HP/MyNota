@@ -6,7 +6,7 @@ import { blockNodes, outlineText, sectionNodes } from '@/ai/pipeline/convert'
 import { DETAILS_PROMPT_VERSION, detailsPrompt } from '@/ai/prompts/details.v1'
 import { OUTLINE_PROMPT_VERSION, outlinePrompt } from '@/ai/prompts/outline.v1'
 import { SYSTEM_PROMPT, type Paragraph } from '@/ai/prompts/shared'
-import { GeminiAdapter } from '@/ai/providers/gemini'
+import { createAdapter } from '@/ai/providers'
 import { AiQueue } from '@/ai/queue'
 import { DetailsResponseSchema, detailsSchemaFor } from '@/ai/schemas/details'
 import { checkDetailsRules, checkOutlineRules } from '@/ai/schemas/rules'
@@ -20,6 +20,7 @@ import { generateStructured } from '@/ai/structured'
 import type { ProviderAdapter } from '@/ai/types'
 import type { ActiveKey } from '@/features/settings/aiKeyStore'
 import { useWorkspace } from './workspaceStore'
+import type { AiProvider } from '@/lib/database.types'
 
 export type SectionStatus =
   | { state: 'queued' }
@@ -40,6 +41,8 @@ export interface BuildOptions {
 
 interface BuildState {
   mapId: string | null
+  /** Provider of the running build, so retries use the same key. */
+  provider: AiProvider | null
   phase: 'idle' | 'outline' | 'details' | 'done' | 'failed' | 'stopped'
   outlineStatus: SectionStatus
   /** sectionNodeId → status */
@@ -65,8 +68,7 @@ let ctx: {
 const CONCURRENCY = 2
 
 function adapterFor(key: ActiveKey): ProviderAdapter {
-  // Phase 3 adds Claude and OpenAI-compatible adapters here.
-  return new GeminiAdapter(key.apiKey, key.model)
+  return createAdapter(key)
 }
 
 const kindOf = (e: unknown): AiErrorKind =>
@@ -278,6 +280,7 @@ export const useBuild = create<BuildState>((set, get) => {
 
   return {
     mapId: null,
+    provider: null,
     phase: 'idle',
     outlineStatus: { state: 'queued' },
     sections: {},
@@ -290,6 +293,7 @@ export const useBuild = create<BuildState>((set, get) => {
       controller = new AbortController()
       set({
         mapId: opts.mapId,
+        provider: key.provider,
         phase: 'outline',
         outlineStatus: { state: 'queued' },
         sections: {},
@@ -325,7 +329,7 @@ export const useBuild = create<BuildState>((set, get) => {
     clear: () => {
       get().stop()
       ctx = null
-      set({ mapId: null, phase: 'idle', sections: {}, order: [], failure: null })
+      set({ mapId: null, provider: null, phase: 'idle', sections: {}, order: [], failure: null })
     },
   }
 })

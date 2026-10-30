@@ -169,14 +169,11 @@ export const de: Messages = {
     signedInAs: 'Angemeldet als {{email}}',
     aiTitle: 'KI-Anbieter',
     aiHint:
-      'MyNota nutzt deinen eigenen KI-Schlüssel. Er wird nur auf diesem Gerät gespeichert und nur an den Anbieter gesendet, nie an die Server von MyNota.',
-    provider: 'Anbieter',
-    gemini: 'Google Gemini',
+      'MyNota nutzt deinen eigenen KI-Schlüssel. Er wird nur auf diesem Gerät gespeichert und nur an den Anbieter gesendet, nie an die Server von MyNota. Wähle, welchen neue Karten standardmäßig nutzen.',
     recommended: 'Empfohlen',
-    moreProviders: 'Claude und weitere Anbieter kommen mit einem späteren Update.',
-    keyLabel: 'Gemini-API-Schlüssel',
+    keyLabel: 'API-Schlüssel',
+    keyLabelOptional: 'API-Schlüssel (für lokale Modelle optional)',
     keyPlaceholder: 'Schlüssel einfügen',
-    getKey: 'Kostenlosen Schlüssel bei Google AI Studio holen',
     remember: 'Schlüssel auf diesem Gerät merken',
     rememberHint: 'Aus: Der Schlüssel wird beim Schließen dieses Tabs vergessen.',
     test: 'Testen und speichern',
@@ -189,6 +186,31 @@ export const de: Messages = {
     replace: 'Anderen Schlüssel verwenden',
     remove: 'Schlüssel entfernen',
     removed: 'Schlüssel von diesem Gerät entfernt.',
+    default: 'Standard',
+    baseUrl: 'Adresse des Dienstes',
+    baseUrlHint:
+      'Endet meist auf /v1. Einfaches http:// geht nur für ein Modell auf diesem Computer.',
+    baseUrlInvalid: 'Nutze eine https://-Adresse oder http://localhost für ein lokales Modell.',
+    modelName: 'Modellname',
+    modelNameHint: 'Nur nötig, wenn der Dienst keine Modellliste anbietet.',
+    unreachableHelp:
+      'MyNota ruft KI-Anbieter direkt aus deinem Browser auf, damit dein Schlüssel nie unsere Server erreicht. Dieser Dienst hat das blockiert oder ist nicht erreichbar. Prüfe die Adresse, nimm einen anderen Dienst oder erlaube diese Website in den Einstellungen deines lokalen Modells (oft „allowed origins“ oder CORS).',
+    providers: {
+      gemini: {
+        name: 'Google Gemini',
+        note: 'Kostenloser Schlüssel von Google AI Studio',
+        getKey: 'Kostenlosen Schlüssel bei Google AI Studio holen',
+      },
+      anthropic: {
+        name: 'Anthropic Claude',
+        note: 'Kostenpflichtiger Schlüssel aus der Claude Console, Abrechnung nach Nutzung',
+        getKey: 'Schlüssel in der Claude Console erstellen',
+      },
+      openai_compatible: {
+        name: 'OpenAI-kompatibel',
+        note: 'OpenAI, OpenRouter, ein lokales Modell …',
+      },
+    },
   },
   ai: {
     errors: {
@@ -203,6 +225,7 @@ export const de: Messages = {
         'Die KI-Antwort hatte auch nach einem Reparaturversuch nicht das erwartete Format.',
       too_long: 'Dieser Text ist für eine Anfrage mit diesem Modell zu lang.',
       network: 'KI-Dienst nicht erreichbar. Prüfe deine Verbindung.',
+      unreachable: 'Dieser KI-Dienst ist aus dem Browser nicht erreichbar.',
       aborted: 'Gestoppt.',
       bad_request: 'Der KI-Anbieter hat die Anfrage abgelehnt.',
       unknown: 'Bei der KI-Anfrage ist etwas schiefgelaufen.',
@@ -261,8 +284,14 @@ export const de: Messages = {
     estTokens: 'gesendete Tokens',
     estRequests: 'KI-Anfragen',
     estModel: 'Modell',
+    estCost: 'Kosten',
+    costFree: 'Kostenlos mit deinem Gemini-Schlüssel',
+    costPaid: '≈ {{usd}} (geschätzt)',
+    costUnknown: 'Hängt von deinem Anbieter ab',
+    aiModel: 'KI-Modell',
+    aiModelHint: 'Füge in den Einstellungen weitere Anbieter hinzu, um pro Karte zu wählen.',
     privacy:
-      'Dein Text geht von diesem Browser direkt mit deinem Schlüssel an Google. Die Server von MyNota sehen den Schlüssel nie.',
+      'Dein Text geht von diesem Browser direkt mit deinem Schlüssel an {{provider}}. Die Server von MyNota sehen den Schlüssel nie.',
     build: 'Meine Karte erstellen',
     creating: 'Deine Karte wird angelegt …',
     errNothingKept: 'Behalte mindestens einen Absatz.',

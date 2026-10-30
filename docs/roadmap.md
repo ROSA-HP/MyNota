@@ -34,6 +34,7 @@ Each phase ends with something a student can actually use. Before starting a pha
 - Chapter regions (colored), semantic zoom, outline panel
 - Cross-links pass with suggested-links tray
 - Claude and OpenAI-compatible adapters; cost estimate
+- Flexible linking (asked for 2026-10-30): drag from any side of a block, inline link picker (kind 1–9, label, arrow), "Link to…" search across the book (L), link toolbar (kind, swap, both ways, edit label, delete), drag a link end to another block, link several selected blocks, drag from the outline
 - Notes mode, merge mode, subjects
 
 **Done when**: a full textbook becomes a navigable book map.

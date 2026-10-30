@@ -21,7 +21,8 @@ import {
   MAX_PASTE_CHARS,
   splitParagraphs,
 } from '@/ai/pipeline/prepare'
-import { testGeminiKey } from '@/ai/providers/gemini'
+import { estimateCost, type CostEstimate } from '@/ai/pricing'
+import { PROVIDERS, testProvider } from '@/ai/providers'
 import {
   Alert,
   Badge,
@@ -35,7 +36,7 @@ import {
 import { useAiKey } from '@/features/settings/aiKeyStore'
 import { createMap } from '@/features/workspace/mapRepo'
 import { cn } from '@/lib/cn'
-import type { MapRow } from '@/lib/database.types'
+import type { AiProvider, MapRow } from '@/lib/database.types'
 import type { BuildRequest } from './buildRequest'
 
 type Kind = MapRow['type']
@@ -140,7 +141,11 @@ function KindCard({
 export function NewMapPage() {
   const { t, i18n } = useTranslation()
   const navigate = useNavigate()
-  const key = useAiKey((s) => s.key)
+  const keys = useAiKey((s) => s.keys)
+  const defaultKey = useAiKey((s) => s.key)
+  const [providerChoice, setProviderChoice] = useState<AiProvider | null>(null)
+  const key = (providerChoice && keys[providerChoice]) || defaultKey
+  const configured = PROVIDERS.filter((p) => keys[p])
   const [step, setStep] = useState<1 | 2>(1)
   const [kind, setKind] = useState<Kind>('notes')
   const [title, setTitle] = useState('')
@@ -161,12 +166,14 @@ export function NewMapPage() {
   // The detected language unless the student picked one.
   const language = languageChoice ?? detected?.lang ?? 'other'
   const estimate = estimateRun(kept)
+  const costOf = (provider: AiProvider, model: string) =>
+    estimateCost(provider, model, estimate.tokensSent, estimate.tokensOut)
 
   // The chosen model's context window decides whether the text fits one outline request.
   useEffect(() => {
     if (step !== 2 || !key) return
     const ctrl = new AbortController()
-    testGeminiKey(key.apiKey, undefined, ctrl.signal)
+    testProvider(key, ctrl.signal)
       .then((r) => setModelLimit(r.models.find((m) => m.id === key.model)?.inputTokenLimit))
       .catch(() => undefined)
     return () => ctrl.abort()
@@ -227,6 +234,7 @@ export function NewMapPage() {
         sourceLanguage,
         explanationLanguage: explanations === 'same' ? sourceLanguage : explanations,
         detailLevel: detail,
+        provider: key.provider,
       }
       navigate(`/maps/${mapId}`, { replace: true, state: { build: request } })
     } catch {
@@ -525,6 +533,19 @@ export function NewMapPage() {
                 ]}
               />
 
+              {configured.length > 0 && key && (
+                <SelectField
+                  label={t('newMap.aiModel')}
+                  value={key.provider}
+                  onChange={(e) => setProviderChoice(e.target.value as AiProvider)}
+                  options={configured.map((p) => ({
+                    value: p,
+                    label: `${t(`settings.providers.${p}.name`)} · ${keys[p]?.model ?? ''}`,
+                  }))}
+                  hint={configured.length === 1 ? t('newMap.aiModelHint') : undefined}
+                />
+              )}
+
               <div className="flex flex-col gap-2 rounded-neo border-2 border-line bg-surface-muted p-3">
                 <span className="text-sm font-bold">{t('newMap.estimate')}</span>
                 <dl className="grid grid-cols-2 gap-3">
@@ -541,15 +562,19 @@ export function NewMapPage() {
                     </dd>
                   </div>
                   <div className="col-span-2">
-                    <dt className="text-xs text-ink-muted">{t('newMap.estModel')}</dt>
-                    <dd className="truncate font-mono text-sm font-bold" dir="ltr">
-                      {key?.model}
+                    <dt className="text-xs text-ink-muted">{t('newMap.estCost')}</dt>
+                    <dd className="text-sm font-bold">
+                      {key ? <CostLabel cost={costOf(key.provider, key.model)} /> : null}
                     </dd>
                   </div>
                 </dl>
               </div>
 
-              <p className="text-xs leading-relaxed text-ink-muted">{t('newMap.privacy')}</p>
+              <p className="text-xs leading-relaxed text-ink-muted">
+                {t('newMap.privacy', {
+                  provider: t(`settings.providers.${key?.provider ?? 'gemini'}.name`),
+                })}
+              </p>
               {errors.form && <Alert tone="danger">{errors.form}</Alert>}
 
               <div className="flex gap-2">
@@ -577,4 +602,17 @@ export function NewMapPage() {
       </main>
     </div>
   )
+}
+
+function CostLabel({ cost }: { cost: CostEstimate }) {
+  const { t, i18n } = useTranslation()
+  if (cost.kind === 'free') return <span className="text-success">{t('newMap.costFree')}</span>
+  if (cost.kind === 'unknown')
+    return <span className="text-ink-muted">{t('newMap.costUnknown')}</span>
+  const usd = new Intl.NumberFormat(i18n.language, {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: cost.usd < 1 ? 3 : 2,
+  }).format(cost.usd)
+  return <span>{t('newMap.costPaid', { usd })}</span>
 }

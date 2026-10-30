@@ -21,7 +21,7 @@ Permissions are enforced in the database, not the UI, and the user's API key nev
 
 - Stored only on the device (IndexedDB), never in Supabase, logs, analytics, or error reports.
 - "Don't remember my key" option: keep it in memory only, cleared when the tab closes.
-- Strict Content Security Policy; no third-party scripts on app pages.
+- Strict Content Security Policy; no third-party scripts on app pages. `connect-src` allows any `https:` origin plus `http://localhost` / `127.0.0.1`, because students can point MyNota at their own OpenAI-compatible endpoint; `script-src` stays `'self'`.
 - Error tracking must scrub keys and map content.
 
 ## Untrusted content

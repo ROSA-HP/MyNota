@@ -184,9 +184,8 @@ Notes-mode and merge-mode prompts are written in Phase 3 following the same stru
 | Provider | How structured output is enforced |
 |---|---|
 | Gemini | `generateContent` (v1beta) with `responseMimeType: application/json` + `responseJsonSchema`; key in the `x-goog-api-key` header, never the URL. Built 2026-10-30; the newer Interactions API can replace it later behind the same adapter |
-| OpenAI | Structured outputs (`json_schema`) |
-| Claude | Forced tool use with the schema |
-| Other OpenAI-compatible | JSON mode if supported; else schema in prompt + Zod validation + one repair retry |
+| Claude | Messages API from the browser (`anthropic-dangerous-direct-browser-access` header, key in `x-api-key`). Forced tool use: one tool whose `input_schema` is the JSON Schema, `tool_choice` forcing it. Key test lists `/v1/models` (no tokens); Sonnet ranked first, then Haiku, then Opus |
+| OpenAI and other OpenAI-compatible | Chat Completions at the student's base URL (https, or http only for localhost). Starts with `response_format: json_schema`, steps down to `json_object`, then to the schema in the prompt when an endpoint rejects a mode; also drops `temperature` or switches to `max_completion_tokens` when refused. What worked is remembered per endpoint + model. Key test lists `/models`, or sends one tiny request when the endpoint has no model list. A blocked (CORS) or unreachable endpoint shows a clear message; no pass-through server |
 
 Common behavior:
 - One shared interface: `generateStructured(prompt, zodSchema, options)`.
@@ -194,7 +193,8 @@ Common behavior:
 - Chunk size adapts to the model's context window.
 - Client-side queue with exponential backoff on HTTP 429 (free AI Studio keys hit limits often). Show "resuming in Ns" in the UI.
 - "Test key" sends a tiny request and shows success or the provider's error. (Gemini: lists models, which costs no quota and also fills the model picker.)
-- Show estimated tokens and cost before processing.
+- Show estimated tokens and cost before processing. Prices live in `src/ai/pricing.ts` with the date they were checked; free Gemini keys show "free", unknown models show tokens only.
+- Each map picks its provider in the new-map flow (default from Settings); retries use the same provider.
 - Record every job in `ai_jobs` (never the key).
 
 ## Prompt quality testing

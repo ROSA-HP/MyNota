@@ -3,7 +3,7 @@ import { Handle, Position, type Node, type NodeProps } from '@xyflow/react'
 import { CircleAlert, Clock, RotateCcw, Sparkles } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Spinner } from '@/components/ui'
-import { useAiKey } from '@/features/settings/aiKeyStore'
+import { useKeyFor } from '@/features/settings/aiKeyStore'
 import { cn } from '@/lib/cn'
 import type { ChapterColor, MapRow, NodeRow } from '@/lib/database.types'
 import { useBuild } from '../buildStore'
@@ -85,7 +85,7 @@ function SectionStatusChip({ sectionId }: { sectionId: string }) {
   const { t } = useTranslation()
   const status = useBuild((s) => s.sections[sectionId])
   const retry = useBuild((s) => s.retrySection)
-  const key = useAiKey((s) => s.key)
+  const key = useKeyFor(useBuild((s) => s.provider))
   if (!status || status.state === 'done') return null
   if (status.state === 'failed') {
     return (

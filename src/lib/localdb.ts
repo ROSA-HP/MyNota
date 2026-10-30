@@ -12,7 +12,15 @@ export interface StoredKey {
   provider: AiProvider
   apiKey: string
   model: string
+  /** OpenAI-compatible endpoints only. */
+  baseUrl?: string
   testedAt: string
+}
+
+/** Small per-user device settings, e.g. `${userId}:defaultProvider`. */
+export interface DeviceSetting {
+  id: string
+  value: string
 }
 
 export interface CachedMap {
@@ -28,12 +36,18 @@ export interface CachedMap {
 class LocalDb extends Dexie {
   keys!: EntityTable<StoredKey, 'id'>
   maps!: EntityTable<CachedMap, 'mapId'>
+  settings!: EntityTable<DeviceSetting, 'id'>
 
   constructor() {
     super('mynota')
     this.version(1).stores({
       keys: 'id',
       maps: 'mapId, userId',
+    })
+    this.version(2).stores({
+      keys: 'id',
+      maps: 'mapId, userId',
+      settings: 'id',
     })
   }
 }

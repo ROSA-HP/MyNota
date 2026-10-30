@@ -16,8 +16,10 @@ function contentSecurityPolicy(supabaseUrl: string): Plugin {
     "style-src 'self'",
     "font-src 'self'",
     "img-src 'self' data: blob: https://*.googleusercontent.com",
-    // AI calls go straight from the browser to the provider with the student's own key.
-    `connect-src 'self' ${supabase.origin} wss://${supabase.host} https://generativelanguage.googleapis.com`,
+    // AI calls go straight from the browser to the provider with the student's own key. Students
+    // can add any OpenAI-compatible endpoint, so any https origin is allowed, plus plain http
+    // only for model servers on their own computer. Scripts stay locked to 'self'.
+    `connect-src 'self' ${supabase.origin} wss://${supabase.host} https: http://localhost:* http://127.0.0.1:*`,
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",

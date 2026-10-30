@@ -4,7 +4,7 @@ import { Clock, RotateCcw, Sparkles, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 import { Button, Spinner } from '@/components/ui'
-import { useAiKey } from '@/features/settings/aiKeyStore'
+import { useKeyFor } from '@/features/settings/aiKeyStore'
 import { useBuild, type SectionStatus } from './buildStore'
 
 function useNow(active: boolean) {
@@ -21,7 +21,7 @@ function useNow(active: boolean) {
 export function BuildBanner() {
   const { t } = useTranslation()
   const { phase, outlineStatus, sections, order, failure, stop, retryOutline, clear } = useBuild()
-  const key = useAiKey((s) => s.key)
+  const key = useKeyFor(useBuild((s) => s.provider))
   const statuses: SectionStatus[] = [outlineStatus, ...Object.values(sections)]
   const waiting = statuses.find(
     (s): s is Extract<SectionStatus, { state: 'waiting' }> => s.state === 'waiting',

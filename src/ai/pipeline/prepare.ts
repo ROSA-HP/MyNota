@@ -122,6 +122,8 @@ export interface Estimate {
   tokensSent: number
   requestsMin: number
   requestsMax: number
+  /** Rough reply size: blocks, details and summaries come out at about the text's length. */
+  tokensOut: number
 }
 
 export function estimateRun(paragraphs: Paragraph[]): Estimate {
@@ -133,6 +135,7 @@ export function estimateRun(paragraphs: Paragraph[]): Estimate {
     tokensSent: textTokens * 2 + PROMPT_OVERHEAD_TOKENS * (1 + sectionsMax),
     requestsMin: 1 + sectionsMin,
     requestsMax: 1 + sectionsMax,
+    tokensOut: Math.round(textTokens * 0.8) + 300 * (1 + sectionsMax),
   }
 }
 
