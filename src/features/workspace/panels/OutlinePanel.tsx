@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/cn'
 import type { NodeRow } from '@/lib/database.types'
 import { childrenIndex, findRoot } from '../canvas/layout'
+import { OUTLINE_DRAG_TYPE } from '../canvas/linking'
 import { chapterColor } from '../canvas/visuals'
 import { useWorkspace } from '../workspaceStore'
 
@@ -84,6 +85,12 @@ export function OutlinePanel({ onNavigate }: { onNavigate?: () => void }) {
           <button
             type="button"
             onClick={() => go(n)}
+            draggable={canEdit && depth > 0}
+            onDragStart={(e) => {
+              e.dataTransfer.setData(OUTLINE_DRAG_TYPE, n.id)
+              e.dataTransfer.effectAllowed = 'link'
+            }}
+            title={canEdit && depth > 0 ? t('ws.link.dragFromOutline') : undefined}
             dir="auto"
             className={cn(
               'min-h-9 min-w-0 flex-1 cursor-pointer truncate rounded-md px-1.5 text-start text-sm',

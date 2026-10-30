@@ -11,7 +11,8 @@ import { cn } from '@/lib/cn'
 import { BuildBanner } from './BuildBanner'
 import { useBuild } from './buildStore'
 import { MapCanvas } from './canvas/MapCanvas'
-import { ConnectHint, DeleteConfirm, NodeMenu, RelationDialog } from './Overlays'
+import { ConnectHint, DeleteConfirm, NodeMenu } from './Overlays'
+import { LinkPicker, LinkSearch } from './LinkPopovers'
 import { NodePanel, RelationPanel } from './panels/NodePanel'
 import { OutlinePanel } from './panels/OutlinePanel'
 import { Toolbar } from './Toolbar'
@@ -237,7 +238,8 @@ function Workspace() {
       </div>
 
       <NodeMenu />
-      <RelationDialog />
+      <LinkPicker />
+      <LinkSearch />
       <DeleteConfirm />
     </div>
   )

@@ -293,7 +293,7 @@
   outline: 3px solid var(--brand);
   outline-offset: 3px;
 }
-.mynota-flow .react-flow__handle {
+.mynota-flow .react-flow__handle:not(.mynota-link-handle) {
   opacity: 0;
   pointer-events: none;
   width: 1px;
@@ -301,6 +301,66 @@
   min-width: 0;
   min-height: 0;
   border: 0;
+}
+/* Link dots on every side of a block: shown on hover / selection, dragged to make a link. */
+.mynota-flow .mynota-link-handle {
+  width: 16px;
+  height: 16px;
+  min-width: 0;
+  min-height: 0;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 2.5px solid var(--brand);
+  opacity: 0;
+  cursor: crosshair;
+  transition:
+    opacity 120ms,
+    transform 120ms;
+  z-index: 3;
+}
+.mynota-flow .mynota-link-handle::after {
+  /* larger touch target than the dot itself */
+  content: '';
+  position: absolute;
+  inset: -12px;
+}
+.mynota-flow .react-flow__node:hover .mynota-link-handle,
+.mynota-flow .react-flow__node.selected .mynota-link-handle {
+  opacity: 1;
+}
+/* While dragging a link, only the block it starts from keeps its dots. */
+.mynota-flow.is-linking .react-flow__node:not(:has(.connectingfrom)) .mynota-link-handle {
+  opacity: 0;
+}
+/* Link labels and tools sit above link lines so they stay clickable. */
+.mynota-flow .react-flow__edgelabel-renderer {
+  z-index: 1001;
+}
+.mynota-flow .mynota-link-handle:hover,
+.mynota-flow .mynota-link-handle.connectingfrom {
+  background: var(--brand);
+  border-color: var(--line);
+}
+@media (hover: none) {
+  .mynota-flow .react-flow__node:hover:not(.selected) .mynota-link-handle {
+    opacity: 0;
+  }
+}
+/* Blocks picked with Shift (to link several) or as the first end in two-click linking. */
+.mynota-flow .react-flow__node.is-marked > * {
+  outline: 3px dashed var(--brand);
+  outline-offset: 3px;
+}
+/* Block under the pointer while dragging a new link. */
+.mynota-flow .react-flow__node.is-link-target > * {
+  outline: 3px solid var(--brand);
+  outline-offset: 4px;
+  background: var(--brand-soft);
+}
+@media (prefers-reduced-motion: reduce) {
+  .mynota-flow .mynota-link-handle {
+    transition: none;
+  }
 }
 .mynota-flow .react-flow__minimap {
   background: var(--surface);

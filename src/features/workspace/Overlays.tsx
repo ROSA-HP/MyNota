@@ -1,18 +1,16 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef } from 'react'
 import { Link2, Plus, SquarePen, Trash } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { makeRelation } from '@/ai/pipeline/convert'
-import { RELATION_TYPES } from '@/ai/schemas/common'
-import { Button, Dialog, SelectField, TextField } from '@/components/ui'
-import type { RelationType } from '@/lib/database.types'
+import { Button, Dialog } from '@/components/ui'
 import { useCanvasUi } from './canvas/canvasUi'
+import { anchorBeside } from './canvas/linking'
 import { useAddChild } from './canvas/MapCanvas'
 import { useWorkspace } from './workspaceStore'
 
 /** Right-click / long-press menu on a node. */
 export function NodeMenu() {
   const { t } = useTranslation()
-  const { menu, closeMenu, startConnect, askDelete } = useCanvasUi()
+  const { menu, closeMenu, openSearch, askDelete } = useCanvasUi()
   const node = useWorkspace((s) => (menu ? s.nodes[menu.nodeId] : undefined))
   const canEdit = useWorkspace((s) => s.role === 'owner' || s.role === 'editor')
   const select = useWorkspace((s) => s.select)
@@ -75,9 +73,10 @@ export function NodeMenu() {
             type="button"
             role="menuitem"
             className={item}
-            onClick={() => startConnect(node.id)}
+            onClick={() => openSearch([node.id], anchorBeside(node.id))}
           >
-            <Link2 size={17} aria-hidden /> {t('ws.connect')}
+            <Link2 size={17} aria-hidden /> {t('ws.link.linkTo')}
+            <kbd className="ms-auto font-mono text-[11px] text-ink-muted">L</kbd>
           </button>
           {node.parent_id && (
             <button
@@ -92,78 +91,6 @@ export function NodeMenu() {
         </>
       )}
     </div>
-  )
-}
-
-/** After picking two nodes in connect mode: choose the link type and label. */
-export function RelationDialog() {
-  const { t } = useTranslation()
-  const { newRelation, closeRelationDialog } = useCanvasUi()
-  const nodes = useWorkspace((s) => s.nodes)
-  const map = useWorkspace((s) => s.map)
-  const addRelations = useWorkspace((s) => s.addRelations)
-  const selectRelation = useWorkspace((s) => s.selectRelation)
-  const [type, setType] = useState<RelationType>('related')
-  const [label, setLabel] = useState('')
-
-  if (!newRelation || !map) return null
-  const from = nodes[newRelation.from]
-  const to = nodes[newRelation.to]
-  const create = () => {
-    const r = makeRelation({
-      map_id: map.id,
-      from_node: newRelation.from,
-      to_node: newRelation.to,
-      type,
-      label: label.trim().slice(0, 40),
-    })
-    addRelations([r])
-    selectRelation(r.id)
-    setLabel('')
-    setType('related')
-    closeRelationDialog()
-  }
-  return (
-    <Dialog
-      open
-      onClose={closeRelationDialog}
-      title={t('ws.relation.title')}
-      footer={
-        <>
-          <Button variant="ghost" onClick={closeRelationDialog}>
-            {t('common.cancel')}
-          </Button>
-          <Button onClick={create}>{t('ws.relation.create')}</Button>
-        </>
-      }
-    >
-      <form
-        className="flex flex-col gap-4"
-        onSubmit={(e) => {
-          e.preventDefault()
-          create()
-        }}
-      >
-        <p className="text-sm" dir="auto">
-          <strong>{from?.title}</strong> → <strong>{to?.title}</strong>
-        </p>
-        <SelectField
-          label={t('ws.panel.relationType')}
-          value={type}
-          onChange={(e) => setType(e.target.value as RelationType)}
-          options={RELATION_TYPES.map((v) => ({ value: v, label: t(`ws.relations.${v}`) }))}
-        />
-        <TextField
-          label={t('ws.panel.relationLabel')}
-          placeholder={t('ws.relation.labelPlaceholder')}
-          value={label}
-          maxLength={40}
-          dir="auto"
-          onChange={(e) => setLabel(e.target.value)}
-          autoFocus
-        />
-      </form>
-    </Dialog>
   )
 }
 
@@ -200,16 +127,26 @@ export function DeleteConfirm() {
   )
 }
 
+/** Status line for two-click linking and for several blocks picked with Shift. */
 export function ConnectHint() {
   const { t } = useTranslation()
   const connecting = useCanvasUi((s) => s.connecting)
-  if (!connecting) return null
+  const connectFrom = useCanvasUi((s) => s.connectFrom)
+  const multi = useCanvasUi((s) => s.multi)
+  const text = connecting
+    ? connectFrom
+      ? t('ws.connectHint')
+      : t('ws.link.pickFirst')
+    : multi.length > 1
+      ? t('ws.link.severalPicked', { count: multi.length })
+      : null
+  if (!text) return null
   return (
     <div
       role="status"
       className="rounded-full border-2 border-line bg-brand-soft px-4 py-2 text-sm font-semibold text-ink neo-shadow-sm"
     >
-      {t('ws.connectHint')}
+      {text}
     </div>
   )
 }

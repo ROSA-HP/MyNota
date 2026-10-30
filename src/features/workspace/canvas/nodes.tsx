@@ -7,6 +7,7 @@ import { useKeyFor } from '@/features/settings/aiKeyStore'
 import { cn } from '@/lib/cn'
 import type { ChapterColor, MapRow, NodeRow } from '@/lib/database.types'
 import { useBuild } from '../buildStore'
+import { useWorkspace } from '../workspaceStore'
 import { useCanvasUi } from './canvasUi'
 import { chapterColor, TYPE_ICON } from './visuals'
 
@@ -24,15 +25,36 @@ export type BlockNodeT = Node<
 >
 export type RegionNodeT = Node<{ color: ChapterColor | null; failed: boolean }, 'region'>
 
-/** Invisible handles: edges are drawn from node boxes (see edges.tsx), but React Flow needs them. */
-function Handles() {
+/**
+ * Handles. Edges are drawn from node boxes (see edges.tsx), so React Flow's own handles stay
+ * invisible; the four link dots (one per side) are what students drag to make a link.
+ */
+function Handles({ linkable = true }: { linkable?: boolean }) {
+  const { t } = useTranslation()
+  const canEdit = useWorkspace((s) => s.role === 'owner' || s.role === 'editor')
   return (
     <>
       <Handle type="target" position={Position.Top} isConnectable={false} />
       <Handle type="source" position={Position.Bottom} isConnectable={false} />
+      {canEdit &&
+        linkable &&
+        LINK_SIDES.map((side) => (
+          <Handle
+            key={side}
+            id={`link-${side}`}
+            type="source"
+            position={side}
+            isConnectable
+            className="mynota-link-handle nodrag"
+            title={t('ws.link.dragHandle')}
+            aria-label={t('ws.link.dragHandle')}
+          />
+        ))}
     </>
   )
 }
+
+const LINK_SIDES = [Position.Top, Position.Right, Position.Bottom, Position.Left] as const
 
 /** Long-press (touch) opens the node menu, like right-click on desktop. */
 function useLongPress(nodeId: string) {
@@ -76,7 +98,7 @@ export function RootNode({ data, selected }: NodeProps<RootNodeT>) {
       <span dir="auto" className="line-clamp-2 text-[17px] leading-tight font-bold">
         {node.title}
       </span>
-      <Handles />
+      <Handles linkable={false} />
     </div>
   )
 }
@@ -152,7 +174,7 @@ export function SectionNode({ data, selected }: NodeProps<SectionNodeT>) {
 
 export function BlockNode({ data, selected }: NodeProps<BlockNodeT>) {
   const { t } = useTranslation()
-  const { node, color, step, connectFrom } = data
+  const { node, color, step } = data
   const c = chapterColor(color)
   const Icon = node.type ? TYPE_ICON[node.type] : null
   const typeLabel = node.type ? t(`ws.types.${node.type}`) : null
@@ -162,7 +184,6 @@ export function BlockNode({ data, selected }: NodeProps<BlockNodeT>) {
       className={cn(
         'flex h-[66px] w-[210px] items-center gap-2 rounded-neo border-2 bg-surface px-2 py-1.5 text-ink',
         selected ? 'border-[2.5px] neo-shadow outline-3 outline-offset-2' : '',
-        connectFrom && 'outline-3 outline-dashed outline-offset-2 outline-brand',
       )}
       style={{
         borderColor: selected ? 'var(--line)' : c.strong,

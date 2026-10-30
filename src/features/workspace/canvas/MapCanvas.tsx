@@ -2,11 +2,15 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Background,
   BackgroundVariant,
+  ConnectionMode,
+  getBezierPath,
   MarkerType,
   MiniMap,
   ReactFlow,
   useReactFlow,
+  type ConnectionLineComponentProps,
   type Edge,
+  type FinalConnectionState,
   type Node,
   type NodeChange,
 } from '@xyflow/react'
@@ -16,11 +20,51 @@ import type { NodeRow } from '@/lib/database.types'
 import { useBuild } from '../buildStore'
 import { useWorkspace } from '../workspaceStore'
 import { useCanvasUi } from './canvasUi'
+import { OUTLINE_DRAG_TYPE, anchorBeside, createLinkedBlock, linkNodes, nodeIdAt } from './linking'
 import { edgeTypes } from './edges'
 import { childrenIndex, computeLayout, mirrorBox, type Box } from './layout'
 import { nodeTypes } from './nodes'
 import { FIT } from './fit'
 import { chapterColor } from './visuals'
+import { cn } from '@/lib/cn'
+
+/** Dashed line that follows the pointer while dragging a new link. */
+function LinkLine({
+  fromX,
+  fromY,
+  toX,
+  toY,
+  fromPosition,
+  toPosition,
+}: ConnectionLineComponentProps) {
+  const [path] = getBezierPath({
+    sourceX: fromX,
+    sourceY: fromY,
+    sourcePosition: fromPosition,
+    targetX: toX,
+    targetY: toY,
+    targetPosition: toPosition,
+  })
+  return (
+    <path
+      d={path}
+      fill="none"
+      stroke="var(--brand)"
+      strokeWidth={3}
+      strokeDasharray="7 6"
+      strokeLinecap="round"
+    />
+  )
+}
+
+/** Client coordinates of a mouse or touch event. */
+function pointOf(e: MouseEvent | TouchEvent): { x: number; y: number } {
+  if ('changedTouches' in e) {
+    const t = e.changedTouches[0]
+    return { x: t?.clientX ?? 0, y: t?.clientY ?? 0 }
+  }
+  return { x: e.clientX, y: e.clientY }
+}
 
 /** The section (top-level branch) a node belongs to, or null for the root. */
 function sectionOf(
@@ -73,9 +117,12 @@ export function MapCanvas() {
   const select = useWorkspace((s) => s.select)
   const updateNode = useWorkspace((s) => s.updateNode)
   const failedSections = useBuild((s) => s.sections)
-  const { connecting, connectFrom, pick, cancelConnect, openMenu, askDelete } = useCanvasUi()
+  const { connecting, connectFrom, multi, pick, cancelConnect, openMenu, askDelete } = useCanvasUi()
   const { fitView } = useReactFlow()
   const [drag, setDrag] = useState<Record<string, { x: number; y: number }>>({})
+  // While a link is being dragged: the block under the pointer, highlighted as the drop target.
+  const [linking, setLinking] = useState(false)
+  const [linkTarget, setLinkTarget] = useState<string | null>(null)
 
   const list = useMemo(() => Object.values(nodes), [nodes])
   const layout = useMemo(() => computeLayout(list), [list])
@@ -113,11 +160,13 @@ export function MapCanvas() {
       if (!box || layout.hidden.has(n.id)) continue
       const b = toScreen(box)
       const pos = drag[n.id] ?? { x: b.x, y: b.y }
+      const marked = connectFrom === n.id || multi.includes(n.id)
       const common = {
         id: n.id,
         position: pos,
         width: box.w,
         height: box.h,
+        className: cn(marked && 'is-marked', linkTarget === n.id && 'is-link-target'),
         selected: n.id === selectedId,
         draggable: canEdit,
         ariaLabel: n.title,
@@ -162,6 +211,8 @@ export function MapCanvas() {
     map,
     kids,
     connectFrom,
+    multi,
+    linkTarget,
     rtl,
     failedSections,
   ])
@@ -283,18 +334,33 @@ export function MapCanvas() {
     return () => clearTimeout(id)
   }, [visibleCount, fitView])
 
-  // Keyboard: Delete removes the selection, Esc cancels connecting / clears selection.
+  // Keyboard: L links the selection (search), Delete removes a block or link, Esc backs out.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const el = e.target as HTMLElement | null
       if (el && (el.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName)))
         return
+      if (e.ctrlKey || e.metaKey || e.altKey) return
+      const ui = useCanvasUi.getState()
+      const ws = useWorkspace.getState()
+      if (ui.picker || ui.search) return // the popover handles its own keys
       if (e.key === 'Escape') {
-        if (useCanvasUi.getState().connecting) cancelConnect()
+        if (ui.connecting) cancelConnect()
+        else if (ui.multi.length) ui.clearMulti()
         else select(null)
+      } else if ((e.key === 'l' || e.key === 'L') && canEdit) {
+        const sources = ui.multi.length ? ui.multi : ws.selectedId ? [ws.selectedId] : []
+        e.preventDefault()
+        if (sources[0]) ui.openSearch(sources, anchorBeside(sources[0]))
+        else ui.startConnect()
       } else if ((e.key === 'Delete' || e.key === 'Backspace') && canEdit) {
-        const id = useWorkspace.getState().selectedId
-        if (id && useWorkspace.getState().nodes[id]?.parent_id) {
+        if (ws.selectedRelationId) {
+          e.preventDefault()
+          ws.deleteRelation(ws.selectedRelationId)
+          return
+        }
+        const id = ws.selectedId
+        if (id && ws.nodes[id]?.parent_id) {
           e.preventDefault()
           askDelete(id)
         }
@@ -304,18 +370,82 @@ export function MapCanvas() {
     return () => window.removeEventListener('keydown', onKey)
   }, [canEdit, cancelConnect, select, askDelete])
 
+  // Dragging a new link: highlight the block under the pointer.
+  useEffect(() => {
+    if (!linking) return
+    let frame = 0
+    const onMove = (e: PointerEvent) => {
+      cancelAnimationFrame(frame)
+      frame = requestAnimationFrame(() => setLinkTarget(nodeIdAt(e.clientX, e.clientY)))
+    }
+    window.addEventListener('pointermove', onMove)
+    return () => {
+      cancelAnimationFrame(frame)
+      window.removeEventListener('pointermove', onMove)
+      setLinkTarget(null)
+    }
+  }, [linking])
+
+  const onConnectEnd = useCallback(
+    (event: MouseEvent | TouchEvent, state: FinalConnectionState) => {
+      setLinking(false)
+      const from = state.fromNode?.id
+      if (!from) return
+      const point = pointOf(event)
+      const over =
+        state.toNode && !state.toNode.id.startsWith('region:')
+          ? state.toNode.id
+          : nodeIdAt(point.x, point.y)
+      if (over === from) return
+      if (over) linkNodes(from, over, point)
+      else createLinkedBlock(from, t('ws.newBlock'), point)
+    },
+    [t],
+  )
+
   return (
-    <div className="mynota-flow relative h-full w-full" aria-label={t('ws.canvas')}>
+    <div
+      className={cn('mynota-flow relative h-full w-full', linking && 'is-linking')}
+      aria-label={t('ws.canvas')}
+      onDragOver={(e) => {
+        if (canEdit && e.dataTransfer.types.includes(OUTLINE_DRAG_TYPE)) {
+          e.preventDefault()
+          e.dataTransfer.dropEffect = 'link'
+          setLinkTarget(nodeIdAt(e.clientX, e.clientY))
+        }
+      }}
+      onDragLeave={() => setLinkTarget(null)}
+      onDrop={(e) => {
+        const from = e.dataTransfer.getData(OUTLINE_DRAG_TYPE)
+        setLinkTarget(null)
+        if (!canEdit || !from) return
+        e.preventDefault()
+        const to = nodeIdAt(e.clientX, e.clientY)
+        if (to && to !== from) linkNodes(from, to, { x: e.clientX, y: e.clientY })
+      }}
+    >
       <ReactFlow
         nodes={flowNodes}
         edges={flowEdges}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         onNodesChange={onNodesChange}
-        onNodeClick={(_, node) => {
+        onNodeClick={(e, node) => {
           if (node.type === 'region') return
-          if (connecting) pick(node.id)
-          else select(node.id)
+          const ui = useCanvasUi.getState()
+          if (connecting) {
+            const pair = pick(node.id)
+            if (pair) linkNodes(pair.from, pair.to, anchorBeside(pair.to))
+          } else if (e.shiftKey && canEdit && node.type !== 'root') {
+            // Shift-click gathers several blocks to link them all at once (press L).
+            const current = useWorkspace.getState().selectedId
+            if (!ui.multi.length && current && current !== node.id && nodes[current]?.parent_id)
+              ui.toggleMulti(current)
+            ui.toggleMulti(node.id)
+          } else {
+            ui.clearMulti()
+            select(node.id)
+          }
         }}
         onNodeContextMenu={(e, node) => {
           if (node.type === 'region') return
@@ -325,9 +455,16 @@ export function MapCanvas() {
         }}
         onPaneClick={() => {
           if (connecting) cancelConnect()
+          useCanvasUi.getState().clearMulti()
           select(null)
         }}
-        nodesConnectable={false}
+        nodesConnectable={canEdit}
+        connectionMode={ConnectionMode.Loose}
+        connectionRadius={36}
+        connectionLineComponent={LinkLine}
+        isValidConnection={(c) => c.source !== c.target && !c.target.startsWith('region:')}
+        onConnectStart={() => setLinking(true)}
+        onConnectEnd={onConnectEnd}
         elementsSelectable
         deleteKeyCode={null}
         selectionKeyCode={null}

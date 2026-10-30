@@ -3,6 +3,7 @@ import { LayoutGrid, Link2, Maximize, Minus, MousePointer2, Plus } from 'lucide-
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/cn'
 import { useCanvasUi } from './canvas/canvasUi'
+import { anchorBeside } from './canvas/linking'
 import { FIT } from './canvas/fit'
 import { findRoot } from './canvas/layout'
 import { useAddChild } from './canvas/MapCanvas'
@@ -45,7 +46,7 @@ export function Toolbar() {
   const { zoomIn, zoomOut, fitView } = useReactFlow()
   const { zoom } = useViewport()
   const canEdit = useWorkspace((s) => s.role === 'owner' || s.role === 'editor')
-  const { connecting, startConnect, cancelConnect } = useCanvasUi()
+  const { connecting, startConnect, cancelConnect, openSearch } = useCanvasUi()
   const addChild = useAddChild()
 
   const add = () => {
@@ -79,11 +80,17 @@ export function Toolbar() {
             <Plus size={19} aria-hidden />
           </ToolButton>
           <ToolButton
-            label={t('ws.connect')}
+            label={t('ws.link.tool')}
             active={connecting}
-            onClick={() =>
-              connecting ? cancelConnect() : startConnect(useWorkspace.getState().selectedId)
-            }
+            onClick={() => {
+              if (connecting) return cancelConnect()
+              const ui = useCanvasUi.getState()
+              const sel = useWorkspace.getState().selectedId
+              const sources = ui.multi.length ? ui.multi : sel ? [sel] : []
+              // With a block selected: search for the target. Otherwise: tap two blocks.
+              if (sources[0]) openSearch(sources, anchorBeside(sources[0]))
+              else startConnect()
+            }}
             showLabel
           >
             <Link2 size={19} aria-hidden />

@@ -1,15 +1,31 @@
+import { useState } from 'react'
+import { createPortal } from 'react-dom'
 import {
   BaseEdge,
   EdgeLabelRenderer,
   useInternalNode,
+  useReactFlow,
   type Edge,
   type EdgeProps,
   type InternalNode,
 } from '@xyflow/react'
-import { Check, X } from 'lucide-react'
+import {
+  ArrowLeftRight,
+  Check,
+  ChevronDown,
+  MoveHorizontal,
+  PenLine,
+  SquareArrowOutUpRight,
+  Trash,
+  X,
+} from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import type { RelationRow } from '@/lib/database.types'
+import { RELATION_TYPES } from '@/ai/schemas/common'
+import { cn } from '@/lib/cn'
+import type { RelationRow, RelationType } from '@/lib/database.types'
 import { useWorkspace } from '../workspaceStore'
+import { useCanvasUi } from './canvasUi'
+import { existingLink, nodeIdAt } from './linking'
 
 /**
  * Edges are drawn from the live node boxes (not from handles), so they follow nodes while
@@ -132,55 +148,85 @@ function floatingPath(a: Rect, b: Rect, rtl: boolean) {
     x: 0.125 * p1.x + 0.375 * c1.x + 0.375 * c2.x + 0.125 * p2.x,
     y: 0.125 * p1.y + 0.375 * c1.y + 0.375 * c2.y + 0.125 * p2.y,
   }
-  return { path, label }
+  return { path, label, p1, p2 }
 }
 
 /** A labelled link between two nodes. Suggested (AI) links are dashed with accept / dismiss. */
-export function RelationEdge({ id, source, target, data, markerEnd }: EdgeProps<RelationEdgeT>) {
+export function RelationEdge({
+  id,
+  source,
+  target,
+  data,
+  markerEnd,
+  markerStart,
+}: EdgeProps<RelationEdgeT>) {
   const { t } = useTranslation()
   const update = useWorkspace((s) => s.updateRelation)
   const remove = useWorkspace((s) => s.deleteRelation)
   const selectRelation = useWorkspace((s) => s.selectRelation)
   const s = rectOf(useInternalNode(source))
   const tg = rectOf(useInternalNode(target))
+  const [editing, setEditing] = useState(false)
+  const pickerOpen = useCanvasUi((u) => u.picker?.relationId === data?.relation.id)
   if (!s || !tg || !data) return null
   const { relation, canEdit, selected } = data
   const suggested = relation.status === 'suggested'
-  const { path, label } = floatingPath(s, tg, data.rtl)
+  const { path, label, p1, p2 } = floatingPath(s, tg, data.rtl)
   const text = relation.label || t(`ws.relations.${relation.type}`)
+  const showTools = selected && canEdit && !suggested && !pickerOpen
   return (
     <>
       <BaseEdge
         id={id}
         path={path}
         markerEnd={markerEnd}
+        markerStart={markerStart}
         interactionWidth={18}
         style={{
           stroke: suggested ? 'var(--ink-muted)' : 'var(--brand)',
-          strokeWidth: selected ? 3.4 : 2.4,
+          strokeWidth: selected ? 4 : 2.4,
           strokeDasharray: suggested ? '6 5' : undefined,
         }}
       />
       <EdgeLabelRenderer>
+        {showTools && (
+          <LinkToolbar
+            relation={relation}
+            x={label.x}
+            y={label.y}
+            onEditLabel={() => setEditing(true)}
+          />
+        )}
         <div
           className="nodrag nopan pointer-events-auto absolute flex items-center gap-1"
           style={{ transform: `translate(-50%, -50%) translate(${label.x}px, ${label.y}px)` }}
         >
-          <button
-            type="button"
-            onClick={() => selectRelation(relation.id)}
-            dir="auto"
-            className="cursor-pointer rounded-full border-2 bg-surface px-2.5 py-0.5 text-xs font-bold whitespace-nowrap"
-            style={{
-              borderColor: suggested ? 'var(--ink-muted)' : 'var(--brand)',
-              borderStyle: suggested ? 'dashed' : 'solid',
-              color: suggested ? 'var(--ink-muted)' : 'var(--ink)',
-              boxShadow: selected ? '2px 2px 0 var(--shadow)' : undefined,
-            }}
-          >
-            {text}
-            {suggested && '?'}
-          </button>
+          {editing ? (
+            <LabelEditor
+              initial={relation.label}
+              onDone={(v) => {
+                if (v !== null) update(relation.id, { label: v.trim().slice(0, 40) })
+                setEditing(false)
+              }}
+            />
+          ) : (
+            <button
+              type="button"
+              onClick={() => selectRelation(relation.id)}
+              onDoubleClick={() => canEdit && !suggested && setEditing(true)}
+              dir="auto"
+              className="cursor-pointer rounded-full border-2 bg-surface px-2.5 py-0.5 text-xs font-bold whitespace-nowrap"
+              style={{
+                borderColor: suggested ? 'var(--ink-muted)' : 'var(--brand)',
+                borderStyle: suggested ? 'dashed' : 'solid',
+                color: suggested ? 'var(--ink-muted)' : 'var(--ink)',
+                boxShadow: selected ? '2px 2px 0 var(--shadow)' : undefined,
+              }}
+            >
+              {text}
+              {suggested && '?'}
+            </button>
+          )}
           {suggested && canEdit && (
             <>
               <button
@@ -204,7 +250,217 @@ export function RelationEdge({ id, source, target, data, markerEnd }: EdgeProps<
             </>
           )}
         </div>
+        {showTools && (
+          <>
+            <EndHandle relation={relation} end="from" at={p1} other={p2} />
+            <EndHandle relation={relation} end="to" at={p2} other={p1} />
+          </>
+        )}
       </EdgeLabelRenderer>
+    </>
+  )
+}
+
+function LabelEditor({ initial, onDone }: { initial: string; onDone: (v: string | null) => void }) {
+  const { t } = useTranslation()
+  const [value, setValue] = useState(initial)
+  return (
+    <input
+      autoFocus
+      value={value}
+      maxLength={40}
+      dir="auto"
+      aria-label={t('ws.link.label')}
+      placeholder={t('ws.link.labelPlaceholder')}
+      onChange={(e) => setValue(e.target.value)}
+      onBlur={() => onDone(value)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') onDone(value)
+        if (e.key === 'Escape') onDone(null)
+        e.stopPropagation()
+      }}
+      className="h-8 w-40 rounded-full border-[2.5px] border-line bg-surface px-3 text-xs font-bold text-ink outline-none neo-shadow-sm"
+    />
+  )
+}
+
+/** Floating tools above a selected link. */
+function LinkToolbar({
+  relation,
+  x,
+  y,
+  onEditLabel,
+}: {
+  relation: RelationRow
+  x: number
+  y: number
+  onEditLabel: () => void
+}) {
+  const { t } = useTranslation()
+  const update = useWorkspace((s) => s.updateRelation)
+  const remove = useWorkspace((s) => s.deleteRelation)
+  const select = useWorkspace((s) => s.select)
+  const { fitView } = useReactFlow()
+  const btn =
+    'flex size-9 cursor-pointer items-center justify-center rounded-lg text-ink hover:bg-paper-sunken'
+  return (
+    <div
+      role="toolbar"
+      aria-label={t('ws.link.tools')}
+      className="nodrag nopan pointer-events-auto absolute flex items-center gap-0.5 rounded-neo border-[2.5px] border-line bg-surface p-1 neo-shadow"
+      style={{ transform: `translate(-50%, -100%) translate(${x}px, ${y - 22}px)` }}
+    >
+      <label className="relative">
+        <span className="sr-only">{t('ws.link.kind')}</span>
+        <select
+          value={relation.type}
+          onChange={(e) => update(relation.id, { type: e.target.value as RelationType })}
+          className="h-9 cursor-pointer appearance-none rounded-lg bg-brand-soft ps-2.5 pe-7 text-[13px] font-bold text-ink outline-none"
+        >
+          {RELATION_TYPES.map((type) => (
+            <option key={type} value={type}>
+              {t(`ws.kinds.${type}`)}
+            </option>
+          ))}
+        </select>
+        <ChevronDown
+          size={13}
+          strokeWidth={2.6}
+          aria-hidden
+          className="pointer-events-none absolute end-2 top-1/2 -translate-y-1/2"
+        />
+      </label>
+      <span aria-hidden className="mx-0.5 h-5 w-0.5 bg-line-soft" />
+      <button
+        type="button"
+        className={btn}
+        aria-label={t('ws.link.swap')}
+        title={t('ws.link.swap')}
+        onClick={() =>
+          update(relation.id, { from_node: relation.to_node, to_node: relation.from_node })
+        }
+      >
+        <ArrowLeftRight size={16} aria-hidden />
+      </button>
+      <button
+        type="button"
+        className={cn(btn, relation.direction === 'both' && 'bg-ink text-paper hover:bg-ink')}
+        aria-label={t('ws.link.bothWays')}
+        aria-pressed={relation.direction === 'both'}
+        title={t('ws.link.bothWays')}
+        onClick={() =>
+          update(relation.id, { direction: relation.direction === 'both' ? 'forward' : 'both' })
+        }
+      >
+        <MoveHorizontal size={16} aria-hidden />
+      </button>
+      <button
+        type="button"
+        className={btn}
+        aria-label={t('ws.link.editLabel')}
+        title={t('ws.link.editLabel')}
+        onClick={onEditLabel}
+      >
+        <PenLine size={16} aria-hidden />
+      </button>
+      <button
+        type="button"
+        className={btn}
+        aria-label={t('ws.link.goOther')}
+        title={t('ws.link.goOther')}
+        onClick={() => {
+          select(relation.to_node)
+          void fitView({ nodes: [{ id: relation.to_node }], duration: 400, maxZoom: 1.1 })
+        }}
+      >
+        <SquareArrowOutUpRight size={16} aria-hidden className="rtl:-scale-x-100" />
+      </button>
+      <span aria-hidden className="mx-0.5 h-5 w-0.5 bg-line-soft" />
+      <button
+        type="button"
+        className={cn(btn, 'text-danger')}
+        aria-label={t('ws.link.delete')}
+        title={t('ws.link.delete')}
+        onClick={() => remove(relation.id)}
+      >
+        <Trash size={16} aria-hidden />
+      </button>
+    </div>
+  )
+}
+
+/**
+ * A square on each end of a selected link: drag it onto another block to move that end.
+ * While dragging, a dashed line follows the pointer (drawn in screen space).
+ */
+function EndHandle({
+  relation,
+  end,
+  at,
+  other,
+}: {
+  relation: RelationRow
+  end: 'from' | 'to'
+  at: { x: number; y: number }
+  other: { x: number; y: number }
+}) {
+  const { t } = useTranslation()
+  const update = useWorkspace((s) => s.updateRelation)
+  const { flowToScreenPosition } = useReactFlow()
+  const [drag, setDrag] = useState<{ x: number; y: number } | null>(null)
+
+  const onPointerDown = (e: React.PointerEvent) => {
+    e.stopPropagation()
+    e.preventDefault()
+    setDrag({ x: e.clientX, y: e.clientY })
+    const move = (ev: PointerEvent) => setDrag({ x: ev.clientX, y: ev.clientY })
+    const up = (ev: PointerEvent) => {
+      window.removeEventListener('pointermove', move)
+      window.removeEventListener('pointerup', up)
+      setDrag(null)
+      const node = nodeIdAt(ev.clientX, ev.clientY)
+      const keep = end === 'from' ? relation.to_node : relation.from_node
+      if (
+        !node ||
+        node === keep ||
+        node === (end === 'from' ? relation.from_node : relation.to_node)
+      )
+        return
+      if (existingLink(node, keep)) return
+      update(relation.id, end === 'from' ? { from_node: node } : { to_node: node })
+    }
+    window.addEventListener('pointermove', move)
+    window.addEventListener('pointerup', up)
+  }
+
+  const fixed = drag ? flowToScreenPosition(other) : null
+  return (
+    <>
+      <button
+        type="button"
+        aria-label={t('ws.link.moveEnd')}
+        title={t('ws.link.moveEnd')}
+        onPointerDown={onPointerDown}
+        className="nodrag nopan pointer-events-auto absolute size-4 cursor-grab rounded-[4px] border-[3px] border-brand bg-surface active:cursor-grabbing"
+        style={{ transform: `translate(-50%, -50%) translate(${at.x}px, ${at.y}px)` }}
+      />
+      {drag &&
+        fixed &&
+        createPortal(
+          <svg aria-hidden className="pointer-events-none fixed inset-0 z-50 h-full w-full">
+            <line
+              x1={fixed.x}
+              y1={fixed.y}
+              x2={drag.x}
+              y2={drag.y}
+              stroke="var(--brand)"
+              strokeWidth={3}
+              strokeDasharray="7 6"
+              strokeLinecap="round"
+            />
+          </svg>,
+          document.body,
+        )}
     </>
   )
 }
