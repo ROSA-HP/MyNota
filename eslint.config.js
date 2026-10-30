@@ -16,4 +16,9 @@ export default tseslint.config(
       'no-console': ['warn', { allow: ['warn', 'error'] }],
     },
   },
+  {
+    // Tests index into fixtures they just built; `!` there is clearer than guards.
+    files: ['tests/**/*.{ts,tsx}'],
+    rules: { '@typescript-eslint/no-non-null-assertion': 'off' },
+  },
 )

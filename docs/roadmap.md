@@ -19,7 +19,7 @@ Each phase ends with something a student can actually use. Before starting a pha
 - Settings → AI providers: Gemini key, test, remember toggle (IndexedDB)
 - AI provider interface + Gemini adapter, Zod schemas, repair retry, queue with backoff
 - Paste text → numbered paragraphs → outline pass → details pass
-- Canvas (React Flow) with ELK layout, custom nodes (type icon, importance), hierarchy and relation edges
+- Canvas (React Flow) with top-down layout (built as a small custom layout; ELK decision pending, see open-questions), custom nodes (type icon, importance), hierarchy and relation edges
 - Add / edit / delete nodes; create labeled relations; node details panel
 - Migrations for `nodes`, `relations`, `ai_jobs`, and `sources` (text only; moved up from Phase 3 so block citations point to saved paragraphs)
 - Save to Supabase + IndexedDB cache

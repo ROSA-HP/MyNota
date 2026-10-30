@@ -1,4 +1,5 @@
 @import 'tailwindcss';
+@import '@xyflow/react/dist/base.css';
 
 /* Self-hosted fonts (no third-party requests; keeps the CSP strict). */
 @import '@fontsource/space-grotesk/latin-400.css';
@@ -55,6 +56,16 @@
   --ch-orange: #fdbe7f;
   --ch-lime: #d4f59a;
 
+  /* Stronger shades of the chapter palette: node borders and region outlines. */
+  --ch-yellow-strong: #d9a521;
+  --ch-coral-strong: #e8684e;
+  --ch-sky-strong: #3d95da;
+  --ch-mint-strong: #2aa66e;
+  --ch-lavender-strong: #8b6fe8;
+  --ch-pink-strong: #db5fa6;
+  --ch-orange-strong: #e8862f;
+  --ch-lime-strong: #84b52a;
+
   --mastery-low: #e5484d;
   --mastery-mid: #f5a524;
   --mastery-high: #2fa85a;
@@ -95,6 +106,15 @@
   --ch-pink: #6e2d52;
   --ch-orange: #74431a;
   --ch-lime: #4b6120;
+
+  --ch-yellow-strong: #e8c35a;
+  --ch-coral-strong: #f59a86;
+  --ch-sky-strong: #6cb8f0;
+  --ch-mint-strong: #4cc98f;
+  --ch-lavender-strong: #b3a0f7;
+  --ch-pink-strong: #f190c6;
+  --ch-orange-strong: #f5ac66;
+  --ch-lime-strong: #b2db5c;
 
   color-scheme: dark;
 }
@@ -252,4 +272,43 @@
     transition-duration: 0ms !important;
     animation-duration: 0ms !important;
   }
+}
+
+/* ---------------------------------------------------------------------------
+ * Map canvas (React Flow) in the notebook style
+ * ------------------------------------------------------------------------- */
+.mynota-flow {
+  --xy-background-color: transparent;
+  --xy-edge-stroke: var(--line);
+  --xy-selection-background-color: color-mix(in srgb, var(--brand) 12%, transparent);
+  --xy-selection-border: 2px dashed var(--brand);
+}
+.mynota-flow .react-flow__node {
+  font-family: inherit;
+}
+.mynota-flow .react-flow__node:focus-visible {
+  outline: none;
+}
+.mynota-flow .react-flow__node:focus-visible > * {
+  outline: 3px solid var(--brand);
+  outline-offset: 3px;
+}
+.mynota-flow .react-flow__handle {
+  opacity: 0;
+  pointer-events: none;
+  width: 1px;
+  height: 1px;
+  min-width: 0;
+  min-height: 0;
+  border: 0;
+}
+.mynota-flow .react-flow__minimap {
+  background: var(--surface);
+  border: 2px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.mynota-flow .react-flow__attribution {
+  background: transparent;
+  font-size: 9px;
 }

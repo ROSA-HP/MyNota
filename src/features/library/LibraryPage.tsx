@@ -9,7 +9,8 @@ import {
   ClipboardPaste,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { Alert, Badge, Button, Panel, Spinner } from '@/components/ui'
+import { Link } from 'react-router'
+import { Alert, Badge, Button, Panel, Spinner, buttonClasses } from '@/components/ui'
 import { useAuth } from '@/features/auth/authStore'
 import { cn } from '@/lib/cn'
 import type { MapRow } from '@/lib/database.types'
@@ -43,6 +44,10 @@ function EmptyLibrary() {
       <div>
         <h2 className="text-2xl font-bold tracking-tight">{t('library.empty.title')}</h2>
         <p className="mt-2 text-ink-muted">{t('library.empty.body')}</p>
+        <Link to="/new" className={buttonClasses({ className: 'mt-5' })}>
+          <Plus size={18} aria-hidden />
+          {t('library.newMap')}
+        </Link>
         <ol className="mt-6 flex flex-col gap-3">
           {steps.map(({ Icon, label, tint }, i) => (
             <li key={label} className="flex items-center gap-3">
@@ -76,20 +81,22 @@ function MapCard({ map }: { map: MapRow }) {
     new Date(map.updated_at),
   )
   return (
-    <Panel className="overflow-hidden">
-      <div className={cn('h-20 border-b-2 border-line', COVER[map.cover_color])} />
-      <div className="p-4">
-        <div className="flex items-center gap-2">
-          <Badge>
-            <Icon size={12} aria-hidden /> {t(`library.types.${map.type}`)}
-          </Badge>
+    <Link to={`/maps/${map.id}`} className="neo-btn block rounded-neo-lg">
+      <Panel className="h-full overflow-hidden">
+        <div className={cn('h-20 border-b-2 border-line', COVER[map.cover_color])} />
+        <div className="p-4">
+          <div className="flex items-center gap-2">
+            <Badge>
+              <Icon size={12} aria-hidden /> {t(`library.types.${map.type}`)}
+            </Badge>
+          </div>
+          <h3 className="mt-2 line-clamp-2 font-bold" dir="auto">
+            {map.title}
+          </h3>
+          <p className="mt-1 text-sm text-ink-muted">{t('library.updated', { date })}</p>
         </div>
-        <h3 className="mt-2 line-clamp-2 font-bold" dir="auto">
-          {map.title}
-        </h3>
-        <p className="mt-1 text-sm text-ink-muted">{t('library.updated', { date })}</p>
-      </div>
-    </Panel>
+      </Panel>
+    </Link>
   )
 }
 
@@ -114,12 +121,10 @@ export function LibraryPage() {
             </p>
           )}
         </div>
-        <Button icon={<Plus size={18} aria-hidden />} disabled title={t('library.newMapSoon')}>
+        <Link to="/new" className={buttonClasses({})}>
+          <Plus size={18} aria-hidden />
           {t('library.newMap')}
-          <Badge tone="neutral" className="ms-1">
-            {t('common.soon')}
-          </Badge>
-        </Button>
+        </Link>
       </div>
 
       <div className="mt-8">

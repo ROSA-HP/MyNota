@@ -17,6 +17,7 @@ import { LANGUAGES, LanguageSchema } from '@/lib/preferences'
 import { PROFILE_COLUMNS, supabase } from '@/lib/supabase'
 import { z } from 'zod'
 import { usePreferences } from './preferencesStore'
+import { AiKeySection } from './AiKeySection'
 import { ThemeToggle } from './ThemeToggle'
 
 function Section({ title, hint, children }: { title: string; hint?: string; children: ReactNode }) {
@@ -128,6 +129,10 @@ export function SettingsPage() {
 
       <Section title={t('settings.profile')} hint={t('settings.profileHint')}>
         <ProfileForm />
+      </Section>
+
+      <Section title={t('settings.aiTitle')} hint={t('settings.aiHint')}>
+        <AiKeySection />
       </Section>
 
       <Section title={t('settings.appearance')} hint={t('settings.appearanceHint')}>

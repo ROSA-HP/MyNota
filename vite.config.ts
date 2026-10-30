@@ -7,7 +7,6 @@ import { defineConfig, loadEnv, type Plugin } from 'vite'
 /**
  * Strict CSP for production builds (the dev server needs inline scripts for HMR, so it is
  * skipped there). Hosting should also send it as a header, plus frame-ancestors 'none'.
- * Phase 2 will add the AI provider origins to connect-src.
  */
 function contentSecurityPolicy(supabaseUrl: string): Plugin {
   const supabase = new URL(supabaseUrl)
@@ -17,7 +16,8 @@ function contentSecurityPolicy(supabaseUrl: string): Plugin {
     "style-src 'self'",
     "font-src 'self'",
     "img-src 'self' data: blob: https://*.googleusercontent.com",
-    `connect-src 'self' ${supabase.origin} wss://${supabase.host}`,
+    // AI calls go straight from the browser to the provider with the student's own key.
+    `connect-src 'self' ${supabase.origin} wss://${supabase.host} https://generativelanguage.googleapis.com`,
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",

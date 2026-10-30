@@ -43,10 +43,10 @@ or paste each file from `supabase/migrations/` into **SQL Editor → New query**
 
 ### 2. Auth settings (Dashboard → Authentication)
 
-| Setting | Value |
-|---|---|
-| Sign In / Providers → Email | Enabled, **Confirm email** on, minimum password length **8** |
-| URL Configuration → Site URL | `http://localhost:5173` (your production URL later) |
+| Setting                           | Value                                                                                                                      |
+| --------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Sign In / Providers → Email       | Enabled, **Confirm email** on, minimum password length **8**                                                               |
+| URL Configuration → Site URL      | `http://localhost:5173` (your production URL later)                                                                        |
 | URL Configuration → Redirect URLs | `http://localhost:5173/auth/callback`, `http://localhost:5173/reset-password` (+ the same paths on your production domain) |
 
 ### 3. Google sign-in
@@ -57,12 +57,12 @@ or paste each file from `supabase/migrations/` into **SQL Editor → New query**
 
 ## Scripts
 
-| Command | What it does |
-|---|---|
-| `pnpm dev` | Dev server |
-| `pnpm build` | Type-check and production build (adds a strict CSP) |
-| `pnpm typecheck` / `pnpm lint` | Checks |
-| `pnpm test` | Unit tests (schemas, translations, preferences) |
+| Command                         | What it does                                                                            |
+| ------------------------------- | --------------------------------------------------------------------------------------- |
+| `pnpm dev`                      | Dev server                                                                              |
+| `pnpm build`                    | Type-check and production build (adds a strict CSP)                                     |
+| `pnpm typecheck` / `pnpm lint`  | Checks                                                                                  |
+| `pnpm test`                     | Unit tests (schemas, translations, preferences)                                         |
 | `pnpm db:test && pnpm test:rls` | Row Level Security tests against a throwaway local Postgres — see `tests/rls/README.md` |
 
 ## Project layout

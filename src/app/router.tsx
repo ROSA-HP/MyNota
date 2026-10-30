@@ -7,7 +7,9 @@ import { SignInPage } from '@/features/auth/SignInPage'
 import { SignUpPage } from '@/features/auth/SignUpPage'
 import { LandingPage } from '@/features/landing/LandingPage'
 import { LibraryPage } from '@/features/library/LibraryPage'
+import { NewMapPage } from '@/features/new-map/NewMapPage'
 import { SettingsPage } from '@/features/settings/SettingsPage'
+import { WorkspacePage } from '@/features/workspace/WorkspacePage'
 import { AppShell } from './AppShell'
 import { RedirectIfAuthed, RequireAuth } from './guards'
 import { NotFoundPage } from './NotFoundPage'
@@ -51,6 +53,22 @@ export const router = createBrowserRouter([
       { path: '/library', element: <LibraryPage /> },
       { path: '/settings', element: <SettingsPage /> },
     ],
+  },
+  {
+    path: '/new',
+    element: (
+      <RequireAuth>
+        <NewMapPage />
+      </RequireAuth>
+    ),
+  },
+  {
+    path: '/maps/:mapId',
+    element: (
+      <RequireAuth>
+        <WorkspacePage />
+      </RequireAuth>
+    ),
   },
   { path: '*', element: <NotFoundPage /> },
 ])

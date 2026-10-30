@@ -183,7 +183,7 @@ Notes-mode and merge-mode prompts are written in Phase 3 following the same stru
 
 | Provider | How structured output is enforced |
 |---|---|
-| Gemini | Response schema |
+| Gemini | `generateContent` (v1beta) with `responseMimeType: application/json` + `responseJsonSchema`; key in the `x-goog-api-key` header, never the URL. Built 2026-10-30; the newer Interactions API can replace it later behind the same adapter |
 | OpenAI | Structured outputs (`json_schema`) |
 | Claude | Forced tool use with the schema |
 | Other OpenAI-compatible | JSON mode if supported; else schema in prompt + Zod validation + one repair retry |
@@ -193,7 +193,7 @@ Common behavior:
 - Low temperature.
 - Chunk size adapts to the model's context window.
 - Client-side queue with exponential backoff on HTTP 429 (free AI Studio keys hit limits often). Show "resuming in Ns" in the UI.
-- "Test key" sends a tiny request and shows success or the provider's error.
+- "Test key" sends a tiny request and shows success or the provider's error. (Gemini: lists models, which costs no quota and also fills the model picker.)
 - Show estimated tokens and cost before processing.
 - Record every job in `ai_jobs` (never the key).
 

@@ -37,7 +37,7 @@ Every table has RLS enabled in the migration that creates it.
 ## Canvas
 
 **nodes**
-- id, map_id, parent_id, order
+- id, map_id, parent_id, sort_order (position among siblings; `order` is reserved in SQL)
 - level: `book` | `chapter` | `section` | `block`
 - title, summary
 - type: `definition` | `concept` | `process_step` | `event` | `person` | `formula` | `example` | `comparison` | `key_fact` | `warning` | `vocabulary` (blocks only)
@@ -47,18 +47,22 @@ Every table has RLS enabled in the migration that creates it.
 - lang, dir: `ltr` | `rtl`
 - branch_view: `tree` | `process` | `timeline` | `comparison` | `cause_effect`
 - position {x, y}, size {w, h}, collapsed
-- source {paragraphs: string[], page: number}
-- ai_added (boolean), ai_added_reason
-- created_by (user id or `ai`), created_at, updated_at
+- source {paragraphs: number[], page?: number} (paragraph numbers cited from the map's source, e.g. `[5, 6]` = P5–P6)
+- ai_added (boolean: content the AI added beyond the source), ai_added_reason
+- origin: `user` | `ai` (who created the node), created_by (the user who saved it), created_at, updated_at
 
 **relations**
 - id, map_id, from_node, to_node
 - type: `causes` | `leads_to` | `part_of` | `example_of` | `contrasts_with` | `prerequisite` | `analogy` | `derived_from` | `related`
 - label (1–3 words), direction: `forward` | `backward` | `both`
 - status: `suggested` | `accepted`
-- created_by
+- origin: `user` | `ai`, created_by
 
 **Detail block types** (from MindLex `shared/index.ts`): `text`, `bullet`, `example` (sentence + translation), `vocab` (rows per language, article, plural), `formula` (LaTeX + variables), `question` (front/back), `cloze`.
+
+Until flashcards ship in Phase 4, flashcard candidates from the details pass are stored on their block as `question` details, so nothing is lost. Phase 4 turns them into cards.
+
+Outline subsections are orientation for the details pass only; they are not stored as nodes. A section's blocks hang directly under it (with nesting where the model groups them).
 
 ## Sources and AI
 
@@ -69,12 +73,13 @@ Every table has RLS enabled in the migration that creates it.
 - paragraphs: numbered `P1..Pn`, each with text and page number
 
 **ai_jobs**
-- id, map_id, chapter_node_id
+- id, map_id, chapter_node_id, node_id (the section a details job is for)
 - pass: `outline` | `details` | `links` | `tool`
 - provider, model, prompt_version
 - status: `queued` | `running` | `done` | `failed`
-- tokens_in, tokens_out, duration_ms, error
-- **Never the API key.**
+- tokens_in, tokens_out, duration_ms, error (a check constraint rejects strings that look like API keys)
+- created_by; owner/editor can insert and update only the status fields
+- **Never the API key, never the source text or model output.**
 
 ## Flashcards
 

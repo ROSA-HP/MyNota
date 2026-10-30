@@ -51,6 +51,127 @@ export type MapMemberRow = {
   added_at: string
 }
 
+export type NodeLevel = 'book' | 'chapter' | 'section' | 'block'
+export type NodeType =
+  | 'definition'
+  | 'concept'
+  | 'process_step'
+  | 'event'
+  | 'person'
+  | 'formula'
+  | 'example'
+  | 'comparison'
+  | 'key_fact'
+  | 'warning'
+  | 'vocabulary'
+export type Importance = 'core' | 'supporting' | 'extra'
+export type BranchView = 'tree' | 'process' | 'timeline' | 'comparison' | 'cause_effect'
+export type RelationType =
+  | 'causes'
+  | 'leads_to'
+  | 'part_of'
+  | 'example_of'
+  | 'contrasts_with'
+  | 'prerequisite'
+  | 'analogy'
+  | 'derived_from'
+  | 'related'
+
+/** Detail blocks (stored as JSON in nodes.details). Validated with Zod in src/features/workspace/model. */
+export type DetailBlock =
+  | { kind: 'text'; text: string }
+  | { kind: 'bullet'; text: string }
+  | { kind: 'example'; text: string; translation?: string }
+  | {
+      kind: 'vocab'
+      term: string
+      meaning: string
+      article?: string
+      plural?: string
+      lang?: string
+    }
+  | { kind: 'formula'; latex: string; variables?: string }
+  | { kind: 'question'; front: string; back: string }
+  | { kind: 'cloze'; text: string }
+
+export type NodeRow = {
+  id: string
+  map_id: string
+  parent_id: string | null
+  sort_order: number
+  level: NodeLevel
+  title: string
+  summary: string
+  type: NodeType | null
+  icon: string | null
+  color: ChapterColor | null
+  importance: Importance
+  details: DetailBlock[]
+  lang: string | null
+  dir: 'ltr' | 'rtl'
+  branch_view: BranchView
+  position: { x: number; y: number } | null
+  size: { w: number; h: number } | null
+  collapsed: boolean
+  source: { paragraphs: number[]; page?: number }
+  ai_added: boolean
+  ai_added_reason: string | null
+  origin: 'user' | 'ai'
+  created_by: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type RelationRow = {
+  id: string
+  map_id: string
+  from_node: string
+  to_node: string
+  type: RelationType
+  label: string
+  direction: 'forward' | 'backward' | 'both'
+  status: 'suggested' | 'accepted'
+  origin: 'user' | 'ai'
+  created_by: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type SourceParagraph = { n: number; text: string; page?: number }
+
+export type SourceRow = {
+  id: string
+  map_id: string
+  chapter_node_id: string | null
+  kind: 'pdf' | 'images' | 'text'
+  storage_path: string | null
+  pages: number | null
+  paragraphs: SourceParagraph[]
+  created_by: string | null
+  created_at: string
+}
+
+export type AiProvider = 'gemini' | 'anthropic' | 'openai_compatible'
+
+export type AiJobRow = {
+  id: string
+  map_id: string
+  chapter_node_id: string | null
+  node_id: string | null
+  pass: 'outline' | 'details' | 'links' | 'tool'
+  provider: AiProvider
+  model: string
+  prompt_version: string
+  status: 'queued' | 'running' | 'done' | 'failed'
+  tokens_in: number | null
+  tokens_out: number | null
+  duration_ms: number | null
+  error: string | null
+  created_by: string
+  created_at: string
+  updated_at: string
+}
+
 type Table<Row, Insert, Update> = {
   Row: Row
   Insert: Insert
@@ -76,6 +197,39 @@ export type Database = {
         Pick<MapRow, 'type' | 'title'> &
           Partial<Pick<MapRow, 'id' | 'subject_id' | 'cover_color' | 'languages'>>,
         Partial<Pick<MapRow, 'subject_id' | 'type' | 'title' | 'cover_color' | 'languages'>>
+      >
+      nodes: Table<
+        NodeRow,
+        Pick<NodeRow, 'map_id' | 'level' | 'title'> &
+          Partial<
+            Omit<NodeRow, 'map_id' | 'level' | 'title' | 'created_by' | 'created_at' | 'updated_at'>
+          >,
+        Partial<Omit<NodeRow, 'id' | 'map_id' | 'created_by' | 'created_at' | 'updated_at'>>
+      >
+      relations: Table<
+        RelationRow,
+        Pick<RelationRow, 'map_id' | 'from_node' | 'to_node'> &
+          Partial<
+            Omit<
+              RelationRow,
+              'map_id' | 'from_node' | 'to_node' | 'created_by' | 'created_at' | 'updated_at'
+            >
+          >,
+        Partial<
+          Pick<RelationRow, 'type' | 'label' | 'direction' | 'status' | 'from_node' | 'to_node'>
+        >
+      >
+      sources: Table<
+        SourceRow,
+        Pick<SourceRow, 'map_id' | 'paragraphs'> &
+          Partial<Pick<SourceRow, 'id' | 'chapter_node_id' | 'kind' | 'storage_path' | 'pages'>>,
+        never
+      >
+      ai_jobs: Table<
+        AiJobRow,
+        Pick<AiJobRow, 'map_id' | 'pass' | 'provider' | 'model' | 'prompt_version'> &
+          Partial<Pick<AiJobRow, 'id' | 'chapter_node_id' | 'node_id' | 'status'>>,
+        Partial<Pick<AiJobRow, 'status' | 'tokens_in' | 'tokens_out' | 'duration_ms' | 'error'>>
       >
       map_members: Table<
         MapMemberRow,

@@ -2,6 +2,7 @@ import type { Session } from '@supabase/supabase-js'
 import { create } from 'zustand'
 import type { ProfileRow } from '@/lib/database.types'
 import { PROFILE_COLUMNS, supabase } from '@/lib/supabase'
+import { useAiKey } from '@/features/settings/aiKeyStore'
 import { usePreferences } from '@/features/settings/preferencesStore'
 
 type Status = 'loading' | 'signedOut' | 'signedIn'
@@ -44,7 +45,10 @@ export const useAuth = create<AuthState>((set, get) => {
     }
     const isFirstLoad = get().profile?.id !== data.id
     set({ status: 'signedIn', session, profile: data })
-    if (isFirstLoad) usePreferences.getState().adoptFromProfile(data)
+    if (isFirstLoad) {
+      usePreferences.getState().adoptFromProfile(data)
+      void useAiKey.getState().load(data.id)
+    }
   }
 
   return {
@@ -68,6 +72,7 @@ export const useAuth = create<AuthState>((set, get) => {
         setTimeout(() => {
           if (event === 'PASSWORD_RECOVERY') set({ recovering: true })
           if (!session) {
+            useAiKey.getState().clearMemory()
             set({ status: 'signedOut', session: null, profile: null, recovering: false })
             return
           }
@@ -94,6 +99,7 @@ export const useAuth = create<AuthState>((set, get) => {
     setProfile: (profile) => set({ profile }),
 
     signOut: async () => {
+      useAiKey.getState().clearMemory()
       await supabase.auth.signOut()
       set({ status: 'signedOut', session: null, profile: null, recovering: false })
     },
