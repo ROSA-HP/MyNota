@@ -69,7 +69,7 @@ Outline subsections are orientation for the details pass only; they are not stor
 **sources**
 - id, map_id, chapter_node_id
 - kind: `pdf` | `images` | `text`
-- storage_path, pages
+- pages, file_name, file_size, file_hash (to find the local copy; the file itself stays in the device's IndexedDB, never in Storage)
 - paragraphs: numbered `P1..Pn`, each with text and page number
 
 **ai_jobs**

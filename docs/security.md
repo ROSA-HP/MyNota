@@ -34,7 +34,7 @@ Permissions are enforced in the database, not the UI, and the user's API key nev
 
 - Allowed types: PDF, images (PNG, JPEG, WebP), plain text.
 - Size limits per file and per-user storage quota.
-- Private Storage buckets; access through short-lived signed URLs.
+- Original files stay on the device (IndexedDB) and are parsed in the browser (pdf.js, Tesseract). Only extracted text and page numbers reach Postgres (decided 2026-10-30). If Storage is ever used: private buckets and short-lived signed URLs.
 
 ## Rate limiting
 

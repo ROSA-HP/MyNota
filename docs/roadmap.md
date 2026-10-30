@@ -19,7 +19,7 @@ Each phase ends with something a student can actually use. Before starting a pha
 - Settings → AI providers: Gemini key, test, remember toggle (IndexedDB)
 - AI provider interface + Gemini adapter, Zod schemas, repair retry, queue with backoff
 - Paste text → numbered paragraphs → outline pass → details pass
-- Canvas (React Flow) with top-down layout (built as a small custom layout; ELK decision pending, see open-questions), custom nodes (type icon, importance), hierarchy and relation edges
+- Canvas (React Flow) with top-down layout (MyNota's own layout, not ELK; decided 2026-10-30), custom nodes (type icon, importance), hierarchy and relation edges
 - Add / edit / delete nodes; create labeled relations; node details panel
 - Migrations for `nodes`, `relations`, `ai_jobs`, and `sources` (text only; moved up from Phase 3 so block citations point to saved paragraphs)
 - Save to Supabase + IndexedDB cache
@@ -28,7 +28,7 @@ Each phase ends with something a student can actually use. Before starting a pha
 
 ## Phase 3 — Books and power
 
-- PDF and photo upload (Storage), pdf.js extraction, Tesseract OCR
+- PDF and photo upload (files stay on the device; only extracted text syncs), pdf.js extraction, Tesseract OCR
 - Chapter detection and extraction review screen
 - PDF and image `sources`; page numbers in the source view
 - Chapter regions (colored), semantic zoom, outline panel

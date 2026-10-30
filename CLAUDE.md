@@ -36,7 +36,7 @@ This file holds the rules that apply to every task. Detailed specs live in `docs
 
 ## Tech stack
 
-React + TypeScript (strict) + Vite · Tailwind CSS v4 · React Flow (`@xyflow/react`) · ELK.js · Zustand · Zod · Yjs · Dexie (IndexedDB) · Supabase JS · pdf.js · Tesseract.js (ara, deu, eng) · KaTeX · lucide-react · ts-fsrs · Vitest.
+React + TypeScript (strict) + Vite · Tailwind CSS v4 · React Flow (`@xyflow/react`) · Zustand · Zod · Yjs · Dexie (IndexedDB) · Supabase JS · pdf.js · Tesseract.js (ara, deu, eng) · KaTeX · lucide-react · ts-fsrs · Vitest.
 
 ## Architecture rules
 
@@ -44,14 +44,16 @@ React + TypeScript (strict) + Vite · Tailwind CSS v4 · React Flow (`@xyflow/re
 - **Postgres**: all persistent data. **Every table has RLS enabled in the same migration that creates it.** Permissions are enforced in the database, never only in the UI.
 - **Edge Functions**: share-link resolution, invites, rate limiting, admin actions, audit logging.
 - **Realtime**: one Yjs document per chapter + one book-level document. Postgres keeps a readable snapshot for search, flashcards, admin, and export.
-- If a provider blocks browser calls (CORS), a pass-through Edge Function may forward requests **without storing or logging the key or content**.
+- **Map layout** is MyNota's own small top-down layout (`src/features/workspace/canvas/layout.ts`), not ELK.js (decided 2026-10-30).
+- **Uploaded PDFs and photos stay on the device** (IndexedDB). Only the extracted paragraphs and page numbers are saved to Postgres, so maps work everywhere; page previews work on the device that has the file (decided 2026-10-30).
+- **AI calls go directly from the browser to the provider.** No pass-through server for now; if an endpoint blocks browser calls (CORS), show a clear message. A pass-through Edge Function (never storing or logging the key or content) is only reconsidered if users need it (decided 2026-10-30).
 
 ## Security essentials (full list in `docs/security.md`)
 
 - Admin role is verified server-side (database / Edge Functions), never only in the UI. 2FA required for admins.
 - AI output is untrusted: validate with Zod, sanitize, render a safe Markdown subset. Never `dangerouslySetInnerHTML` with model output.
 - Prompts treat source text as data and tell the model to ignore instructions inside it.
-- Uploads: allowed types and size limits, private buckets, signed URLs.
+- Uploads: allowed types and size limits; files are parsed locally and stay on the device (nothing uploaded to Storage).
 - Share-link tokens: ≥ 32 random bytes, URL-safe, rotatable.
 
 ## Folder structure
