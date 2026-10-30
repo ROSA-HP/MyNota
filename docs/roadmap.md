@@ -21,7 +21,7 @@ Each phase ends with something a student can actually use. Before starting a pha
 - Paste text → numbered paragraphs → outline pass → details pass
 - Canvas (React Flow) with ELK layout, custom nodes (type icon, importance), hierarchy and relation edges
 - Add / edit / delete nodes; create labeled relations; node details panel
-- Migrations for `nodes`, `relations`, `ai_jobs`
+- Migrations for `nodes`, `relations`, `ai_jobs`, and `sources` (text only; moved up from Phase 3 so block citations point to saved paragraphs)
 - Save to Supabase + IndexedDB cache
 
 **Done when**: pasted text becomes an editable, saved map.
@@ -30,7 +30,7 @@ Each phase ends with something a student can actually use. Before starting a pha
 
 - PDF and photo upload (Storage), pdf.js extraction, Tesseract OCR
 - Chapter detection and extraction review screen
-- `sources` table; source view in node details
+- PDF and image `sources`; page numbers in the source view
 - Chapter regions (colored), semantic zoom, outline panel
 - Cross-links pass with suggested-links tray
 - Claude and OpenAI-compatible adapters; cost estimate

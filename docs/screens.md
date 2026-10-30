@@ -39,7 +39,7 @@
   - Source: original paragraphs and page number ("where is this in my book?")
   - This node's flashcards
   - AI tools: expand, simplify, example, split, explain simpler, translate, make cards
-- **Bottom toolbar**: select, add node, connect, auto-layout (style: radial / left-right tree / top-down), focus mode, hide-details mode, undo / redo, zoom.
+- **Bottom toolbar**: select, add node, connect, auto-layout (style: top-down (default) / left-right tree / radial), focus mode, hide-details mode, undo / redo, zoom.
 - **AI processing banner**: per-section progress, retry on failure, rate-limit countdown.
 - **Suggested links tray**: dashed AI-proposed relations to accept or dismiss.
 - **Context menus**: right-click or long-press on nodes and edges.

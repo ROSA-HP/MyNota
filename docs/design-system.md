@@ -48,7 +48,8 @@ All colors are CSS variables with light and dark values.
 - Light and dark themes.
 - App UI in English (the default for every first visit, regardless of browser language), Arabic, German. Full RTL mirroring when the UI language is Arabic (use logical CSS properties: `ms-`, `me-`, `start`, `end`).
 - Each node has its own `dir`, so Arabic nodes render correctly inside an English UI and vice versa.
-- In Arabic UI, the default map layout grows right-to-left.
+- Default map layout is **top-down** (decided 2026-10-30): the map title at the top, top-level sections as columns below it, and each section's blocks stacked under it. Process sections stack their steps vertically with arrows.
+- In Arabic UI the columns run right-to-left.
 
 ## Tablet
 
