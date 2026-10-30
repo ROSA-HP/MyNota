@@ -1,0 +1,255 @@
+@import 'tailwindcss';
+
+/* Self-hosted fonts (no third-party requests; keeps the CSP strict). */
+@import '@fontsource/space-grotesk/latin-400.css';
+@import '@fontsource/space-grotesk/latin-500.css';
+@import '@fontsource/space-grotesk/latin-600.css';
+@import '@fontsource/space-grotesk/latin-700.css';
+@import '@fontsource/space-grotesk/latin-ext-400.css';
+@import '@fontsource/space-grotesk/latin-ext-700.css';
+@import '@fontsource/ibm-plex-sans-arabic/arabic-400.css';
+@import '@fontsource/ibm-plex-sans-arabic/arabic-500.css';
+@import '@fontsource/ibm-plex-sans-arabic/arabic-600.css';
+@import '@fontsource/ibm-plex-sans-arabic/arabic-700.css';
+@import '@fontsource/space-mono/latin-400.css';
+@import '@fontsource/space-mono/latin-700.css';
+
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+
+/*
+ * Design tokens. Components use the semantic names (paper, surface, ink, line,
+ * shadow, brand ...). Light/dark only swap the variables below.
+ */
+:root {
+  --paper: #fbf7ee;
+  --paper-sunken: #f2ecdf;
+  --surface: #ffffff;
+  --surface-muted: #f7f3ea;
+  --ink: #121c1b;
+  --ink-muted: #46524f;
+  --ink-faint: #6b7774;
+  --line: #121c1b;
+  --line-soft: #121c1b33;
+  --shadow: #121c1b;
+  --dot: #121c1b26;
+
+  --brand: #0d9488;
+  --brand-hover: #0b7d73;
+  --brand-ink: #ffffff;
+  --brand-soft: #ccf3ee;
+
+  --danger: #c2261d;
+  --danger-soft: #fde2df;
+  --success: #15803d;
+  --success-soft: #dcf5e4;
+  --warning: #b45309;
+  --warning-soft: #fdefd3;
+
+  /* Chapter palette, in order. Fills are region tints / node borders. */
+  --ch-yellow: #fde68a;
+  --ch-coral: #ffa38f;
+  --ch-sky: #a5d8ff;
+  --ch-mint: #a7f0cf;
+  --ch-lavender: #c9b8ff;
+  --ch-pink: #fbb0d8;
+  --ch-orange: #fdbe7f;
+  --ch-lime: #d4f59a;
+
+  --mastery-low: #e5484d;
+  --mastery-mid: #f5a524;
+  --mastery-high: #2fa85a;
+
+  color-scheme: light;
+}
+
+[data-theme='dark'] {
+  --paper: #131917;
+  --paper-sunken: #0e1312;
+  --surface: #1b2321;
+  --surface-muted: #222b29;
+  --ink: #edf2ef;
+  --ink-muted: #b4c0bc;
+  --ink-faint: #8a9894;
+  --line: #d6e0dc;
+  --line-soft: #d6e0dc40;
+  --shadow: #d6e0dc;
+  --dot: #d6e0dc1f;
+
+  --brand: #2dd4bf;
+  --brand-hover: #5eead4;
+  --brand-ink: #062a26;
+  --brand-soft: #0f3b36;
+
+  --danger: #ff7a70;
+  --danger-soft: #3d1a17;
+  --success: #5fd38a;
+  --success-soft: #133222;
+  --warning: #f7b955;
+  --warning-soft: #3a2a10;
+
+  --ch-yellow: #6b5a17;
+  --ch-coral: #7a3a2d;
+  --ch-sky: #22506f;
+  --ch-mint: #1e5a45;
+  --ch-lavender: #4a3d7a;
+  --ch-pink: #6e2d52;
+  --ch-orange: #74431a;
+  --ch-lime: #4b6120;
+
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-paper-sunken: var(--paper-sunken);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-ink-faint: var(--ink-faint);
+  --color-line: var(--line);
+  --color-line-soft: var(--line-soft);
+  --color-shadow: var(--shadow);
+  --color-brand: var(--brand);
+  --color-brand-hover: var(--brand-hover);
+  --color-brand-ink: var(--brand-ink);
+  --color-brand-soft: var(--brand-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-ch-yellow: var(--ch-yellow);
+  --color-ch-coral: var(--ch-coral);
+  --color-ch-sky: var(--ch-sky);
+  --color-ch-mint: var(--ch-mint);
+  --color-ch-lavender: var(--ch-lavender);
+  --color-ch-pink: var(--ch-pink);
+  --color-ch-orange: var(--ch-orange);
+  --color-ch-lime: var(--ch-lime);
+  --color-mastery-low: var(--mastery-low);
+  --color-mastery-mid: var(--mastery-mid);
+  --color-mastery-high: var(--mastery-high);
+
+  --font-sans: 'Space Grotesk', 'IBM Plex Sans Arabic', ui-sans-serif, system-ui, sans-serif;
+  /* Space Mono has no Arabic glyphs: fall back to Plex Arabic so Arabic letters still join. */
+  --font-mono: 'Space Mono', 'IBM Plex Sans Arabic', ui-monospace, Menlo, Consolas, monospace;
+
+  --radius-neo: 10px;
+  --radius-neo-lg: 12px;
+
+  --shadow-neo-sm: 2px 2px 0 0 var(--shadow);
+  --shadow-neo: 4px 4px 0 0 var(--shadow);
+  --shadow-neo-lg: 6px 6px 0 0 var(--shadow);
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    margin: 0;
+    min-height: 100dvh;
+    background-color: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Arabic UI: put the Arabic face first so Latin digits/punctuation match it. */
+  html[lang='ar'] body {
+    font-family: 'IBM Plex Sans Arabic', 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
+  }
+
+  /* Letter-spacing and uppercase break Arabic letter joining. */
+  :lang(ar) .font-mono,
+  :lang(ar).font-mono {
+    letter-spacing: 0;
+  }
+
+  :focus-visible {
+    outline: 3px solid var(--brand);
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background: var(--brand-soft);
+    color: var(--ink);
+  }
+
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: var(--paper-sunken);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--line);
+    border-radius: 4px;
+  }
+}
+
+@layer components {
+  /* Perfusense tactile press. Shadows are mirrored in RTL so they keep pointing "away". */
+  .neo-btn {
+    transition:
+      transform 80ms ease,
+      box-shadow 80ms ease,
+      background-color 120ms ease;
+  }
+  @media (hover: hover) {
+    .neo-btn:not(:disabled):hover {
+      transform: translate(-1px, -1px);
+    }
+    [dir='rtl'] .neo-btn:not(:disabled):hover {
+      transform: translate(1px, -1px);
+    }
+  }
+  .neo-btn:not(:disabled):active {
+    transform: translate(2px, 2px);
+    box-shadow: none !important; /* beats the neo-shadow utilities */
+  }
+  [dir='rtl'] .neo-btn:not(:disabled):active {
+    transform: translate(-2px, 2px);
+  }
+
+  /* Notebook paper with a dot grid (used for the canvas and auth backgrounds). */
+  .paper-dots {
+    background-color: var(--paper);
+    background-image: radial-gradient(var(--dot) 1.2px, transparent 1.2px);
+    background-size: 22px 22px;
+  }
+}
+
+/* Hard offset shadows that flip direction in RTL (variant-friendly: hover:, focus:, ...). */
+@utility neo-shadow-sm {
+  box-shadow: 2px 2px 0 0 var(--shadow);
+  [dir='rtl'] & {
+    box-shadow: -2px 2px 0 0 var(--shadow);
+  }
+}
+@utility neo-shadow {
+  box-shadow: 4px 4px 0 0 var(--shadow);
+  [dir='rtl'] & {
+    box-shadow: -4px 4px 0 0 var(--shadow);
+  }
+}
+@utility neo-shadow-lg {
+  box-shadow: 6px 6px 0 0 var(--shadow);
+  [dir='rtl'] & {
+    box-shadow: -6px 6px 0 0 var(--shadow);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0ms !important;
+    animation-duration: 0ms !important;
+  }
+}
