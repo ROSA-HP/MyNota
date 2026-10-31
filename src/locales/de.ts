@@ -206,6 +206,27 @@ export const de: Messages = {
     },
   },
   settings: {
+    data: {
+      title: 'Deine Daten',
+      hint: 'Alles herunterladen, was du erstellt hast, oder dein Konto löschen.',
+      exportTitle: 'Meine Daten herunterladen',
+      exportHint: 'Eine Datei mit deinen Maps (Blöcke, Verbindungen, Quelltext, Karten), Fächern, Lernfortschritt und Wiederholungsverlauf. Dein KI-Schlüssel ist nicht enthalten.',
+      export: 'Meine Daten herunterladen',
+      collecting: 'Wird gesammelt …',
+      progress: 'Maps: {{done}} von {{total}}',
+      downloaded: 'Deine Daten sind heruntergeladen.',
+      deleteTitle: 'Mein Konto löschen',
+      deleteHint: 'Löscht dein Konto und alles, was dazugehört. Geteilte Maps werden für alle darauf gelöscht.',
+      delete: 'Mein Konto löschen …',
+      deleteWarning: 'Das kann nicht rückgängig gemacht werden. Lade vorher deine Daten herunter, wenn du sie behalten willst.',
+      typeUsername: 'Gib zur Bestätigung deinen Nutzernamen ({{username}}) ein',
+      deleteForever: 'Endgültig löschen',
+      deleted: 'Dein Konto ist gelöscht.',
+      errConfirm: 'Das ist nicht dein Nutzername.',
+      errMfa: 'Melde dich zuerst mit deinem Authenticator-Code neu an.',
+      errLimit: 'Zu viele Versuche. Versuche es später.',
+      errDelete: 'Dein Konto konnte nicht gelöscht werden. Versuche es später.',
+    },
     security: {
       title: 'Sicherheit',
       hint: 'Anmeldung in zwei Schritten und die Geräte, die mit deinem Konto angemeldet sind.',
@@ -1370,6 +1391,103 @@ export const de: Messages = {
       device: 'Gerät',
       ok: 'Angemeldet',
       failed: 'Fehlgeschlagen',
+    },
+  },
+  legal: {
+    updated: 'Zuletzt geändert: {{date}}',
+    contactTitle: 'Kontakt',
+    contactSoon: 'Kontaktdaten für Datenschutz- und Rechtsfragen werden hier ergänzt, bevor MyNota öffentlich startet.',
+    privacy: {
+      title: 'Datenschutzerklärung',
+      intro: 'MyNota macht aus Lernmaterial Mindmaps und Karteikarten. Hier steht, was wir speichern, wohin es geht und was du tun kannst.',
+      sections: {
+        who: {
+          title: 'Verantwortlich',
+          body: 'Verantwortlich für deine Daten ist der Betreiber von MyNota (Kontakt unten). Unsere Server stellt Supabase bereit.',
+        },
+        collect: {
+          title: 'Was wir speichern',
+          body: 'Dein Konto (E-Mail, Nutzername, Name, Bild, Sprache, Design), deine Fächer und Maps (Titel, Blöcke, Verbindungen und der Text aus deinen Quellen mit Seitenzahlen), deine Karteikarten, dein Lernfortschritt und Wiederholungsverlauf, Freigaben, Einladungen und Meldungen.',
+        },
+        keys: {
+          title: 'Dein KI-Schlüssel bleibt auf deinem Gerät',
+          body: 'Dein Schlüssel für den KI-Anbieter wird nur in diesem Browser gespeichert (oder nur im Arbeitsspeicher, wenn du das wählst). Er wird nie an unsere Server, Protokolle oder Fehlerberichte gesendet.',
+        },
+        files: {
+          title: 'Deine Dateien bleiben auf deinem Gerät',
+          body: 'PDFs und Fotos werden in deinem Browser gelesen und nur auf dem verwendeten Gerät behalten. In deinem Konto werden nur der erkannte Text und die Seitenzahlen gespeichert.',
+        },
+        ai: {
+          title: 'KI-Anbieter',
+          body: 'Wenn du eine Map erstellst oder Karten machst, sendet dein Browser den Quelltext direkt an den gewählten KI-Anbieter (zum Beispiel Google Gemini oder Anthropic Claude), mit deinem eigenen Schlüssel und nach dessen Bedingungen. Wir sehen diese Anfragen nicht.',
+        },
+        admins: {
+          title: 'Admins können Inhalte von Maps sehen',
+          body: 'Wenige MyNota-Admins können jede Map öffnen, zum Beispiel um eine Meldung zu prüfen. Admins müssen die Anmeldung in zwei Schritten nutzen und einen Grund angeben; jedes Öffnen wird in einem Protokoll festgehalten.',
+        },
+        sharing: {
+          title: 'Teilen',
+          body: 'Geteilte Maps sehen die eingeladenen Personen und, wenn du einen Link einschaltest, alle mit dem Link. Personen auf einer Map sehen gegenseitig Namen, Mauszeiger und welchen Block jemand bearbeitet.',
+        },
+        device: {
+          title: 'Speicher auf deinem Gerät',
+          body: 'Wir nutzen den Speicher deines Browsers für deine Anmeldung und eine Kopie deiner Maps (schnell und offline). Wir verwenden keine Werbe- oder Tracking-Cookies und keine Analysedienste.',
+        },
+        logins: {
+          title: 'Anmeldungen und Fehler',
+          body: 'Zur Sicherheit erfassen wir Anmeldungen: Zeit, Erfolg, Methode, einen kurzen Gerätenamen (etwa „Firefox on Windows“), ein ungefähres Land und eine verschlüsselte (gehashte) Form der IP-Adresse, nie die Adresse selbst. App-Fehler werden ohne KI-Schlüssel und ohne Map-Inhalte erfasst.',
+        },
+        keep: {
+          title: 'Wie lange wir Daten speichern',
+          body: 'Solange du ein Konto hast. Wenn du dein Konto löschst, werden Konto, Maps, Karten und Fortschritt sofort gelöscht; Sicherungen werden nach kurzer Zeit überschrieben. Protokolleinträge bleiben ohne deinen Namen.',
+        },
+        rights: {
+          title: 'Deine Rechte',
+          body: 'Unter Einstellungen › Deine Daten kannst du jederzeit alle Daten herunterladen und dein Konto löschen. Du hast außerdem das Recht auf Auskunft, Berichtigung, Einschränkung, Widerspruch und Beschwerde bei einer Datenschutzbehörde.',
+        },
+      },
+    },
+    terms: {
+      title: 'Nutzungsbedingungen',
+      intro: 'Mit der Nutzung von MyNota stimmst du diesen Bedingungen zu. Sie sind kurz.',
+      sections: {
+        use: {
+          title: 'Was MyNota ist',
+          body: 'MyNota hilft Lernenden, eigenes Lernmaterial in Maps und Karteikarten zu verwandeln. Es ist kostenlos, wird so bereitgestellt, wie es ist, und kann sich ändern.',
+        },
+        account: {
+          title: 'Dein Konto',
+          body: 'Schütze dein Passwort und deine Authenticator-App. Du bist für dein Konto verantwortlich und kannst es jederzeit löschen.',
+        },
+        content: {
+          title: 'Deine Inhalte',
+          body: 'Was du erstellst, gehört dir. Du erlaubst MyNota, es zu speichern und dir und den Personen, mit denen du teilst, anzuzeigen, nur um den Dienst zu betreiben. Lade nur Material hoch, das du nutzen darfst.',
+        },
+        rules: {
+          title: 'Faire Nutzung',
+          body: 'Teile keine illegalen, hasserfüllten, schädlichen oder rechtsverletzenden Inhalte, verschicke keinen Spam und greife weder den Dienst noch andere an. Limits für Maps und Uploads gelten für alle.',
+        },
+        ai: {
+          title: 'KI kann sich irren',
+          body: 'Maps und Karten erstellt ein KI-Modell; sie können Fehler enthalten. Prüfe wichtige Fakten an deinen Quellen.',
+        },
+        keys: {
+          title: 'Dein KI-Anbieter',
+          body: 'Du nutzt deinen eigenen KI-Schlüssel. Für diese Anfragen gelten die Bedingungen, Limits und eventuellen Kosten deines Anbieters; MyNota ist dafür nicht verantwortlich.',
+        },
+        moderation: {
+          title: 'Meldungen und Moderation',
+          body: 'Geteilte Maps können gemeldet werden. Admins können Freigabelinks abschalten und Konten sperren oder verbannen, die gegen diese Bedingungen verstoßen. Jede Admin-Aktion wird protokolliert.',
+        },
+        service: {
+          title: 'Keine Garantie',
+          body: 'Wir tun unser Bestes, damit MyNota erreichbar ist und deine Daten sicher sind, können das aber nicht versprechen. Behalte eine eigene Kopie wichtiger Inhalte; du kannst deine Daten jederzeit herunterladen.',
+        },
+        changes: {
+          title: 'Änderungen',
+          body: 'Wir können diese Bedingungen ändern. Bei wichtigen Änderungen informieren wir dich vorher in der App.',
+        },
+      },
     },
   },
   report: {

@@ -73,3 +73,12 @@ country when the platform sends it, salted IP hash; 30 per IP hash an hour via `
 - Account deletion.
 - Regular backups.
 - Many users may be in the EU, so treat privacy law as a requirement.
+
+As built in Phase 7.5: Settings › Your data downloads one JSON file built in the browser (owned
+maps with blocks, links, source text and cards; subjects; own progress and review history on
+every map; never AI keys). "Delete my account" calls the `delete-account` Edge Function: the
+username must be typed, two-factor accounts need an aal2 session, 5 tries an hour; deleting the
+auth user cascades to everything the account owns, and the app then clears the account's data
+from the device (`forgetAccountOnDevice`). `/privacy` and `/terms` are public pages in all three
+languages, linked from every sign-in screen and Settings; they are drafts until reviewed and the
+contact (`LEGAL_CONTACT`) is set before launch.

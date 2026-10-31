@@ -202,6 +202,27 @@ export const en = {
     },
   },
   settings: {
+    data: {
+      title: 'Your data',
+      hint: 'Download everything you made, or delete your account.',
+      exportTitle: 'Download my data',
+      exportHint: 'One file with your maps (blocks, links, source text, cards), subjects, study progress and review history. Your AI key is not included.',
+      export: 'Download my data',
+      collecting: 'Collecting…',
+      progress: 'Maps: {{done}} of {{total}}',
+      downloaded: 'Your data is downloaded.',
+      deleteTitle: 'Delete my account',
+      deleteHint: 'Deletes your account and everything it owns. Maps you share are deleted for everyone on them.',
+      delete: 'Delete my account…',
+      deleteWarning: 'This cannot be undone. Download your data first if you want to keep it.',
+      typeUsername: 'Type your username ({{username}}) to confirm',
+      deleteForever: 'Delete forever',
+      deleted: 'Your account is deleted.',
+      errConfirm: 'That is not your username.',
+      errMfa: 'Sign in again with your authenticator code first.',
+      errLimit: 'Too many attempts. Try again later.',
+      errDelete: 'Your account could not be deleted. Try again later.',
+    },
     security: {
       title: 'Security',
       hint: 'Two-factor sign-in and the devices signed in to your account.',
@@ -1333,6 +1354,103 @@ export const en = {
       device: 'Device',
       ok: 'Signed in',
       failed: 'Failed',
+    },
+  },
+  legal: {
+    updated: 'Last updated: {{date}}',
+    contactTitle: 'Contact',
+    contactSoon: 'Contact details for privacy and legal questions will be added here before MyNota opens to the public.',
+    privacy: {
+      title: 'Privacy policy',
+      intro: 'MyNota turns study material into mind maps and flashcards. This page explains what we store, where it goes, and what you can do about it.',
+      sections: {
+        who: {
+          title: 'Who is responsible',
+          body: 'The operator of MyNota (contact details below) is responsible for your data. Our servers are provided by Supabase.',
+        },
+        collect: {
+          title: 'What we store',
+          body: 'Your account (email, username, name, picture, language, theme), your subjects and maps (titles, blocks, links, and the text taken from your sources with page numbers), your flashcards, study progress and review history, sharing settings, invites and reports.',
+        },
+        keys: {
+          title: 'Your AI key stays on your device',
+          body: 'Your AI provider key is stored only in this browser (or only in memory, if you choose). It is never sent to our servers, logs or error reports.',
+        },
+        files: {
+          title: 'Your files stay on your device',
+          body: 'PDFs and photos are read in your browser and kept only on the device you used. Only the extracted text and page numbers are saved to your account.',
+        },
+        ai: {
+          title: 'AI providers',
+          body: 'When you build a map or make cards, your browser sends the source text directly to the AI provider you chose (for example Google Gemini or Anthropic Claude), using your own key and under that provider’s terms. We do not see these requests.',
+        },
+        admins: {
+          title: 'Admins can see map content',
+          body: 'A small number of MyNota admins can open any map, for example to handle a report. Admins must use two-factor sign-in, must give a reason, and every time an admin opens a map it is recorded in an audit log.',
+        },
+        sharing: {
+          title: 'Sharing',
+          body: 'Maps you share are visible to the people you invite, and to anyone with the link if you turn a link on. People on a map can see each other’s names, cursors and which block someone is editing.',
+        },
+        device: {
+          title: 'Storage on your device',
+          body: 'We use your browser’s storage to keep your sign-in and a copy of your maps for fast and offline use. We use no advertising or tracking cookies and no analytics services.',
+        },
+        logins: {
+          title: 'Sign-in records and errors',
+          body: 'For security we record sign-ins: time, success, method, a short device name (such as “Firefox on Windows”), an approximate country and a scrambled (hashed) form of the IP address, never the address itself. App errors are recorded without your AI key or map content.',
+        },
+        keep: {
+          title: 'How long we keep data',
+          body: 'We keep your data while you have an account. When you delete your account, your account, maps, cards and progress are deleted at once; backups are overwritten within a short period. Audit entries remain without your name.',
+        },
+        rights: {
+          title: 'Your rights',
+          body: 'You can download all your data and delete your account at any time in Settings › Your data. You also have the right to access, correct, restrict or object to the use of your data, and to complain to a data protection authority.',
+        },
+      },
+    },
+    terms: {
+      title: 'Terms of use',
+      intro: 'By using MyNota you agree to these terms. Please read them; they are short.',
+      sections: {
+        use: {
+          title: 'What MyNota is',
+          body: 'MyNota helps students turn their own study material into maps and flashcards. It is provided free of charge, as it is, and may change over time.',
+        },
+        account: {
+          title: 'Your account',
+          body: 'Keep your password and authenticator safe. You are responsible for what happens in your account. You can delete it at any time.',
+        },
+        content: {
+          title: 'Your content',
+          body: 'What you create stays yours. You allow MyNota to store and show it to you and to the people you share it with, only to run the service. Only upload material you are allowed to use.',
+        },
+        rules: {
+          title: 'Fair use',
+          body: 'Do not use MyNota to share illegal, hateful, harmful or infringing content, to spam, or to attack the service or other people. Limits on maps and uploads apply to everyone.',
+        },
+        ai: {
+          title: 'AI can be wrong',
+          body: 'Maps and cards are made by an AI model and can contain mistakes. Check important facts against your sources.',
+        },
+        keys: {
+          title: 'Your AI provider',
+          body: 'You use your own AI key. Your provider’s terms, limits and any costs apply to those requests; MyNota is not responsible for them.',
+        },
+        moderation: {
+          title: 'Reports and moderation',
+          body: 'Anyone can report a shared map. Admins may turn off a share link, and suspend or ban accounts that break these terms. Every admin action is recorded.',
+        },
+        service: {
+          title: 'No guarantee',
+          body: 'We do our best to keep MyNota available and your data safe, but we cannot promise it will always work. Keep your own copy of important material; you can download your data at any time.',
+        },
+        changes: {
+          title: 'Changes',
+          body: 'We may update these terms. If a change matters, we will tell you in the app before it applies.',
+        },
+      },
     },
   },
   report: {

@@ -72,6 +72,13 @@ when their token renews (the default is 1 hour); they can never save changes aft
    Linking only connects the CLI to the project; it does not run any migration. Until the
    function is deployed, signing in works as before and only the successful sign-ins are
    missing from Login activity.
+3. Deploy the account-deletion function (Settings › Your data › Delete my account; Phase 7.5):
+
+   ```bash
+   npx supabase functions deploy delete-account
+   ```
+
+   Until it is deployed, the delete button shows "could not be deleted"; nothing is removed.
 
 ### Option B: Supabase CLI
 

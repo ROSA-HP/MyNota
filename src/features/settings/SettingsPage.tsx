@@ -18,6 +18,7 @@ import { PROFILE_COLUMNS, supabase } from '@/lib/supabase'
 import { z } from 'zod'
 import { usePreferences } from './preferencesStore'
 import { AiProvidersSection } from './AiProvidersSection'
+import { DataSection } from './DataSection'
 import { SecuritySection } from './SecuritySection'
 import { StudySection } from './StudySection'
 import { ThemeToggle } from './ThemeToggle'
@@ -175,6 +176,10 @@ export function SettingsPage() {
         hint={t('settings.security.hint')}
       >
         <SecuritySection />
+      </Section>
+
+      <Section id="data" title={t('settings.data.title')} hint={t('settings.data.hint')}>
+        <DataSection />
       </Section>
 
       <Section title={t('settings.account')}>

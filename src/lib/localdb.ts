@@ -96,3 +96,22 @@ class LocalDb extends Dexie {
 }
 
 export const localDb = new LocalDb()
+
+/**
+ * Removes everything this device keeps for one account: AI keys, cached maps and live
+ * documents, uploaded files and device settings (after deleting the account, Phase 7.5).
+ */
+export async function forgetAccountOnDevice(userId: string): Promise<void> {
+  const mine = (id: string) => id.startsWith(`${userId}:`)
+  await localDb.transaction(
+    'rw',
+    [localDb.keys, localDb.maps, localDb.settings, localDb.files, localDb.docs],
+    async () => {
+      await localDb.keys.filter((k) => mine(k.id)).delete()
+      await localDb.settings.filter((s) => mine(s.id)).delete()
+      await localDb.maps.where('userId').equals(userId).delete()
+      await localDb.files.where('userId').equals(userId).delete()
+      await localDb.docs.filter((d) => d.userId === userId).delete()
+    },
+  )
+}

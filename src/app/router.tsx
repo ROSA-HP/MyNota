@@ -10,6 +10,7 @@ import { ResetPasswordPage } from '@/features/auth/ResetPasswordPage'
 import { SignInPage } from '@/features/auth/SignInPage'
 import { SignUpPage } from '@/features/auth/SignUpPage'
 import { FlashcardsPage } from '@/features/flashcards/FlashcardsPage'
+import { LegalPage } from '@/features/legal/LegalPage'
 import { HomePage } from '@/features/home/HomePage'
 import { LandingPage } from '@/features/landing/LandingPage'
 import { LibraryPage } from '@/features/library/LibraryPage'
@@ -52,6 +53,8 @@ export const router = createBrowserRouter([
   { path: '/forgot-password', element: <ForgotPasswordPage /> },
   { path: '/reset-password', element: <ResetPasswordPage /> },
   { path: '/auth/callback', element: <AuthCallbackPage /> },
+  { path: '/privacy', element: <LegalPage kind="privacy" /> },
+  { path: '/terms', element: <LegalPage kind="terms" /> },
   // A map shared by link: open to everyone (read only); signing in unlocks join / copy / report.
   { path: '/s/:token', element: <LinkPage /> },
   {
