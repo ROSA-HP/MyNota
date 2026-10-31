@@ -34,3 +34,25 @@ grant execute on function auth.uid() to anon, authenticated, service_role;
 -- our migrations must revoke what they do not want, so emulate that default here.
 alter default privileges in schema public grant all on tables to anon, authenticated, service_role;
 alter default privileges in schema public grant all on functions to anon, authenticated, service_role;
+
+-- Realtime: the table whose RLS policies decide who may join private channels, and the
+-- function that tells those policies which topic is being joined (Supabase's real schema has
+-- more columns; these are the ones policies use). Tests set `realtime.topic` and then try to
+-- select / insert, the same check Realtime runs at join time.
+create schema if not exists realtime;
+create table if not exists realtime.messages (
+  id           bigserial primary key,
+  topic        text not null,
+  extension    text not null,
+  payload      jsonb,
+  event        text,
+  private      boolean default true,
+  inserted_at  timestamptz not null default now()
+);
+alter table realtime.messages enable row level security;
+create or replace function realtime.topic() returns text
+language sql stable as $$ select nullif(current_setting('realtime.topic', true), '') $$;
+grant usage on schema realtime to anon, authenticated, service_role;
+grant select, insert on realtime.messages to authenticated;
+grant usage on sequence realtime.messages_id_seq to authenticated;
+grant execute on function realtime.topic() to anon, authenticated, service_role;

@@ -34,7 +34,9 @@ One deck per map, scheduled with FSRS (`ts-fsrs`). Every card links back to its 
 ## Real-time co-editing (Phase 6)
 
 - Yjs: one document per chapter + one book-level document.
-- Sync via Supabase Realtime or a dedicated Yjs server (see open questions).
+- Sync via **Supabase Realtime** (decided 2026-10-31; no separate sync server): private Broadcast channels checked by RLS policies on `realtime.messages` (owner and editors send changes, everyone on the map receives; presence and cursors on a second channel). Every change is also saved in Postgres, so a map opens with everything even when nobody else is online. A dedicated server (Hocuspocus, Y-Sweet) is only reconsidered if very large books or the Realtime limits (free plan: 200 connections, 100 messages/s for the whole project) become a problem.
+- Two people typing in the **same box** at once (decided 2026-10-31): the block shows who is editing it; if both still type there, the last change to that box wins (fields merge one by one, not letter by letter).
+- People who open a map through a share link without joining see a **snapshot** and refresh to update (decided 2026-10-31); only people on the map join the live channels.
 - Presence: avatars in the top bar, colored cursors, highlight on the block someone is editing.
 - Offline edits sync on reconnect.
 - Per-user undo.

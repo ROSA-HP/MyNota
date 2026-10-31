@@ -15,6 +15,7 @@ Permissions are enforced in the database, not the UI, and the user's API key nev
 - Read only what you own or what is shared with you; write only as owner or editor.
 - Admin role checked in the database and Edge Functions, never only by hiding UI.
 - Share-link access resolved by a `SECURITY DEFINER` Postgres function (`link_open`, `share_link_map`) that validates token, access level, expiry and that the owner is active (decided 2026-10-31, instead of an Edge Function). The token column is never readable through the table API; only the owner gets it from `share_settings()`.
+- Live editing (Phase 6): Realtime channels are private and checked by RLS policies on `realtime.messages` — only people on the map join, only owner and editors send changes; "Allow public access" is turned off in the Realtime settings. Every change is saved through `doc_push` under the normal write rules. Realtime checks access when someone joins and keeps that answer for the connection, so a removed member can keep *receiving* live changes until their access token renews (keep the token lifetime short, e.g. 15 minutes); they can never save changes after removal.
 - Write tests for RLS policies.
 
 ## API keys

@@ -6,6 +6,12 @@ Canvas content lives in two forms:
 1. **Live Yjs documents** for editing (one per chapter + one book-level document for chapter positions and cross-chapter relations). Opening a book loads only the chapters in view.
 2. **Readable Postgres snapshot** (`nodes`, `relations`) kept in sync from Yjs, used by search, flashcards, admin, and export.
 
+**Live documents** (`20261031190000_live_docs.sql`, Phase 6): `doc_key` is `book` (the book and chapter nodes, links between chapters) or a chapter node id (its sections, blocks and the links inside it).
+- **map_docs**: map_id, doc_key, state (merged Yjs update), upto (last saved change merged into it), updated_by, updated_at. Read by everyone on the map; written only by `doc_compact()`.
+- **map_doc_updates**: id (increasing), map_id, doc_key, data (one Yjs update, ≤ 4 MB), created_by (always the caller), created_at. Read by everyone on the map; inserted by owner and editors; never changed; deleted only by `doc_compact()`.
+- Functions (base64 in and out): `doc_load(map, keys[])` (state + changes after it + upto, `SECURITY INVOKER`), `doc_push(map, key, update)` (`SECURITY INVOKER`), `doc_compact(map, key, state, upto)` (`SECURITY DEFINER`, owner/editor, one at a time per document; an older merge never replaces a newer one).
+- Realtime topics `map:<id>` (changes) and `map:<id>:people` (presence, cursors), checked by policies on `realtime.messages` using `live_topic_map()` and `map_role()`.
+
 Every table has RLS enabled in the migration that creates it.
 
 ## Users and organization

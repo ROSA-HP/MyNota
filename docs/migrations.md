@@ -18,6 +18,7 @@ security and is meant to run **once**, in order.
 | 8 | `20261031130000_review_undo.sql` | 4.2 | undo in a study session (delete your own review within an hour) |
 | 9 | `20261031150000_search.sql` | 4.5 | `pg_trgm`, search columns and indexes, `search_normalize()`, `search_all()` |
 | 10 | `20261031170000_sharing.sql` | 5 | `map_invites`, `share_events`, `reports`, all sharing functions; members change only through them |
+| 11 | `20261031190000_live_docs.sql` | 6 | `map_docs`, `map_doc_updates`, `doc_load()`, `doc_push()`, `doc_compact()`, who may join a map's live (Realtime) channels. **Also one dashboard setting, below** |
 
 ## Which ones does my database already have?
 
@@ -38,6 +39,17 @@ For each `MISSING` file, **in the order of the table**:
    running the next file.
 
 Then run `check_migrations.sql` again: every row should say `applied`.
+
+### After migration 11: one Realtime setting
+
+Live editing (Phase 6) uses private Realtime channels, checked by the rules in migration 11.
+Supabase › **Realtime** › **Settings** › turn **off** "Allow public access" › Save. Without
+this, channels are still checked when the app joins them as private (it always does), but
+turning it off makes sure nothing can join a channel without those checks.
+
+Optional, recommended: in the project settings, find the access token (JWT) expiry setting and
+set it to 15 minutes (900 seconds). Someone removed from a map stops receiving live changes
+when their token renews (the default is 1 hour); they can never save changes after removal.
 
 ### Option B: Supabase CLI
 

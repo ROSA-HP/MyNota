@@ -16,6 +16,7 @@ from (values
                                                      where tablename = 'review_logs'
                                                        and policyname = 'review_logs: undo own recent')),
   (9,  '20261031150000_search.sql',                to_regprocedure('public.search_all(text, integer)') is not null),
-  (10, '20261031170000_sharing.sql',               to_regclass('public.map_invites') is not null)
+  (10, '20261031170000_sharing.sql',               to_regclass('public.map_invites') is not null),
+  (11, '20261031190000_live_docs.sql',             to_regclass('public.map_docs') is not null)
 ) as m (step, file, applied)
 order by step;
