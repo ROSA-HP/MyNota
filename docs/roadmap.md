@@ -78,6 +78,15 @@ Each phase ends with something a student can actually use. Before starting a pha
 
 **Done when**: ready for public students.
 
+Decided 2026-10-31 for Phase 7: built on top of Phase 6 (branch `phase-7`); CI on GitHub runs
+type check, lint, unit tests, build and the RLS tests on every push; error monitoring is MyNota's
+own `client_errors` table (scrubbed, shown in the admin dashboard; no third-party service); Edge
+Functions are used for login country, account deletion and admin actions on other accounts
+(deploy steps in `docs/migrations.md`); branding stays teal `#0D9488` with the current logo.
+Steps: 7.0 CI · 7.1 admin database · 7.2 2FA · 7.3 admin dashboard · 7.4 limits and login
+events · 7.5 data rights and legal pages · 7.6 error monitoring · 7.7 prompt test set, models
+list, launch checklist.
+
 ## After launch
 
 Mobile layout · merge-mode polish · search by meaning · stylus annotation · image-occlusion cards.
