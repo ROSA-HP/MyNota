@@ -81,7 +81,7 @@ export function BuildBanner() {
                   : t('ws.build.title')}
         </strong>
         {total > 0 && (
-          <span className="font-mono text-xs font-bold text-ink-muted">
+          <span className="text-xs font-semibold tabular-nums text-ink-muted">
             {t('ws.build.progress', { done, total })}
           </span>
         )}
@@ -105,7 +105,7 @@ export function BuildBanner() {
               type="button"
               aria-label={t('ws.build.dismiss')}
               onClick={clear}
-              className="flex size-8 cursor-pointer items-center justify-center rounded-md hover:bg-paper-sunken"
+              className="flex size-8 cursor-pointer items-center justify-center rounded-md pointer-coarse:size-11 hover:bg-paper-sunken"
             >
               <X size={16} />
             </button>

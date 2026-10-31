@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react'
+import { motionMs } from '@/lib/motion'
 import { createPortal } from 'react-dom'
 import {
   BaseEdge,
@@ -407,7 +408,7 @@ function LinkToolbar({
         title={t('ws.link.goOther')}
         onClick={() => {
           select(relation.to_node)
-          void fitView({ nodes: [{ id: relation.to_node }], duration: 400, maxZoom: 1.1 })
+          void fitView({ nodes: [{ id: relation.to_node }], duration: motionMs(400), maxZoom: 1.1 })
         }}
       >
         <SquareArrowOutUpRight size={16} aria-hidden className="rtl:-scale-x-100" />

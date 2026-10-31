@@ -9,7 +9,8 @@ interface PanelProps extends HTMLAttributes<HTMLDivElement> {
 const shadows = { none: '', sm: 'neo-shadow-sm', md: 'neo-shadow', lg: 'neo-shadow-lg' }
 const tones = { surface: 'bg-surface', muted: 'bg-surface-muted', brand: 'bg-brand-soft' }
 
-export function Panel({ shadow = 'md', tone = 'surface', className, ...rest }: PanelProps) {
+/** A surface. Static panels carry no shadow; pass one only for raised or floating things. */
+export function Panel({ shadow = 'none', tone = 'surface', className, ...rest }: PanelProps) {
   return (
     <div
       className={cn(

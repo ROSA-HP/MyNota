@@ -79,3 +79,22 @@ and chose to **refine the neo-brutalist style, not replace it**:
   what to do.
 - ui-ux-pro-max's accessibility and interaction rules are required: contrast 4.5:1, visible focus,
   44 px touch targets, labels on icon-only buttons, `prefers-reduced-motion`, no emoji icons.
+
+### Polish pass 4.D (2026-10-31)
+
+- **Light-theme contrast fixes.** `--brand` is now `#0f766e` (hover `#115e59`) so brand text and white
+  on brand pass 4.5:1; `--ink-faint` `#5c6865`; `--success` `#147a3b`; `--warning` `#9a4a0a`.
+  Dark-theme values already passed and are unchanged.
+- **Shadows.** `Panel` has no shadow by default. Shadows stay on buttons, pressable cards (library
+  map cards), dialogs, menus, popovers, the canvas toolbar, the auth card and selected canvas blocks.
+- **Navigation.** The active sidebar item is a bordered white row in bold, with no fill or shadow.
+- **Type.** Badges and word labels ("118 words", "3 maps") use the text face, semibold, with
+  `tabular-nums`. Space Mono is kept for figures that line up: page numbers, P/N references,
+  zoom percent, counters, keyboard keys.
+- **Disabled controls** are flat and sunken (`bg-paper-sunken`, muted text, no shadow), not faded.
+- **Touch.** Small buttons grow to 44 px on coarse pointers (`pointer-coarse:`).
+- **Motion.** Global `prefers-reduced-motion` CSS; canvas camera moves use `motionMs()` and become
+  instant.
+- **Landing.** Two-line headline, no eyebrow, feature cards are colored block fields without icons.
+- Two patterns are kept on purpose and marked `taste-skill-ignore`: the paper dot grid and the hatch
+  on chapters waiting to be built.

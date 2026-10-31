@@ -442,7 +442,7 @@ export function NewMapPage() {
                   <label htmlFor="paste" className="text-sm font-semibold">
                     {t('newMap.pasteLabel')}
                   </label>
-                  <span className="font-mono text-xs font-bold text-ink-muted">
+                  <span className="text-xs font-semibold tabular-nums text-ink-muted">
                     {t('newMap.words', { count: words })}
                   </span>
                 </div>
@@ -584,7 +584,7 @@ export function NewMapPage() {
                 </span>
               </div>
               <p className="text-sm text-ink-muted">{t('newMap.skipHint')}</p>
-              <p className="font-mono text-xs font-bold text-ink-muted">
+              <p className="text-xs font-semibold tabular-nums text-ink-muted">
                 {t('newMap.kept', { count: kept.length, total: paragraphs.length })}
               </p>
               <ul className="overflow-hidden rounded-neo-lg border-2 border-line bg-surface">
@@ -646,10 +646,7 @@ export function NewMapPage() {
               )}
             </section>
 
-            <Panel
-              shadow="lg"
-              className="flex min-w-[300px] max-w-[400px] flex-[1_1_340px] flex-col gap-4 p-5"
-            >
+            <Panel className="flex min-w-[300px] max-w-[400px] flex-[1_1_340px] flex-col gap-4 p-5">
               <h2 className="text-lg font-bold">{t('newMap.options')}</h2>
 
               <DetailPicker value={detail} onChange={setDetail} />

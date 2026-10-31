@@ -35,7 +35,7 @@ export function Toaster() {
               type="button"
               onClick={() => dismiss(toast.id)}
               aria-label={t('common.close')}
-              className="-me-1 flex size-8 cursor-pointer items-center justify-center rounded-md hover:bg-paper-sunken"
+              className="-me-1 flex size-8 cursor-pointer items-center justify-center rounded-md pointer-coarse:size-11 hover:bg-paper-sunken"
             >
               <X size={16} />
             </button>

@@ -400,7 +400,7 @@ export function AddNotesDialog({ open, onClose }: { open: boolean; onClose: () =
           type="button"
           onClick={close}
           aria-label={t('common.close')}
-          className="flex size-10 cursor-pointer items-center justify-center rounded-neo hover:bg-paper-sunken"
+          className="flex size-10 cursor-pointer items-center justify-center rounded-neo hover:bg-paper-sunken pointer-coarse:size-11"
         >
           <X size={20} />
         </button>

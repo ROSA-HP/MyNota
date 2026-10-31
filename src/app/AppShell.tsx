@@ -14,7 +14,7 @@ const navLinkClass = ({ isActive }: { isActive: boolean }) =>
   cn(
     'flex min-h-11 items-center gap-3 rounded-neo border-2 px-3 text-[15px] font-semibold transition-colors',
     isActive
-      ? 'border-line bg-ch-yellow text-ink neo-shadow-sm'
+      ? 'border-line bg-surface font-bold text-ink'
       : 'border-transparent text-ink hover:bg-paper-sunken',
   )
 

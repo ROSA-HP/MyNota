@@ -38,10 +38,9 @@ export const de: Messages = {
     settings: 'Einstellungen',
   },
   landing: {
-    eyebrow: 'Lernkarten, erstellt von deiner KI',
-    title: 'Vom Lehrbuchkapitel zur bunten Mindmap, die du bearbeiten kannst.',
+    title: 'Dein Kapitel als Mindmap.',
     subtitle:
-      'Füge Notizen ein oder lade ein Kapitel hoch. Deine eigene KI ordnet den Stoff in Themen, und MyNota zeichnet daraus eine übersichtliche, bearbeitbare Mindmap mit Karteikarten.',
+      'Füge Notizen ein oder lade ein Lehrbuchkapitel hoch. Deine eigene KI ordnet den Stoff in Themen, und MyNota zeichnet daraus eine bunte Mindmap, die du bearbeiten und mit Karteikarten lernen kannst.',
     ctaStart: 'Kostenloses Konto erstellen',
     ctaSignIn: 'Ich habe ein Konto',
     features: {

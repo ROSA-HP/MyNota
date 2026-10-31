@@ -28,22 +28,22 @@
   --surface-muted: #f7f3ea;
   --ink: #121c1b;
   --ink-muted: #46524f;
-  --ink-faint: #6b7774;
+  --ink-faint: #5c6865; /* 4.5:1 on paper and sunken paper */
   --line: #121c1b;
   --line-soft: #121c1b33;
   --shadow: #121c1b;
   --dot: #121c1b26;
 
-  --brand: #0d9488;
-  --brand-hover: #0b7d73;
+  --brand: #0f766e; /* darkened from #0d9488 so text and white-on-brand pass 4.5:1 */
+  --brand-hover: #115e59;
   --brand-ink: #ffffff;
   --brand-soft: #ccf3ee;
 
   --danger: #c2261d;
   --danger-soft: #fde2df;
-  --success: #15803d;
+  --success: #147a3b;
   --success-soft: #dcf5e4;
-  --warning: #b45309;
+  --warning: #9a4a0a;
   --warning-soft: #fdefd3;
 
   /* Chapter palette, in order. Fills are region tints / node borders. */
@@ -240,7 +240,9 @@
   /* Notebook paper with a dot grid (used for the canvas and auth backgrounds). */
   .paper-dots {
     background-color: var(--paper);
-    background-image: radial-gradient(var(--dot) 1.2px, transparent 1.2px);
+    /* The dot grid is the notebook texture, kept on purpose. */
+    --paper-dot: radial-gradient(var(--dot) 1.2px, transparent 1.2px); /* taste-skill-ignore */
+    background-image: var(--paper-dot);
     background-size: 22px 22px;
   }
 }
@@ -427,4 +429,16 @@
   width: var(--s);
   height: var(--s);
   font-size: calc(var(--s) * 0.46);
+}
+
+/* Reduced motion: keep state changes, drop travel and transitions. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

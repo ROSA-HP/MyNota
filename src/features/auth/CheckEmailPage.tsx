@@ -34,7 +34,7 @@ export function CheckEmailPage() {
   return (
     <AuthLayout title={t('auth.checkEmail.title')}>
       <div className="flex flex-col gap-4">
-        <div className="flex size-14 items-center justify-center rounded-neo-lg border-2 border-line bg-ch-mint neo-shadow-sm">
+        <div className="flex size-14 items-center justify-center rounded-neo-lg border-2 border-line bg-ch-mint">
           <MailCheck size={28} aria-hidden />
         </div>
         <p className="text-ink-muted">

@@ -177,7 +177,7 @@ function LinkPickerInner({
           {words > 0 && (
             <span
               className={cn(
-                'font-mono text-[10px] font-bold',
+                'text-[11px] font-semibold',
                 words > 3 ? 'text-warning' : 'text-ink-muted',
               )}
             >
@@ -216,7 +216,7 @@ function LinkPickerInner({
                 className={cn(
                   'flex h-10 cursor-pointer items-center gap-1.5 rounded-lg px-2 text-start text-[13px]',
                   on
-                    ? 'border-[2.5px] border-line bg-brand-soft font-bold neo-shadow-sm'
+                    ? 'border-[2.5px] border-line bg-brand-soft font-bold'
                     : 'border-2 border-line-soft font-semibold hover:bg-paper-sunken',
                 )}
               >

@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { motionMs } from '@/lib/motion'
 import { useReactFlow } from '@xyflow/react'
 import { ArrowLeftRight, ArrowRight, Check, Search, Sparkles, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
@@ -132,7 +133,7 @@ export function LinksTray({ onClose }: { onClose: () => void }) {
         ? LEVEL_THRESHOLDS.book.sections + 0.02
         : LEVEL_THRESHOLDS.notes.sections + 0.02,
       maxZoom: 1,
-      duration: 450,
+      duration: motionMs(450),
     })
   }
 
@@ -195,7 +196,7 @@ export function LinksTray({ onClose }: { onClose: () => void }) {
               key={r.id}
               className={cn(
                 'flex flex-col gap-2 rounded-neo-lg border-2 border-line bg-surface p-3',
-                shown && 'bg-success-soft/40 neo-shadow',
+                shown && 'bg-success-soft/40 outline-2 outline-line',
               )}
             >
               <p className="text-[15px] leading-snug font-bold">
@@ -241,7 +242,7 @@ export function LinksTray({ onClose }: { onClose: () => void }) {
                 <button
                   type="button"
                   onClick={() => show(r)}
-                  className="ms-auto min-h-9 cursor-pointer px-2 text-sm font-bold text-brand underline-offset-4 hover:underline"
+                  className="ms-auto min-h-9 cursor-pointer px-2 pointer-coarse:min-h-11 text-sm font-bold text-brand underline-offset-4 hover:underline"
                 >
                   {t('ws.suggest.show')}
                 </button>

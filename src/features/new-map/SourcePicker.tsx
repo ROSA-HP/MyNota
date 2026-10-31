@@ -191,7 +191,7 @@ export function PhotoPicker({
                   aria-label={t('newMap.source.moveEarlier')}
                   disabled={i === 0}
                   onClick={() => move(i, -1)}
-                  className="flex size-8 cursor-pointer items-center justify-center rounded-md hover:bg-paper-sunken disabled:opacity-30"
+                  className="flex size-8 cursor-pointer items-center justify-center rounded-md pointer-coarse:size-11 hover:bg-paper-sunken disabled:opacity-30"
                 >
                   <ArrowLeft size={15} aria-hidden className="rtl:-scale-x-100" />
                 </button>
@@ -199,7 +199,7 @@ export function PhotoPicker({
                   type="button"
                   aria-label={t('newMap.source.removePhoto')}
                   onClick={() => onPhotos(photos.filter((_, j) => j !== i))}
-                  className="flex size-8 cursor-pointer items-center justify-center rounded-md text-danger hover:bg-paper-sunken"
+                  className="flex size-8 cursor-pointer items-center justify-center rounded-md pointer-coarse:size-11 text-danger hover:bg-paper-sunken"
                 >
                   <Trash size={15} aria-hidden />
                 </button>
@@ -208,7 +208,7 @@ export function PhotoPicker({
                   aria-label={t('newMap.source.moveLater')}
                   disabled={i === photos.length - 1}
                   onClick={() => move(i, 1)}
-                  className="flex size-8 cursor-pointer items-center justify-center rounded-md hover:bg-paper-sunken disabled:opacity-30"
+                  className="flex size-8 cursor-pointer items-center justify-center rounded-md pointer-coarse:size-11 hover:bg-paper-sunken disabled:opacity-30"
                 >
                   <ArrowRight size={15} aria-hidden className="rtl:-scale-x-100" />
                 </button>
@@ -298,7 +298,7 @@ export function ExtractProgressPanel({
       ref={ref}
       tabIndex={-1}
       role="status"
-      className="flex flex-col gap-4 rounded-neo-lg border-2 border-line bg-surface p-5 outline-none neo-shadow"
+      className="flex flex-col gap-4 rounded-neo-lg border-2 border-line bg-surface p-5 outline-none"
     >
       {!photos && (
         <Bar

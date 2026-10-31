@@ -122,7 +122,7 @@ function ProviderCard({ provider }: { provider: AiProvider }) {
       aria-labelledby={`prov-${provider}`}
       className={cn(
         'flex flex-col gap-4 rounded-neo-lg border-2 border-line bg-surface p-4',
-        isDefault && 'border-[2.5px] neo-shadow',
+        isDefault && 'border-[2.5px] bg-brand-soft/40',
       )}
     >
       <div className="flex flex-wrap items-center gap-3">

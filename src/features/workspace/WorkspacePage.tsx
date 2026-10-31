@@ -121,7 +121,6 @@ function AddNotesButton({ onOpen }: { onOpen: () => void }) {
       className={buttonClasses({
         variant: 'secondary',
         size: 'sm',
-        className: 'disabled:cursor-not-allowed disabled:opacity-55',
       })}
     >
       <GitMerge size={16} aria-hidden />
@@ -318,7 +317,8 @@ function Workspace() {
             className={buttonClasses({
               variant: 'secondary',
               size: 'sm',
-              className: 'pointer-events-none hidden opacity-55 md:inline-flex',
+              className:
+                'pointer-events-none hidden bg-paper-sunken! text-ink-muted! shadow-none! md:inline-flex',
             })}
             aria-disabled
             title={t('ws.comingIn', { n: 4 })}
@@ -327,7 +327,10 @@ function Workspace() {
             <Badge>{t('ws.comingIn', { n: 4 })}</Badge>
           </span>
           <span
-            className={buttonClasses({ size: 'sm', className: 'pointer-events-none opacity-55' })}
+            className={buttonClasses({
+              size: 'sm',
+              className: 'pointer-events-none bg-paper-sunken! text-ink-muted! shadow-none!',
+            })}
             aria-disabled
             title={t('ws.comingIn', { n: 5 })}
           >

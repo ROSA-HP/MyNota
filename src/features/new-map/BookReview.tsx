@@ -354,10 +354,7 @@ export function BookReview({
         )}
       </section>
 
-      <Panel
-        shadow="lg"
-        className="flex min-w-[300px] max-w-[400px] flex-[1_1_340px] flex-col gap-4 p-5"
-      >
+      <Panel className="flex min-w-[300px] max-w-[400px] flex-[1_1_340px] flex-col gap-4 p-5">
         <h2 className="text-lg font-bold">{t('newMap.options')}</h2>
         <ModelSelect
           activeKey={key}

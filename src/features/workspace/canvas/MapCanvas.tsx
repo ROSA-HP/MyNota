@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { motionMs } from '@/lib/motion'
 import {
   Background,
   BackgroundVariant,
@@ -495,7 +496,7 @@ export function MapCanvas() {
     if (useCanvasUi.getState().viewLocked || visibleCount === fitted.current) return
     const first = fitted.current === 0
     fitted.current = visibleCount
-    const id = setTimeout(() => void fitView({ ...FIT, duration: first ? 0 : 350 }), 60)
+    const id = setTimeout(() => void fitView({ ...FIT, duration: first ? 0 : motionMs(350) }), 60)
     return () => clearTimeout(id)
   }, [visibleCount, fitView])
 
@@ -601,7 +602,12 @@ export function MapCanvas() {
           if (node.type === 'chapterRegion' && level === 'chapters') {
             // Zoomed all the way out: a chapter opens by zooming into it.
             useCanvasUi.getState().lockView()
-            void fitView({ nodes: [{ id: node.id }], ...FIT, maxZoom: 0.9, duration: 450 })
+            void fitView({
+              nodes: [{ id: node.id }],
+              ...FIT,
+              maxZoom: 0.9,
+              duration: motionMs(450),
+            })
             return
           }
           if (node.type === 'region' || node.type === 'chapterRegion') return
@@ -634,7 +640,7 @@ export function MapCanvas() {
             nodes: [{ id: edge.source }, { id: edge.target }],
             ...FIT,
             minZoom: 0.7,
-            duration: 450,
+            duration: motionMs(450),
           })
         }}
         onPaneClick={() => {

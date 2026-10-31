@@ -22,11 +22,11 @@ export function IconButton({
       aria-label={label}
       title={label}
       className={cn(
-        'neo-btn inline-flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-neo text-ink',
+        'neo-btn inline-flex size-11 shrink-0 pointer-coarse:min-h-11 pointer-coarse:min-w-11 cursor-pointer items-center justify-center rounded-neo text-ink',
         bordered
           ? 'border-2 border-line bg-surface neo-shadow-sm hover:bg-surface-muted'
           : 'hover:bg-paper-sunken',
-        'disabled:cursor-not-allowed disabled:opacity-55',
+        'disabled:cursor-not-allowed disabled:bg-transparent disabled:text-ink-faint disabled:shadow-none',
         className,
       )}
       {...rest}

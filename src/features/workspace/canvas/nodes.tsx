@@ -110,7 +110,7 @@ export function RootNode({ data, selected }: NodeProps<RootNodeT>) {
       )}
     >
       {mapType && (
-        <span className="font-mono text-[10px] font-bold opacity-85">
+        <span className="text-[11px] font-semibold opacity-85">
           {t(`library.types.${mapType}`)}
         </span>
       )}
@@ -274,7 +274,7 @@ export function BlockNode({ data, selected }: NodeProps<BlockNodeT>) {
         </span>
         <span className="flex items-center gap-1.5">
           {node.importance === 'core' && (
-            <span className="rounded-[5px] border-[1.5px] border-line bg-brand-soft px-1 font-mono text-[10px] leading-tight font-bold">
+            <span className="rounded-[5px] border-[1.5px] border-line bg-brand-soft px-1 text-[11px] leading-tight font-semibold">
               {t('ws.core')}
             </span>
           )}
@@ -427,7 +427,7 @@ export function ChapterRegionNode({ data }: NodeProps<ChapterRegionNodeT>) {
         waiting
           ? {
               borderColor: c.strong,
-              background: `repeating-linear-gradient(135deg, var(--surface) 0 12px, color-mix(in srgb, ${c.fill} 35%, var(--surface)) 12px 24px)`,
+              background: `repeating-linear-gradient(135deg, var(--surface) 0 12px, color-mix(in srgb, ${c.fill} 35%, var(--surface)) 12px 24px)`, // taste-skill-ignore: the hatch marks a chapter still waiting to be built
             }
           : { background: c.tint, borderColor: c.strong }
       }

@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { motionMs } from '@/lib/motion'
 import { useReactFlow } from '@xyflow/react'
 import { ChevronDown, ChevronRight, Search, Sparkles } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
@@ -55,7 +56,7 @@ export function OutlinePanel({ onNavigate }: { onNavigate?: () => void }) {
       void setCenter(
         x + (internal.measured.width ?? 0) / 2,
         y + (internal.measured.height ?? 0) / 2,
-        { zoom: 1, duration: 350 },
+        { zoom: 1, duration: motionMs(350) },
       )
     }
     onNavigate?.()
@@ -70,7 +71,7 @@ export function OutlinePanel({ onNavigate }: { onNavigate?: () => void }) {
         <div
           className={cn(
             'flex items-center gap-1 rounded-lg',
-            n.id === selectedId && 'bg-surface neo-shadow-sm outline-2 outline-line',
+            n.id === selectedId && 'bg-surface outline-2 outline-line',
           )}
           style={{ paddingInlineStart: depth * 14 }}
         >
@@ -81,12 +82,12 @@ export function OutlinePanel({ onNavigate }: { onNavigate?: () => void }) {
               aria-expanded={open}
               disabled={!canEdit && !q}
               onClick={() => canEdit && update(n.id, { collapsed: !n.collapsed })}
-              className="flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-md hover:bg-paper-sunken"
+              className="flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-md hover:bg-paper-sunken pointer-coarse:size-11"
             >
               {open ? (
-                <ChevronDown size={15} aria-hidden />
+                <ChevronDown size={17} aria-hidden />
               ) : (
-                <ChevronRight size={15} aria-hidden className="rtl:-scale-x-100" />
+                <ChevronRight size={17} aria-hidden className="rtl:-scale-x-100" />
               )}
             </button>
           ) : (
@@ -153,7 +154,7 @@ export function OutlinePanel({ onNavigate }: { onNavigate?: () => void }) {
     <div className="flex h-full flex-col gap-3 p-3">
       <div className="flex items-center justify-between">
         <h2 className="text-[15px] font-bold">{t('ws.outline')}</h2>
-        <span className="font-mono text-[11px] font-bold text-ink-muted">
+        <span className="text-xs font-semibold tabular-nums text-ink-muted">
           {t('ws.nodes', { count: list.length })}
         </span>
       </div>

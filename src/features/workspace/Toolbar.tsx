@@ -1,4 +1,5 @@
 import { useReactFlow, useStore, useViewport } from '@xyflow/react'
+import { motionMs } from '@/lib/motion'
 import {
   BookOpen,
   LayoutGrid,
@@ -64,8 +65,13 @@ function LevelSwitch() {
     useCanvasUi.getState().lockView()
     // All chapters: show the whole book. Otherwise keep the centre and change the zoom.
     if (l === 'chapters')
-      void fitView({ ...FIT, maxZoom: zoomForLevel(l, book), minZoom: 0.15, duration: 350 })
-    else void zoomTo(zoomForLevel(l, book), { duration: 350 })
+      void fitView({
+        ...FIT,
+        maxZoom: zoomForLevel(l, book),
+        minZoom: 0.15,
+        duration: motionMs(350),
+      })
+    else void zoomTo(zoomForLevel(l, book), { duration: motionMs(350) })
   }
   return (
     <div
@@ -119,7 +125,7 @@ export function Toolbar() {
         .filter((n) => n.position)
         .map((n) => ({ id: n.id, patch: { position: null } })),
     )
-    requestAnimationFrame(() => void fitView({ ...FIT, duration: 300 }))
+    requestAnimationFrame(() => void fitView({ ...FIT, duration: motionMs(300) }))
   }
 
   return (
@@ -165,7 +171,7 @@ export function Toolbar() {
         label={t('ws.zoomOut')}
         onClick={() => {
           useCanvasUi.getState().lockView()
-          void zoomOut({ duration: 150 })
+          void zoomOut({ duration: motionMs(150) })
         }}
       >
         <Minus size={19} aria-hidden />
@@ -177,12 +183,15 @@ export function Toolbar() {
         label={t('ws.zoomIn')}
         onClick={() => {
           useCanvasUi.getState().lockView()
-          void zoomIn({ duration: 150 })
+          void zoomIn({ duration: motionMs(150) })
         }}
       >
         <Plus size={19} aria-hidden />
       </ToolButton>
-      <ToolButton label={t('ws.fit')} onClick={() => void fitView({ ...FIT, duration: 300 })}>
+      <ToolButton
+        label={t('ws.fit')}
+        onClick={() => void fitView({ ...FIT, duration: motionMs(300) })}
+      >
         <Maximize size={18} aria-hidden />
       </ToolButton>
     </div>

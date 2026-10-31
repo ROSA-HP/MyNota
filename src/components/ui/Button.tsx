@@ -16,15 +16,18 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variants: Record<Variant, string> = {
-  primary: 'bg-brand text-brand-ink border-line neo-shadow hover:bg-brand-hover',
-  secondary: 'bg-surface text-ink border-line neo-shadow hover:bg-surface-muted',
-  ghost: 'bg-transparent text-ink border-transparent hover:bg-paper-sunken',
-  danger: 'bg-danger text-white border-line neo-shadow hover:brightness-95',
+  primary:
+    'bg-brand text-brand-ink border-line neo-shadow hover:bg-brand-hover disabled:bg-paper-sunken disabled:text-ink-muted',
+  secondary:
+    'bg-surface text-ink border-line neo-shadow hover:bg-surface-muted disabled:bg-paper-sunken disabled:text-ink-muted',
+  ghost: 'bg-transparent text-ink border-transparent hover:bg-paper-sunken disabled:text-ink-faint',
+  danger:
+    'bg-danger text-white border-line neo-shadow hover:brightness-95 disabled:bg-paper-sunken disabled:text-ink-muted',
 }
 
 // md/lg meet the 44px touch-target minimum for tablets.
 const sizes: Record<Size, string> = {
-  sm: 'min-h-9 px-3 text-sm gap-1.5',
+  sm: 'min-h-9 px-3 text-sm gap-1.5 pointer-coarse:min-h-11',
   md: 'min-h-11 px-4 text-[15px] gap-2',
   lg: 'min-h-13 px-6 text-base gap-2.5',
 }
@@ -37,7 +40,8 @@ export function buttonClasses({
 }: Pick<ButtonProps, 'variant' | 'size' | 'fullWidth' | 'className'>): string {
   return cn(
     'neo-btn inline-flex select-none items-center justify-center rounded-neo border-2 font-semibold',
-    'cursor-pointer disabled:cursor-not-allowed disabled:opacity-55',
+    // Disabled stays legible: a flat, sunken button instead of a faded one.
+    'cursor-pointer disabled:cursor-not-allowed disabled:shadow-none disabled:hover:brightness-100',
     variants[variant],
     sizes[size],
     fullWidth && 'w-full',

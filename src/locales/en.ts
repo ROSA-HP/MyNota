@@ -37,10 +37,9 @@ export const en = {
     settings: 'Settings',
   },
   landing: {
-    eyebrow: 'Study maps, made by your AI',
-    title: 'From textbook chapter to a colorful map you can edit.',
+    title: 'Turn a chapter into a map.',
     subtitle:
-      'Paste notes or upload a chapter. Your own AI sorts it into topics, and MyNota draws a clean, editable mind map with flashcards.',
+      'Paste notes or upload a textbook chapter. Your own AI sorts it into topics, and MyNota draws a colorful mind map you can edit and study with flashcards.',
     ctaStart: 'Create free account',
     ctaSignIn: 'I have an account',
     features: {

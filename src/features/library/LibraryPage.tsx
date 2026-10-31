@@ -55,10 +55,7 @@ function EmptyLibrary() {
     { Icon: Sparkles, label: t('library.empty.step3'), tint: 'bg-ch-mint' },
   ]
   return (
-    <Panel
-      shadow="lg"
-      className="grid items-center gap-8 overflow-hidden p-6 md:grid-cols-[1fr_1.1fr] md:p-10"
-    >
+    <Panel className="grid items-center gap-8 overflow-hidden p-6 md:grid-cols-[1fr_1.1fr] md:p-10">
       <div>
         <h2 className="text-2xl font-bold tracking-tight">{t('library.empty.title')}</h2>
         <p className="mt-2 text-ink-muted">{t('library.empty.body')}</p>
@@ -67,7 +64,7 @@ function EmptyLibrary() {
           {t('library.newMap')}
         </Link>
         <ol className="mt-6 flex flex-col gap-3">
-          {steps.map(({ Icon, label, tint }, i) => (
+          {steps.map(({ Icon, label, tint }) => (
             <li key={label} className="flex items-center gap-3">
               <span
                 className={cn(
@@ -76,9 +73,6 @@ function EmptyLibrary() {
                 )}
               >
                 <Icon size={19} aria-hidden />
-              </span>
-              <span className="font-mono text-sm font-bold text-ink-muted">
-                {String(i + 1).padStart(2, '0')}
               </span>
               <span className="font-semibold">{label}</span>
             </li>
@@ -173,7 +167,10 @@ function MapCard({
       }}
       className="group relative"
     >
-      <Panel className="relative h-full overflow-hidden transition-transform group-hover:-translate-y-0.5">
+      <Panel
+        shadow="md"
+        className="relative h-full overflow-hidden transition-transform group-hover:-translate-y-0.5"
+      >
         <div
           className={cn(
             'flex h-20 items-center gap-2 border-b-2 border-line px-3',
@@ -378,7 +375,6 @@ type Group = { key: string; subject: SubjectRow | null; shared?: boolean; maps: 
 
 export function LibraryPage() {
   const { t } = useTranslation()
-  const profile = useAuth((s) => s.profile)
   const userId = useAuth((s) => s.session?.user.id)
   const { state, reload, createSubject, updateSubject, deleteSubject, moveMap } = useLibrary()
   const [params, setParams] = useSearchParams()
@@ -465,14 +461,7 @@ export function LibraryPage() {
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-8">
       <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          {profile && (
-            <p className="font-semibold text-ink-muted" dir="auto">
-              {t('library.greeting', { name: profile.name || profile.username })}
-            </p>
-          )}
-          <h1 className="text-3xl font-bold tracking-tight">{t('library.title')}</h1>
-        </div>
+        <h1 className="text-3xl font-bold tracking-tight">{t('library.title')}</h1>
         <Link
           to={activeSubject ? `/new?subject=${activeSubject.id}` : '/new'}
           className={buttonClasses({})}
@@ -576,7 +565,7 @@ export function LibraryPage() {
                             ? t('library.shared')
                             : t('library.noSubject')}
                       </h2>
-                      <span className="font-mono text-xs font-bold text-ink-muted">
+                      <span className="text-xs font-semibold tabular-nums text-ink-muted">
                         {t('library.mapCount', { count: g.maps.length })}
                       </span>
                       {g.subject && (
