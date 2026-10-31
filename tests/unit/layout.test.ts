@@ -91,3 +91,96 @@ describe('computeLayout', () => {
     expect(L.regions).toEqual([])
   })
 })
+
+describe('computeLayout for books', () => {
+  function book(chapters: Array<{ sections: number; blocks: number }>) {
+    const root = makeNode({ map_id: 'm', level: 'book', title: 'Biology' })
+    const nodes: NodeRow[] = [root]
+    const chapterIds: string[] = []
+    chapters.forEach((c, i) => {
+      const ch = makeNode({
+        map_id: 'm',
+        level: 'chapter',
+        title: `Chapter ${i + 1}`,
+        parent_id: root.id,
+        sort_order: i,
+      })
+      nodes.push(ch)
+      chapterIds.push(ch.id)
+      for (let s = 0; s < c.sections; s++) {
+        const sec = makeNode({
+          map_id: 'm',
+          level: 'section',
+          title: `S${s}`,
+          parent_id: ch.id,
+          sort_order: s,
+        })
+        nodes.push(sec)
+        for (let b = 0; b < c.blocks; b++)
+          nodes.push(
+            makeNode({
+              map_id: 'm',
+              level: 'block',
+              title: `B${b}`,
+              parent_id: sec.id,
+              sort_order: b,
+            }),
+          )
+      }
+    })
+    return { nodes, root, chapterIds }
+  }
+
+  it('puts each chapter in a region with its tab on top, sections inside', () => {
+    const { nodes, chapterIds } = book([
+      { sections: 3, blocks: 2 },
+      { sections: 0, blocks: 0 },
+    ])
+    const L = computeLayout(nodes)
+    expect(L.book).toBe(true)
+    const [c1, c2] = chapterIds
+    const r1 = L.regions.find((r) => r.sectionId === c1)!
+    const tab = L.boxes[c1!]!
+    expect(r1.kind).toBe('chapter')
+    expect(r1.built).toBe(true)
+    expect(tab.y + tab.h).toBe(r1.y)
+    expect(tab.x).toBe(r1.x)
+    for (const n of nodes.filter((n) => L.chapterOf[n.id] === c1 && n.id !== c1)) {
+      const b = L.boxes[n.id]!
+      expect(b.x).toBeGreaterThanOrEqual(r1.x)
+      expect(b.x + b.w).toBeLessThanOrEqual(r1.x + r1.w)
+      expect(b.y).toBeGreaterThan(r1.y)
+      expect(b.y + b.h).toBeLessThanOrEqual(r1.y + r1.h)
+    }
+    const r2 = L.regions.find((r) => r.sectionId === c2)!
+    expect(r2.built).toBe(false)
+    expect([r2.w, r2.h]).toEqual([SIZES.waitingW, SIZES.waitingH])
+  })
+
+  it('packs chapters into rows instead of one long line', () => {
+    const { nodes, chapterIds } = book(
+      Array.from({ length: 7 }, () => ({ sections: 3, blocks: 1 })),
+    )
+    const L = computeLayout(nodes)
+    const tops = new Set(chapterIds.map((id) => L.boxes[id]!.y))
+    expect(tops.size).toBeGreaterThan(1)
+    expect(tops.size).toBeLessThan(7)
+    // No two regions overlap.
+    const rs = L.regions
+    for (let i = 0; i < rs.length; i++)
+      for (let j = i + 1; j < rs.length; j++) {
+        const a = rs[i]!
+        const b = rs[j]!
+        const overlap = a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h
+        expect(overlap).toBe(false)
+      }
+  })
+
+  it('records each section column for the zoomed-out section view', () => {
+    const { nodes } = book([{ sections: 2, blocks: 3 }])
+    const L = computeLayout(nodes)
+    const section = nodes.find((n) => n.level === 'section')!
+    const col = L.columns[section.id]!
+    expect(col.h).toBeGreaterThan(SIZES.sectionH + 3 * SIZES.blockH)
+  })
+})

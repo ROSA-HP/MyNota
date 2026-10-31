@@ -465,9 +465,47 @@ function EndHandle({
   )
 }
 
+export type BundleEdgeT = Edge<{ count: number; label: string; rtl: boolean }, 'bundle'>
+
+/**
+ * Zoomed out: the links between two cards (sections or chapters) drawn as one line, thicker for
+ * more links, with the count. Line and label keep their on-screen size at any zoom.
+ */
+export function BundleEdge({ id, source, target, data }: EdgeProps<BundleEdgeT>) {
+  const s = rectOf(useInternalNode(source))
+  const tg = rectOf(useInternalNode(target))
+  if (!s || !tg || !data) return null
+  const { path, label } = floatingPath(s, tg, data.rtl)
+  const width = 2.5 + Math.min(data.count, 6) * 0.6
+  return (
+    <>
+      <BaseEdge
+        id={id}
+        path={path}
+        interactionWidth={24}
+        style={{ stroke: 'var(--brand)', strokeWidth: `calc(${width}px / var(--z))` }}
+      />
+      <EdgeLabelRenderer>
+        <div
+          className="mynota-zoomtext nodrag nopan pointer-events-none absolute"
+          style={{ transform: `translate(-50%, -50%) translate(${label.x}px, ${label.y}px)` }}
+        >
+          <span
+            dir="auto"
+            className="zt-small block max-w-[calc(220px/var(--z))] truncate rounded-full border-[calc(2px/var(--z))] border-brand bg-surface px-[calc(8px/var(--z))] py-[calc(2px/var(--z))] font-bold text-ink"
+          >
+            {data.label}
+          </span>
+        </div>
+      </EdgeLabelRenderer>
+    </>
+  )
+}
+
 export const edgeTypes = {
   branch: BranchEdge,
   tree: TreeEdge,
   step: StepEdge,
   relation: RelationEdge,
+  bundle: BundleEdge,
 }

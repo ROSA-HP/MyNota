@@ -1,12 +1,17 @@
 import { useMemo, useState } from 'react'
 import { useReactFlow } from '@xyflow/react'
-import { ChevronDown, ChevronRight, Search } from 'lucide-react'
+import { ChevronDown, ChevronRight, Search, Sparkles } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/cn'
 import type { NodeRow } from '@/lib/database.types'
+import { matchesQuery } from '@/lib/searchText'
+import { Spinner } from '@/components/ui'
+import { useChapterBuilder } from '../bookBuild'
+import { useBuild } from '../buildStore'
 import { childrenIndex, findRoot } from '../canvas/layout'
 import { OUTLINE_DRAG_TYPE } from '../canvas/linking'
 import { chapterColor } from '../canvas/visuals'
+import { chapterSummaries, type ChapterSummary } from '../canvas/zoom'
 import { useWorkspace } from '../workspaceStore'
 
 /** Whole map as a tree; click flies to the node. The filter matches titles and summaries. */
@@ -22,12 +27,24 @@ export function OutlinePanel({ onNavigate }: { onNavigate?: () => void }) {
   const list = useMemo(() => Object.values(nodes), [nodes])
   const kids = useMemo(() => childrenIndex(list), [list])
   const root = useMemo(() => findRoot(list), [list])
-  const q = filter.trim().toLocaleLowerCase()
+  const sources = useWorkspace((s) => s.sources)
+  const book = root?.level === 'book'
+  const chapters = useMemo(
+    () => (book && root ? chapterSummaries(nodes, sources, root.id) : []),
+    [book, root, nodes, sources],
+  )
+  const chapterById = useMemo(() => new Map(chapters.map((c) => [c.id, c])), [chapters])
+  const live = useBuild((s) => s.chapters)
+  const { build, canBuild } = useChapterBuilder()
+  const waiting = chapters.filter(
+    (c) => (c.progress === 'waiting' || c.progress === 'partial') && !live[c.id],
+  )
+  const q = filter.trim()
 
   const matches = (n: NodeRow): boolean =>
     !q ||
-    n.title.toLocaleLowerCase().includes(q) ||
-    n.summary.toLocaleLowerCase().includes(q) ||
+    matchesQuery(n.title, q) ||
+    matchesQuery(n.summary, q) ||
     (kids.get(n.id) ?? []).some(matches)
 
   const go = (n: NodeRow) => {
@@ -75,13 +92,22 @@ export function OutlinePanel({ onNavigate }: { onNavigate?: () => void }) {
           ) : (
             <span className="size-7 shrink-0" />
           )}
-          {depth === 1 && (
-            <span
-              aria-hidden
-              className="size-2.5 shrink-0 rounded-[3px] border-[1.5px] border-line"
-              style={{ background: chapterColor(color).strong }}
-            />
-          )}
+          {depth === 1 &&
+            (chapterById.get(n.id) ? (
+              <span
+                aria-hidden
+                className="flex size-5 shrink-0 items-center justify-center rounded-full border-[1.5px] border-line font-mono text-[10px] font-bold"
+                style={{ background: chapterColor(color).fill }}
+              >
+                {chapterById.get(n.id)?.number}
+              </span>
+            ) : (
+              <span
+                aria-hidden
+                className="size-2.5 shrink-0 rounded-[3px] border-[1.5px] border-line"
+                style={{ background: chapterColor(color).strong }}
+              />
+            ))}
           <button
             type="button"
             onClick={() => go(n)}
@@ -105,10 +131,15 @@ export function OutlinePanel({ onNavigate }: { onNavigate?: () => void }) {
           >
             {n.title}
           </button>
-          {depth === 1 && children.length > 0 && (
-            <span className="pe-1.5 font-mono text-[11px] font-bold text-ink-muted">
-              {children.length}
-            </span>
+          {chapterById.get(n.id) ? (
+            <ChapterChip chapter={chapterById.get(n.id) as ChapterSummary} />
+          ) : (
+            depth === 1 &&
+            children.length > 0 && (
+              <span className="pe-1.5 font-mono text-[11px] font-bold text-ink-muted">
+                {children.length}
+              </span>
+            )
           )}
         </div>
         {open && children.length > 0 && (
@@ -138,7 +169,83 @@ export function OutlinePanel({ onNavigate }: { onNavigate?: () => void }) {
           className="w-full bg-transparent text-sm outline-none"
         />
       </label>
+      {book && chapters.length > 0 && (
+        <div className="flex flex-col gap-2 rounded-neo border-2 border-line bg-surface p-2.5">
+          <div className="flex items-center justify-between gap-2 text-xs font-semibold">
+            <span>
+              {t('ws.book.chaptersBuilt', {
+                done: chapters.filter((c) => c.progress === 'built').length,
+                total: chapters.length,
+              })}
+            </span>
+          </div>
+          <span aria-hidden className="flex h-2 gap-0.5">
+            {chapters.map((c) => (
+              <span
+                key={c.id}
+                className="flex-1 rounded-[2px] border border-line"
+                style={{
+                  background:
+                    c.progress === 'built'
+                      ? chapterColor(c.color).strong
+                      : c.progress === 'partial'
+                        ? chapterColor(c.color).fill
+                        : 'var(--surface)',
+                }}
+              />
+            ))}
+          </span>
+          {canEdit && canBuild && waiting.length > 0 && (
+            <button
+              type="button"
+              onClick={() => build(waiting.map((c) => c.id))}
+              className="neo-btn flex min-h-10 items-center justify-center gap-2 text-sm"
+            >
+              <Sparkles size={15} aria-hidden />
+              {t('ws.book.buildAll', { count: waiting.length })}
+            </button>
+          )}
+        </div>
+      )}
       <ul className="-mx-1 flex-1 overflow-y-auto px-1">{root && renderNode(root, 0, null)}</ul>
     </div>
+  )
+}
+
+/** A chapter's state in the outline: building now, in the queue, not built, or unfinished. */
+function ChapterChip({ chapter }: { chapter: ChapterSummary }) {
+  const { t } = useTranslation()
+  const live = useBuild((s) => s.chapters[chapter.id])
+  if (live === 'running')
+    return (
+      <span className="flex shrink-0 items-center pe-1.5" title={t('ws.book.building')}>
+        <Spinner size={13} />
+      </span>
+    )
+  const label =
+    live === 'queued'
+      ? t('ws.book.queued')
+      : chapter.progress === 'waiting' ||
+          chapter.progress === 'partial' ||
+          chapter.progress === 'empty'
+        ? t(`ws.book.status.${chapter.progress}`)
+        : null
+  if (!label)
+    return (
+      <span className="pe-1.5 font-mono text-[11px] font-bold text-ink-muted">
+        {chapter.blocks}
+      </span>
+    )
+  return (
+    <span
+      className={cn(
+        'me-1 shrink-0 rounded-full border-[1.5px] px-1.5 text-[10.5px] font-bold whitespace-nowrap',
+        chapter.progress === 'partial'
+          ? 'border-line bg-warning-soft'
+          : 'border-dashed border-ink-muted text-ink-muted',
+      )}
+    >
+      {label}
+    </span>
   )
 }

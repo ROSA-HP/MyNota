@@ -20,7 +20,7 @@ import { generateStructured } from '@/ai/structured'
 import type { ProviderAdapter } from '@/ai/types'
 import type { ActiveKey } from '@/features/settings/aiKeyStore'
 import { useWorkspace } from './workspaceStore'
-import type { AiProvider } from '@/lib/database.types'
+import type { AiProvider, NodeRow } from '@/lib/database.types'
 
 export type SectionStatus =
   | { state: 'queued' }
@@ -43,6 +43,10 @@ export interface BuildOptions {
 
 export type ChapterBuildState = 'queued' | 'running' | 'done' | 'failed' | 'stopped'
 
+/** A chapter to build. `resume` continues a chapter whose outline exists but some sections
+ *  have no blocks yet (a closed tab, a failure): only those sections run again. */
+export type BuildJob = BuildOptions & { resume?: boolean }
+
 interface BuildState {
   mapId: string | null
   /** Provider of the running build, so retries use the same key. */
@@ -58,7 +62,10 @@ interface BuildState {
   chapterOrder: string[]
   currentChapter: string | null
   start: (opts: BuildOptions, key: ActiveKey) => Promise<void>
-  startBook: (jobs: BuildOptions[], key: ActiveKey) => Promise<void>
+  /** Adds chapters to the queue; starts it if idle. Chapters run one after another. */
+  enqueue: (jobs: BuildJob[], key: ActiveKey) => void
+  /** Continues a chapter from its saved outline (sections without blocks). */
+  resume: (opts: BuildOptions, key: ActiveKey) => Promise<void>
   retrySection: (sectionId: string, key: ActiveKey) => Promise<void>
   retryOutline: (key: ActiveKey) => Promise<void>
   stop: () => void
@@ -69,6 +76,8 @@ interface BuildState {
 let controller: AbortController | null = null
 /** Set by stop(): the book queue does not start further chapters. */
 let bookStopped = false
+const pending: Array<{ job: BuildJob; key: ActiveKey }> = []
+let looping = false
 let ctx: {
   opts: BuildOptions
   outline: OutlineResponse | null
@@ -301,36 +310,109 @@ export const useBuild = create<BuildState>((set, get) => {
     chapterOrder: [],
     currentChapter: null,
 
-    startBook: async (jobs, key) => {
-      bookStopped = false
+    enqueue: (jobs, key) => {
+      const fresh = jobs.filter(
+        (j) => !pending.some((p) => p.job.rootId === j.rootId) && get().currentChapter !== j.rootId,
+      )
+      if (!fresh.length) return
+      if (!looping) bookStopped = false
+      pending.push(...fresh.map((job) => ({ job, key })))
       set({
-        chapters: Object.fromEntries(jobs.map((j) => [j.rootId, 'queued' as const])),
-        chapterOrder: jobs.map((j) => j.rootId),
-        currentChapter: null,
+        chapters: {
+          ...get().chapters,
+          ...Object.fromEntries(fresh.map((j) => [j.rootId, 'queued' as const])),
+        },
+        chapterOrder: [
+          ...get().chapterOrder.filter((id) => !fresh.some((j) => j.rootId === id)),
+          ...fresh.map((j) => j.rootId),
+        ],
       })
-      for (const job of jobs) {
-        if (bookStopped) break
-        set({
-          currentChapter: job.rootId,
-          chapters: { ...get().chapters, [job.rootId]: 'running' },
-        })
-        await get().start(job, key)
-        const phase = get().phase
-        const state: ChapterBuildState =
-          phase === 'done' ? 'done' : phase === 'stopped' ? 'stopped' : 'failed'
-        set({ chapters: { ...get().chapters, [job.rootId]: state } })
-        if (state === 'stopped') bookStopped = true
+      if (looping) return
+      looping = true
+      void (async () => {
+        for (let next = pending.shift(); next; next = pending.shift()) {
+          if (bookStopped) break
+          const { job, key: k } = next
+          set({
+            currentChapter: job.rootId,
+            chapters: { ...get().chapters, [job.rootId]: 'running' },
+          })
+          if (job.resume) await get().resume(job, k)
+          else await get().start(job, k)
+          const phase = get().phase
+          const state: ChapterBuildState =
+            phase === 'done' ? 'done' : phase === 'stopped' ? 'stopped' : 'failed'
+          set({ chapters: { ...get().chapters, [job.rootId]: state } })
+          if (state === 'stopped') bookStopped = true
+        }
+        if (bookStopped) {
+          pending.length = 0
+          set({
+            chapters: Object.fromEntries(
+              Object.entries(get().chapters).map(([id, st]) => [
+                id,
+                st === 'queued' ? 'stopped' : st,
+              ]),
+            ),
+          })
+        }
+        looping = false
+        set({ currentChapter: null })
+      })()
+    },
+
+    resume: async (opts, key) => {
+      controller?.abort()
+      const nodes = useWorkspace.getState().nodes
+      const all = Object.values(nodes)
+      const sections = all
+        .filter((n) => n.parent_id === opts.rootId)
+        .sort((a, b) => a.sort_order - b.sort_order)
+      const hasBlocks = (id: string) => all.some((n) => n.parent_id === id)
+      const range = (n: NodeRow) => {
+        const ps = n.source.paragraphs
+        return { from: Math.min(...ps), to: Math.max(...ps) }
       }
-      if (bookStopped)
-        set({
-          chapters: Object.fromEntries(
-            Object.entries(get().chapters).map(([id, st]) => [
-              id,
-              st === 'queued' ? 'stopped' : st,
-            ]),
-          ),
-        })
-      set({ currentChapter: null })
+      const usable = sections.filter((sec) => sec.source.paragraphs.length > 0)
+      const outline: OutlineResponse = {
+        sections: usable.map((sec) => ({
+          title: sec.title,
+          summary: sec.summary,
+          shape: sec.branch_view,
+          paragraphs: range(sec),
+          subsections: [],
+        })),
+      }
+      ctx = {
+        opts,
+        outline,
+        sectionRanges: Object.fromEntries(
+          usable.map((sec) => [
+            sec.id,
+            { ...range(sec), title: sec.title, shape: sec.branch_view },
+          ]),
+        ),
+      }
+      const todo = usable.filter((sec) => !hasBlocks(sec.id)).map((sec) => sec.id)
+      set({
+        mapId: opts.mapId,
+        provider: key.provider,
+        phase: 'details',
+        outlineStatus: { state: 'done' },
+        order: usable.map((sec) => sec.id),
+        sections: Object.fromEntries(
+          usable.map((sec) => [
+            sec.id,
+            (todo.includes(sec.id) ? { state: 'queued' } : { state: 'done' }) as SectionStatus,
+          ]),
+        ),
+        failure: null,
+      })
+      if (!todo.length) {
+        set({ phase: 'done' })
+        return
+      }
+      await runDetails(key, todo)
     },
 
     start: async (opts, key) => {
@@ -375,6 +457,7 @@ export const useBuild = create<BuildState>((set, get) => {
 
     clear: () => {
       get().stop()
+      pending.length = 0
       ctx = null
       set({
         mapId: null,

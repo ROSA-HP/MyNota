@@ -282,6 +282,9 @@
   --xy-edge-stroke: var(--line);
   --xy-selection-background-color: color-mix(in srgb, var(--brand) 12%, transparent);
   --xy-selection-border: 2px dashed var(--brand);
+  /* Current zoom, set from the canvas: zoomed-out cards divide text sizes by it so they stay
+     readable on screen (semantic zoom). */
+  --z: 1;
 }
 .mynota-flow .react-flow__node {
   font-family: inherit;
@@ -371,4 +374,57 @@
 .mynota-flow .react-flow__attribution {
   background: transparent;
   font-size: 9px;
+}
+
+/* Semantic zoom: text sizes in canvas units that read as fixed screen sizes, capped by the
+   card's own size (container units) so small chapters never overflow. */
+.mynota-zoomtext {
+  container-type: size;
+  line-height: 1.25;
+}
+.mynota-zoomtext .zt-chapter {
+  font-size: min(calc(26px / var(--z)), 13cqw);
+  line-height: 1.1;
+}
+.mynota-zoomtext .zt-title {
+  font-size: min(calc(17px / var(--z)), 12cqw);
+}
+.mynota-zoomtext .zt-body {
+  font-size: min(calc(13px / var(--z)), 9cqw);
+}
+.mynota-zoomtext .zt-small {
+  font-size: min(calc(11.5px / var(--z)), 8cqw);
+}
+.mynota-zoomtext .zt-badge {
+  --s: min(calc(32px / var(--z)), 15cqw);
+  width: var(--s);
+  height: var(--s);
+  font-size: calc(var(--s) * 0.45);
+}
+.mynota-zoomtext .zt-button {
+  --u: min(calc(1px / var(--z)), 0.55cqw);
+  height: calc(var(--u) * 40);
+  padding-inline: calc(var(--u) * 14);
+  font-size: calc(var(--u) * 14);
+  gap: calc(var(--u) * 8);
+  border-width: max(1px, calc(var(--u) * 2));
+  box-shadow: calc(var(--u) * 3) calc(var(--u) * 3) 0 var(--line);
+  white-space: nowrap;
+}
+.mynota-zoomtext .zt-button svg {
+  width: calc(var(--u) * 16);
+  height: calc(var(--u) * 16);
+}
+/* Chapter tabs: readable when zoomed out, never taller than the tab. */
+.mynota-tab {
+  container-type: size;
+}
+.mynota-tab .tab-title {
+  font-size: min(calc(17px / var(--z)), 46cqh);
+}
+.mynota-tab .tab-badge {
+  --s: min(calc(26px / var(--z)), 66cqh);
+  width: var(--s);
+  height: var(--s);
+  font-size: calc(var(--s) * 0.46);
 }

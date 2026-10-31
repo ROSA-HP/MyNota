@@ -61,7 +61,7 @@ function Workspace() {
     selectRelation,
   } = useWorkspace()
   const startBuild = useBuild((s) => s.start)
-  const startBook = useBuild((s) => s.startBook)
+  const enqueue = useBuild((s) => s.enqueue)
   const buildMapId = useBuild((s) => s.mapId)
   const [outlineOpen, setOutlineOpen] = useState(false)
   const started = useRef(false)
@@ -105,7 +105,7 @@ function Workspace() {
           },
         ]
       })
-      void startBook(jobs, key)
+      enqueue(jobs, key)
     } else {
       void startBuild({ mapId, ...request }, key)
     }
@@ -118,7 +118,7 @@ function Workspace() {
     mapId,
     buildMapId,
     startBuild,
-    startBook,
+    enqueue,
     navigate,
     location.pathname,
   ])

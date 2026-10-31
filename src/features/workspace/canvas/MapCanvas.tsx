@@ -8,6 +8,8 @@ import {
   MiniMap,
   ReactFlow,
   useReactFlow,
+  useStore,
+  useStoreApi,
   type ConnectionLineComponentProps,
   type Edge,
   type FinalConnectionState,
@@ -24,6 +26,13 @@ import { OUTLINE_DRAG_TYPE, anchorBeside, createLinkedBlock, linkNodes, nodeIdAt
 import { edgeTypes } from './edges'
 import { childrenIndex, computeLayout, mirrorBox, type Box } from './layout'
 import { nodeTypes } from './nodes'
+import {
+  bundleRelations,
+  chapterSummaries,
+  levelFor,
+  nearestShown,
+  type ChapterSummary,
+} from './zoom'
 import { FIT } from './fit'
 import { chapterColor } from './visuals'
 import { cn } from '@/lib/cn'
@@ -66,15 +75,27 @@ function pointOf(e: MouseEvent | TouchEvent): { x: number; y: number } {
   return { x: e.clientX, y: e.clientY }
 }
 
-/** The section (top-level branch) a node belongs to, or null for the root. */
+/**
+ * Whether a node is a section card: a child of the map title, or in a book, a child of a
+ * chapter (which is a child of the book title).
+ */
+function isSectionOf(nodes: Record<string, NodeRow>, rootId: string | null, book: boolean) {
+  return (n: NodeRow): boolean => {
+    if (!n.parent_id || !rootId) return false
+    if (!book) return n.parent_id === rootId
+    return n.parent_id !== rootId && nodes[n.parent_id]?.parent_id === rootId
+  }
+}
+
+/** The section a node belongs to (itself if it is one), or null for the title and chapters. */
 function sectionOf(
   nodes: Record<string, NodeRow>,
-  rootId: string | null,
+  isSection: (n: NodeRow) => boolean,
   id: string,
 ): NodeRow | null {
   let cur = nodes[id]
-  while (cur?.parent_id && cur.parent_id !== rootId) cur = nodes[cur.parent_id]
-  return cur && cur.parent_id === rootId ? cur : null
+  while (cur && !isSection(cur)) cur = cur.parent_id ? nodes[cur.parent_id] : undefined
+  return cur ?? null
 }
 
 /** Adds a child (a section under the map title, a block anywhere else) and selects it. */
@@ -105,6 +126,16 @@ export function useAddChild() {
   )
 }
 
+function countDescendants(kids: Map<string | null, NodeRow[]>, id: string): number {
+  let count = 0
+  const stack = [...(kids.get(id) ?? [])]
+  for (let cur = stack.pop(); cur; cur = stack.pop()) {
+    count += 1
+    stack.push(...(kids.get(cur.id) ?? []))
+  }
+  return count
+}
+
 export function MapCanvas() {
   const { t, i18n } = useTranslation()
   const rtl = i18n.dir() === 'rtl'
@@ -124,9 +155,43 @@ export function MapCanvas() {
   const [linking, setLinking] = useState(false)
   const [linkTarget, setLinkTarget] = useState<string | null>(null)
 
+  const sources = useWorkspace((s) => s.sources)
   const list = useMemo(() => Object.values(nodes), [nodes])
   const layout = useMemo(() => computeLayout(list), [list])
   const kids = useMemo(() => childrenIndex(list), [list])
+  const { book, rootId } = layout
+  const isSection = useMemo(() => isSectionOf(nodes, rootId, book), [nodes, rootId, book])
+
+  // Semantic zoom: re-render only when the level changes; the exact zoom goes to a CSS variable.
+  const level = useStore((s) => levelFor(s.transform[2], book))
+  const store = useStoreApi()
+  const wrapRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const set = (z: number) => wrapRef.current?.style.setProperty('--z', z.toFixed(3))
+    set(store.getState().transform[2])
+    return store.subscribe((s) => set(s.transform[2]))
+  }, [store])
+
+  const chapters = useMemo(
+    () => (book ? chapterSummaries(nodes, sources, rootId) : []),
+    [book, nodes, sources, rootId],
+  )
+  const chapterById = useMemo(() => {
+    const m = new Map<string, ChapterSummary>()
+    for (const c of chapters) m.set(c.id, c)
+    return m
+  }, [chapters])
+  /** Book maps: sections and blocks take their chapter's color. */
+  const colorOf = useCallback(
+    (n: NodeRow, section: NodeRow | null) => {
+      if (book) {
+        const ch = layout.chapterOf[n.id]
+        return ch ? (nodes[ch]?.color ?? null) : null
+      }
+      return section?.color ?? null
+    },
+    [book, layout.chapterOf, nodes],
+  )
 
   // Logical layout → screen: mirrored for Arabic so columns run right to left.
   const toScreen = useCallback(
@@ -137,27 +202,41 @@ export function MapCanvas() {
   const flowNodes = useMemo<Node[]>(() => {
     const out: Node[] = []
     for (const region of layout.regions) {
-      const section = nodes[region.sectionId]
       const b = toScreen(region)
-      out.push({
+      const base = {
         id: `region:${region.sectionId}`,
-        type: 'region',
         position: { x: b.x, y: b.y },
         width: b.w,
         height: b.h,
-        data: {
-          color: section?.color ?? null,
-          failed: failedSections[region.sectionId]?.state === 'failed',
-        },
         draggable: false,
         selectable: false,
         focusable: false,
         zIndex: -1,
+      }
+      const chapter = chapterById.get(region.sectionId)
+      if (region.kind === 'chapter' && chapter) {
+        out.push({ ...base, type: 'chapterRegion', data: { chapter, level } })
+        continue
+      }
+      out.push({
+        ...base,
+        type: 'region',
+        data: {
+          color: nodes[region.sectionId]?.color ?? null,
+          failed: failedSections[region.sectionId]?.state === 'failed',
+        },
       })
     }
     for (const n of list) {
       const box = layout.boxes[n.id]
       if (!box || layout.hidden.has(n.id)) continue
+      const isRoot = n.id === rootId
+      const isChapter = book && !isRoot && n.parent_id === rootId
+      const section = isRoot || isChapter ? null : sectionOf(nodes, isSection, n.id)
+      const isSectionCard = section?.id === n.id
+      // What each zoom level shows: chapter overviews / section cards / everything.
+      if (level === 'chapters' && !isRoot) continue
+      if (level === 'sections' && !isRoot && !isChapter && !isSectionCard) continue
       const b = toScreen(box)
       const pos = drag[n.id] ?? { x: b.x, y: b.y }
       const marked = connectFrom === n.id || multi.includes(n.id)
@@ -168,19 +247,32 @@ export function MapCanvas() {
         height: box.h,
         className: cn(marked && 'is-marked', linkTarget === n.id && 'is-link-target'),
         selected: n.id === selectedId,
-        draggable: canEdit,
+        draggable: canEdit && level === 'blocks' && !isChapter,
         ariaLabel: n.title,
       }
-      if (n.id === layout.rootId) {
+      if (isRoot) {
         out.push({ ...common, type: 'root', data: { node: n, mapType: map?.type ?? null } })
-      } else if (n.parent_id === layout.rootId) {
+      } else if (isChapter) {
+        const chapter = chapterById.get(n.id)
+        if (chapter) out.push({ ...common, type: 'chapterTab', data: { chapter } })
+      } else if (isSectionCard) {
+        const column = layout.columns[n.id]
+        const children = kids.get(n.id) ?? []
+        const expanded = level === 'sections' && column
+        // Zoomed out, the card grows to cover its whole column (same place, more to read).
+        const eb = expanded ? toScreen({ x: box.x, y: box.y, w: column.w, h: column.h }) : null
         out.push({
           ...common,
+          ...(eb && { position: { x: eb.x, y: eb.y }, width: eb.w, height: eb.h }),
           type: 'section',
-          data: { node: n, childCount: kids.get(n.id)?.length ?? 0 },
+          data: {
+            node: n,
+            childCount: book ? countDescendants(kids, n.id) : children.length,
+            color: book ? colorOf(n, section) : undefined,
+            expanded: expanded ? { blockTitles: children.slice(0, 8).map((c) => c.title) } : null,
+          },
         })
       } else {
-        const section = sectionOf(nodes, layout.rootId, n.id)
         const siblings = kids.get(n.parent_id) ?? []
         const step =
           section?.branch_view === 'process' && n.parent_id === section.id
@@ -191,7 +283,7 @@ export function MapCanvas() {
           type: 'block',
           data: {
             node: n,
-            color: section?.color ?? null,
+            color: colorOf(n, section),
             step,
             connectFrom: connectFrom === n.id,
             rtl,
@@ -215,24 +307,76 @@ export function MapCanvas() {
     linkTarget,
     rtl,
     failedSections,
+    level,
+    book,
+    rootId,
+    isSection,
+    chapterById,
+    colorOf,
   ])
 
   const flowEdges = useMemo<Edge[]>(() => {
     const out: Edge[] = []
-    const visible = (id: string) => Boolean(layout.boxes[id]) && !layout.hidden.has(id)
+    const shown = new Set(flowNodes.map((n) => n.id))
+    const branch = (source: string, target: string): Edge => ({
+      id: `h:${target}`,
+      source,
+      target,
+      type: 'branch',
+      selectable: false,
+      focusable: false,
+    })
+    const relationsList = Object.values(relations)
+
+    if (level !== 'blocks') {
+      // Zoomed out: the tree as title → sections (or chapter tab → sections), and links bundled
+      // between the cards that are still drawn.
+      if (level === 'sections')
+        for (const n of list)
+          if (n.parent_id && shown.has(n.id) && shown.has(n.parent_id) && isSection(n))
+            out.push(branch(n.parent_id, n.id))
+      const visibleOf =
+        level === 'chapters'
+          ? (id: string) => {
+              const ch = layout.chapterOf[id]
+              return ch ? `region:${ch}` : null
+            }
+          : (id: string) => {
+              const v = nearestShown(nodes, id, (n) => shown.has(n.id) && n.id !== rootId)
+              return v && shown.has(v) ? v : null
+            }
+      for (const bundle of bundleRelations(relationsList, visibleOf)) {
+        if (!shown.has(bundle.from) || !shown.has(bundle.to)) continue
+        const only = bundle.relations.length === 1 ? bundle.relations[0] : undefined
+        out.push({
+          id: bundle.id,
+          source: bundle.from,
+          target: bundle.to,
+          type: 'bundle',
+          data: {
+            count: bundle.relations.length,
+            label: only
+              ? only.label || t(`ws.relations.${only.type}`)
+              : t('ws.bundle', { count: bundle.relations.length }),
+            rtl,
+          },
+          focusable: false,
+          zIndex: 1,
+        })
+      }
+      return out
+    }
+
+    const visible = (id: string) => shown.has(id)
     for (const n of list) {
       if (!n.parent_id || !visible(n.id) || !visible(n.parent_id)) continue
       const parent = nodes[n.parent_id]
-      if (n.parent_id === layout.rootId) {
-        out.push({
-          id: `h:${n.id}`,
-          source: n.parent_id,
-          target: n.id,
-          type: 'branch',
-          selectable: false,
-          focusable: false,
-        })
-      } else if (parent?.branch_view === 'process' && parent.parent_id === layout.rootId) {
+      if (n.parent_id === rootId) {
+        // Books: chapters sit in their own regions; no lines from the book title.
+        if (!book) out.push(branch(n.parent_id, n.id))
+      } else if (book && isSection(n)) {
+        out.push(branch(n.parent_id, n.id))
+      } else if (parent?.branch_view === 'process' && isSection(parent)) {
         const siblings = kids.get(parent.id) ?? []
         const i = siblings.findIndex((s) => s.id === n.id)
         const prev = siblings[i - 1]
@@ -273,7 +417,7 @@ export function MapCanvas() {
         })
       }
     }
-    for (const r of Object.values(relations)) {
+    for (const r of relationsList) {
       if (!visible(r.from_node) || !visible(r.to_node)) continue
       const color = r.status === 'suggested' ? 'var(--ink-muted)' : 'var(--brand)'
       out.push({
@@ -294,7 +438,22 @@ export function MapCanvas() {
       })
     }
     return out
-  }, [list, nodes, relations, layout, kids, rtl, canEdit, selectedRelationId])
+  }, [
+    flowNodes,
+    list,
+    nodes,
+    relations,
+    layout,
+    kids,
+    rtl,
+    canEdit,
+    selectedRelationId,
+    level,
+    book,
+    rootId,
+    isSection,
+    t,
+  ])
 
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => {
@@ -323,11 +482,15 @@ export function MapCanvas() {
 
   // Keep the whole map in view while it grows (the AI adds sections, then blocks), until the
   // student pans or zooms themselves.
-  const visibleCount = flowNodes.length
-  const autoFit = useRef(true)
+  const visibleCount = list.length - layout.hidden.size
+  const mapId = map?.id
   const fitted = useRef(0)
   useEffect(() => {
-    if (!autoFit.current || visibleCount === fitted.current) return
+    useCanvasUi.getState().lockView(false)
+    fitted.current = 0
+  }, [mapId])
+  useEffect(() => {
+    if (useCanvasUi.getState().viewLocked || visibleCount === fitted.current) return
     const first = fitted.current === 0
     fitted.current = visibleCount
     const id = setTimeout(() => void fitView({ ...FIT, duration: first ? 0 : 350 }), 60)
@@ -405,6 +568,8 @@ export function MapCanvas() {
 
   return (
     <div
+      ref={wrapRef}
+      data-zoom-level={level}
       className={cn('mynota-flow relative h-full w-full', linking && 'is-linking')}
       aria-label={t('ws.canvas')}
       onDragOver={(e) => {
@@ -431,7 +596,13 @@ export function MapCanvas() {
         edgeTypes={edgeTypes}
         onNodesChange={onNodesChange}
         onNodeClick={(e, node) => {
-          if (node.type === 'region') return
+          if (node.type === 'chapterRegion' && level === 'chapters') {
+            // Zoomed all the way out: a chapter opens by zooming into it.
+            useCanvasUi.getState().lockView()
+            void fitView({ nodes: [{ id: node.id }], ...FIT, maxZoom: 0.9, duration: 450 })
+            return
+          }
+          if (node.type === 'region' || node.type === 'chapterRegion') return
           const ui = useCanvasUi.getState()
           if (connecting) {
             const pair = pick(node.id)
@@ -448,10 +619,21 @@ export function MapCanvas() {
           }
         }}
         onNodeContextMenu={(e, node) => {
-          if (node.type === 'region') return
+          if (node.type === 'region' || node.type === 'chapterRegion') return
           e.preventDefault()
           select(node.id)
           openMenu(node.id, e.clientX, e.clientY)
+        }}
+        onEdgeClick={(_, edge) => {
+          // A bundle of links: zoom in on the two cards so the single links show.
+          if (edge.type !== 'bundle') return
+          useCanvasUi.getState().lockView()
+          void fitView({
+            nodes: [{ id: edge.source }, { id: edge.target }],
+            ...FIT,
+            minZoom: 0.7,
+            duration: 450,
+          })
         }}
         onPaneClick={() => {
           if (connecting) cancelConnect()
@@ -475,7 +657,7 @@ export function MapCanvas() {
         panOnScroll
         proOptions={{ hideAttribution: true }}
         onMoveStart={(event) => {
-          if (event) autoFit.current = false // a real pan/zoom by the student, not ours
+          if (event) useCanvasUi.getState().lockView() // a real pan/zoom by the student, not ours
         }}
         fitView
         fitViewOptions={FIT}
@@ -489,9 +671,11 @@ export function MapCanvas() {
           nodeColor={(n) =>
             n.type === 'region'
               ? chapterColor((n.data as { color?: NodeRow['color'] }).color).fill
-              : n.type === 'root'
-                ? 'var(--brand)'
-                : 'var(--surface)'
+              : n.type === 'chapterRegion'
+                ? chapterColor((n.data as { chapter: ChapterSummary }).chapter.color).fill
+                : n.type === 'root'
+                  ? 'var(--brand)'
+                  : 'var(--surface)'
           }
           nodeStrokeColor="var(--line)"
           maskColor="color-mix(in srgb, var(--paper) 55%, transparent)"

@@ -18,6 +18,9 @@ interface CanvasUiState {
   multi: string[]
   menu: { nodeId: string; x: number; y: number } | null
   confirmDelete: string | null
+  /** The student moved the view (pan, zoom, toolbar): stop fitting the growing map. */
+  viewLocked: boolean
+  lockView: (locked?: boolean) => void
   startConnect: (from?: string | null) => void
   /** Returns the pair when the second node is picked. */
   pick: (nodeId: string) => { from: string; to: string } | null
@@ -41,6 +44,8 @@ export const useCanvasUi = create<CanvasUiState>((set, get) => ({
   multi: [],
   menu: null,
   confirmDelete: null,
+  viewLocked: false,
+  lockView: (locked = true) => set({ viewLocked: locked }),
   startConnect: (from = null) =>
     set({ connecting: true, connectFrom: from, menu: null, search: null, picker: null }),
   pick: (nodeId) => {

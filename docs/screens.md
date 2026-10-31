@@ -28,10 +28,13 @@
 
 - **Top bar**: map title, breadcrumb (Book › Chapter › Section), collaborator avatars, Search, Study, Share.
 - **Canvas**: dot grid, minimap.
-- **Semantic zoom**:
-  - Zoomed out: chapter islands with titles and chapter-to-chapter arrows.
-  - Middle: sections with summaries.
-  - Zoomed in: full nodes with type icon, importance, mastery dot.
+- **Semantic zoom** (built 2026-10-31). Positions never change between levels; only what is drawn changes. Zoomed-out text keeps a readable screen size (capped by the card's size).
+  - Chapters (book maps, zoom < 0.32): each chapter region shows its number, title, section chips with block counts, and a core-blocks bar. Click a chapter to zoom into it.
+  - Sections (book < 0.62, notes < 0.45): each section card grows over its column with its summary and first blocks.
+  - Blocks: full nodes with type icon, importance, mastery dot.
+  - Zoomed out, links are bundled between the cards still drawn (one line per pair, thicker and counted for several); click a bundle to zoom in on it.
+  - Toolbar switch: Chapters / Sections / Blocks (notes maps: Sections / Blocks). Any zoom by the student stops the map from re-fitting while it grows.
+- **Book maps**: chapters are notebook tabs over colored regions, packed in rows. A chapter not built yet is striped with "Build this chapter"; one that stopped half-way shows "Continue building", which only builds the missing sections (works after closing the tab). The outline shows chapter numbers and status and offers "Build N waiting chapters"; chapters build one after another.
 - **Left panel — outline**: collapsible tree of the whole map; click to fly there.
 - **Right panel — node details** (when a node is selected):
   - Editable title, summary, type, color, importance

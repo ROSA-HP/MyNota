@@ -1,18 +1,31 @@
 import { useRef, type PointerEvent } from 'react'
 import { Handle, Position, type Node, type NodeProps } from '@xyflow/react'
 import { CircleAlert, Clock, RotateCcw, Sparkles } from 'lucide-react'
+import { Link } from 'react-router'
 import { useTranslation } from 'react-i18next'
 import { Spinner } from '@/components/ui'
 import { useKeyFor } from '@/features/settings/aiKeyStore'
 import { cn } from '@/lib/cn'
 import type { ChapterColor, MapRow, NodeRow } from '@/lib/database.types'
+import { useChapterBuilder } from '../bookBuild'
 import { useBuild } from '../buildStore'
 import { useWorkspace } from '../workspaceStore'
 import { useCanvasUi } from './canvasUi'
 import { chapterColor, TYPE_ICON } from './visuals'
+import type { ChapterSummary, ZoomLevel } from './zoom'
 
 export type RootNodeT = Node<{ node: NodeRow; mapType: MapRow['type'] | null }, 'root'>
-export type SectionNodeT = Node<{ node: NodeRow; childCount: number }, 'section'>
+export type SectionNodeT = Node<
+  {
+    node: NodeRow
+    childCount: number
+    /** Book maps: sections take their chapter's color. */
+    color?: ChapterColor | null
+    /** Zoomed out to sections: a bigger card with the summary and first blocks. */
+    expanded?: { blockTitles: string[] } | null
+  },
+  'section'
+>
 export type BlockNodeT = Node<
   {
     node: NodeRow
@@ -24,6 +37,12 @@ export type BlockNodeT = Node<
   'block'
 >
 export type RegionNodeT = Node<{ color: ChapterColor | null; failed: boolean }, 'region'>
+
+export type ChapterTabNodeT = Node<{ chapter: ChapterSummary }, 'chapterTab'>
+export type ChapterRegionNodeT = Node<
+  { chapter: ChapterSummary; level: ZoomLevel },
+  'chapterRegion'
+>
 
 /**
  * Handles. Edges are drawn from node boxes (see edges.tsx), so React Flow's own handles stay
@@ -149,11 +168,45 @@ function SectionStatusChip({ sectionId }: { sectionId: string }) {
 
 export function SectionNode({ data, selected }: NodeProps<SectionNodeT>) {
   const { t } = useTranslation()
-  const { node, childCount } = data
-  const c = chapterColor(node.color)
+  const { node, childCount, expanded } = data
+  const c = chapterColor(data.color === undefined ? node.color : data.color)
+  const longPress = useLongPress(node.id)
+  if (expanded) {
+    const more = childCount - expanded.blockTitles.length
+    return (
+      <div
+        {...longPress}
+        className={cn(
+          'mynota-zoomtext flex size-full flex-col gap-[calc(8px/var(--z))] overflow-hidden rounded-[14px] border-[2.5px] bg-surface p-[calc(10px/var(--z))] text-ink',
+          selected && 'neo-shadow outline-3 outline-offset-2',
+        )}
+        style={{ borderColor: selected ? 'var(--line)' : c.strong, outlineColor: c.strong }}
+      >
+        <span dir="auto" className="zt-title font-bold">
+          {node.title}
+        </span>
+        {node.summary && (
+          <span dir="auto" className="zt-body text-ink-muted">
+            {node.summary}
+          </span>
+        )}
+        <span className="zt-small font-semibold text-ink-muted">
+          {t(`ws.shapes.${node.branch_view}`)} · {t('ws.blocks', { count: childCount })}
+        </span>
+        <span aria-hidden className="h-0.5 shrink-0" style={{ background: c.fill }} />
+        {expanded.blockTitles.map((title, i) => (
+          <span key={i} dir="auto" className="zt-body truncate font-semibold">
+            {title}
+          </span>
+        ))}
+        {more > 0 && <span className="zt-small text-ink-muted">+{more}</span>}
+        <Handles />
+      </div>
+    )
+  }
   return (
     <div
-      {...useLongPress(node.id)}
+      {...longPress}
       className={cn(
         'relative flex h-[58px] w-[190px] flex-col items-center justify-center rounded-[11px] border-[2.5px] bg-surface px-2.5 text-center text-ink',
         selected && 'neo-shadow outline-3 outline-offset-2',
@@ -263,9 +316,197 @@ export function RegionNode({ data }: NodeProps<RegionNodeT>) {
   )
 }
 
+function ChapterStatus({ chapter }: { chapter: ChapterSummary }) {
+  const { t } = useTranslation()
+  const live = useBuild((s) => s.chapters[chapter.id])
+  const running = live === 'running'
+  const queued = live === 'queued'
+  if (running)
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full border-2 border-line bg-surface px-2 py-0.5 text-xs font-bold whitespace-nowrap">
+        <Spinner size={11} /> {t('ws.book.building')}
+      </span>
+    )
+  if (queued)
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full border-2 border-line bg-surface px-2 py-0.5 text-xs font-bold whitespace-nowrap">
+        <Clock size={12} aria-hidden /> {t('ws.book.queued')}
+      </span>
+    )
+  return null
+}
+
+/** The notebook tab on top of a chapter: number, title, page range, live status. */
+export function ChapterTabNode({ data, selected }: NodeProps<ChapterTabNodeT>) {
+  const { chapter } = data
+  const c = chapterColor(chapter.color)
+  const waiting = chapter.progress === 'waiting'
+  return (
+    <div
+      {...useLongPress(chapter.id)}
+      className={cn(
+        'mynota-tab flex size-full items-center gap-2 rounded-t-[12px] border-[2.5px] border-b-0 border-line px-2.5 text-ink',
+        waiting && 'border-dashed',
+        selected && 'outline-3 outline-offset-2 outline-ink',
+      )}
+      style={{ background: waiting ? 'var(--surface)' : c.fill }}
+    >
+      <span className="tab-badge flex shrink-0 items-center justify-center rounded-full border-2 border-line bg-surface font-mono font-bold">
+        {chapter.number}
+      </span>
+      <span dir="auto" className="tab-title min-w-0 truncate font-bold">
+        {chapter.title}
+      </span>
+      <span className="ms-auto flex shrink-0 items-center gap-2">
+        <ChapterStatus chapter={chapter} />
+        {chapter.pages && (
+          <span className="rounded-[5px] border-[1.5px] border-line bg-surface px-1.5 font-mono text-[11px] font-bold">
+            {chapter.pages}
+          </span>
+        )}
+      </span>
+      <Handles linkable={false} />
+    </div>
+  )
+}
+
+function BuildChapterButton({ chapter, big }: { chapter: ChapterSummary; big?: boolean }) {
+  const { t } = useTranslation()
+  const { build, canBuild } = useChapterBuilder()
+  const canEdit = useWorkspace((s) => s.role === 'owner' || s.role === 'editor')
+  const live = useBuild((s) => s.chapters[chapter.id])
+  if (!canEdit || live === 'running' || live === 'queued') return null
+  if (!canBuild)
+    return (
+      <Link to="/settings" className="nodrag text-sm font-semibold underline">
+        {t('ws.build.needKey')}
+      </Link>
+    )
+  const partial = chapter.progress === 'partial'
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation()
+        build([chapter.id])
+      }}
+      className={cn(
+        'nodrag nopan inline-flex cursor-pointer items-center gap-2 self-start rounded-neo border-2 border-line bg-surface font-semibold text-ink neo-shadow-sm hover:bg-paper-sunken',
+        big ? 'zt-button' : 'h-11 px-4 text-sm',
+      )}
+    >
+      {partial ? <RotateCcw size={16} aria-hidden /> : <Sparkles size={16} aria-hidden />}
+      {partial ? t('ws.book.continue') : t('ws.book.build')}
+    </button>
+  )
+}
+
+/**
+ * A chapter's background region. Built chapters are tinted; waiting ones are striped with a
+ * Build button. Zoomed out to chapters, it shows the chapter overview (title, sections, size).
+ */
+export function ChapterRegionNode({ data }: NodeProps<ChapterRegionNodeT>) {
+  const { t } = useTranslation()
+  const { chapter, level } = data
+  const c = chapterColor(chapter.color)
+  const waiting = chapter.progress === 'waiting' || chapter.progress === 'empty'
+  const overview = level === 'chapters'
+  // Zoomed out (chapters or sections), a waiting chapter's message stays readable.
+  const scaled = level !== 'blocks'
+  const live = useBuild((s) => s.chapters[chapter.id])
+  return (
+    <div
+      className={cn(
+        'mynota-zoomtext flex size-full flex-col overflow-hidden rounded-[6px_22px_22px_22px] border-[2.5px] text-ink',
+        waiting && 'border-dashed',
+        overview || (scaled && waiting)
+          ? 'gap-[calc(10px/var(--z))] p-[min(calc(14px/var(--z)),4cqw)]'
+          : 'gap-2 p-5',
+      )}
+      style={
+        waiting
+          ? {
+              borderColor: c.strong,
+              background: `repeating-linear-gradient(135deg, var(--surface) 0 12px, color-mix(in srgb, ${c.fill} 35%, var(--surface)) 12px 24px)`,
+            }
+          : { background: c.tint, borderColor: c.strong }
+      }
+    >
+      {overview && (
+        <span className="flex items-center gap-[calc(8px/var(--z))]">
+          <span className="zt-badge flex shrink-0 items-center justify-center rounded-full border-2 border-line bg-surface font-mono font-bold">
+            {chapter.number}
+          </span>
+          <span dir="auto" className="zt-chapter line-clamp-2 min-w-0 font-bold break-words">
+            {chapter.title}
+          </span>
+        </span>
+      )}
+      {waiting ? (
+        <span
+          className={cn(
+            'flex flex-col',
+            scaled ? 'zt-body gap-[calc(6px/var(--z))]' : 'gap-2 pt-3',
+          )}
+        >
+          <span className={cn('font-bold', !scaled && 'text-base')}>
+            {live === 'queued' || live === 'running' ? t('ws.book.inQueue') : t('ws.book.notBuilt')}
+          </span>
+          <span className={cn('text-ink-muted', !scaled && 'text-sm')}>
+            {t('ws.book.waitingInfo', { count: chapter.paragraphs })}
+            {chapter.pages ? ` · ${t('ws.book.pages', { pages: chapter.pages })}` : ''}
+          </span>
+          {chapter.progress === 'waiting' && <BuildChapterButton chapter={chapter} big={scaled} />}
+        </span>
+      ) : overview ? (
+        <>
+          <span className="grid grid-cols-2 gap-[calc(6px/var(--z))]">
+            {chapter.sections.slice(0, 8).map((sec) => (
+              <span
+                key={sec.id}
+                className="zt-body flex min-w-0 items-center gap-[calc(6px/var(--z))] rounded-[calc(8px/var(--z))] border-2 bg-surface px-[calc(8px/var(--z))] py-[calc(4px/var(--z))] font-bold"
+                style={{ borderColor: c.strong }}
+              >
+                <span dir="auto" className="truncate">
+                  {sec.title}
+                </span>
+                <span className="ms-auto font-mono text-ink-muted">{sec.count}</span>
+              </span>
+            ))}
+          </span>
+          <span className="zt-small mt-auto flex items-center gap-[calc(8px/var(--z))] font-semibold text-ink-muted">
+            <span
+              aria-hidden
+              className="flex h-[calc(8px/var(--z))] flex-1 overflow-hidden rounded-full border-[1.5px] border-line bg-surface"
+            >
+              <span
+                style={{
+                  width: `${chapter.blocks ? (chapter.core / chapter.blocks) * 100 : 0}%`,
+                  background: c.strong,
+                }}
+              />
+            </span>
+            {t('ws.book.blocksCore', { count: chapter.blocks, core: chapter.core })}
+          </span>
+          {chapter.progress === 'partial' && <BuildChapterButton chapter={chapter} big />}
+        </>
+      ) : (
+        chapter.progress === 'partial' && (
+          <span className="mt-auto flex items-center gap-2 self-start rounded-neo border-2 border-line bg-warning-soft px-3 py-2 text-sm font-semibold">
+            {t('ws.book.unfinished')} <BuildChapterButton chapter={chapter} />
+          </span>
+        )
+      )}
+      <Handles linkable={false} />
+    </div>
+  )
+}
+
 export const nodeTypes = {
   root: RootNode,
   section: SectionNode,
   block: BlockNode,
   region: RegionNode,
+  chapterTab: ChapterTabNode,
+  chapterRegion: ChapterRegionNode,
 }

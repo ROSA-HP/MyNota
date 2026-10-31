@@ -1,5 +1,15 @@
-import { useReactFlow, useViewport } from '@xyflow/react'
-import { LayoutGrid, Link2, Maximize, Minus, MousePointer2, Plus } from 'lucide-react'
+import { useReactFlow, useStore, useViewport } from '@xyflow/react'
+import {
+  BookOpen,
+  LayoutGrid,
+  Link2,
+  Maximize,
+  Minus,
+  MousePointer2,
+  PanelsTopLeft,
+  Plus,
+  StickyNote,
+} from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/cn'
 import { useCanvasUi } from './canvas/canvasUi'
@@ -7,6 +17,7 @@ import { anchorBeside } from './canvas/linking'
 import { FIT } from './canvas/fit'
 import { findRoot } from './canvas/layout'
 import { useAddChild } from './canvas/MapCanvas'
+import { levelFor, zoomForLevel, type ZoomLevel } from './canvas/zoom'
 import { useWorkspace } from './workspaceStore'
 
 function ToolButton({
@@ -40,7 +51,53 @@ function ToolButton({
   )
 }
 
-/** Bottom toolbar: select, add, connect, tidy up, zoom. */
+const LEVEL_ICON = { chapters: BookOpen, sections: PanelsTopLeft, blocks: StickyNote } as const
+
+/** Chapters / Sections / Blocks: jumps to a zoom where the map shows that much detail. */
+function LevelSwitch() {
+  const { t } = useTranslation()
+  const book = useWorkspace((s) => s.map?.type === 'book')
+  const level = useStore((s) => levelFor(s.transform[2], book))
+  const { fitView, zoomTo } = useReactFlow()
+  const levels: ZoomLevel[] = book ? ['chapters', 'sections', 'blocks'] : ['sections', 'blocks']
+  const go = (l: ZoomLevel) => {
+    useCanvasUi.getState().lockView()
+    // All chapters: show the whole book. Otherwise keep the centre and change the zoom.
+    if (l === 'chapters')
+      void fitView({ ...FIT, maxZoom: zoomForLevel(l, book), minZoom: 0.15, duration: 350 })
+    else void zoomTo(zoomForLevel(l, book), { duration: 350 })
+  }
+  return (
+    <div
+      role="group"
+      aria-label={t('ws.book.levels')}
+      className="flex items-center gap-0.5 rounded-lg bg-paper-sunken p-0.5"
+    >
+      {levels.map((l) => {
+        const Icon = LEVEL_ICON[l]
+        const active = l === level
+        return (
+          <button
+            key={l}
+            type="button"
+            aria-pressed={active}
+            title={t(`ws.book.level.${l}`)}
+            onClick={() => go(l)}
+            className={cn(
+              'flex h-10 min-w-10 cursor-pointer items-center justify-center gap-1.5 rounded-md px-2 text-sm font-semibold whitespace-nowrap',
+              active ? 'border-2 border-line bg-surface text-ink' : 'text-ink-muted hover:text-ink',
+            )}
+          >
+            <Icon size={17} aria-hidden />
+            <span className="hidden lg:inline">{t(`ws.book.level.${l}`)}</span>
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+/** Bottom toolbar: select, add, connect, tidy up, detail level, zoom. */
 export function Toolbar() {
   const { t } = useTranslation()
   const { zoomIn, zoomOut, fitView } = useReactFlow()
@@ -102,13 +159,27 @@ export function Toolbar() {
         </>
       )}
       <span aria-hidden className="mx-0.5 h-6 w-0.5 bg-line-soft" />
-      <ToolButton label={t('ws.zoomOut')} onClick={() => void zoomOut({ duration: 150 })}>
+      <LevelSwitch />
+      <span aria-hidden className="mx-0.5 h-6 w-0.5 bg-line-soft" />
+      <ToolButton
+        label={t('ws.zoomOut')}
+        onClick={() => {
+          useCanvasUi.getState().lockView()
+          void zoomOut({ duration: 150 })
+        }}
+      >
         <Minus size={19} aria-hidden />
       </ToolButton>
       <span className="hidden w-12 text-center font-mono text-xs font-bold sm:inline" dir="ltr">
         {Math.round(zoom * 100)}%
       </span>
-      <ToolButton label={t('ws.zoomIn')} onClick={() => void zoomIn({ duration: 150 })}>
+      <ToolButton
+        label={t('ws.zoomIn')}
+        onClick={() => {
+          useCanvasUi.getState().lockView()
+          void zoomIn({ duration: 150 })
+        }}
+      >
         <Plus size={19} aria-hidden />
       </ToolButton>
       <ToolButton label={t('ws.fit')} onClick={() => void fitView({ ...FIT, duration: 300 })}>
