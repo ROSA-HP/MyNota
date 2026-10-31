@@ -22,6 +22,7 @@ import { PALETTE, makeNode } from '@/ai/pipeline/convert'
 import type { NodeRow } from '@/lib/database.types'
 import { matchesQuery, nodeSearchText } from '@/lib/searchText'
 import { useBuild } from '../buildStore'
+import { LiveCursors } from '../live/LivePresence'
 import { useWorkspace } from '../workspaceStore'
 import { useCanvasUi } from './canvasUi'
 import { focusGroupOf } from './focus'
@@ -769,6 +770,7 @@ export function MapCanvas() {
           className="hidden md:block"
           style={{ width: 150, height: 100 }}
         />
+        <LiveCursors />
       </ReactFlow>
     </div>
   )

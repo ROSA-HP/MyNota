@@ -38,8 +38,17 @@ One deck per map, scheduled with FSRS (`ts-fsrs`). Every card links back to its 
 - Two people typing in the **same box** at once (decided 2026-10-31): the block shows who is editing it; if both still type there, the last change to that box wins (fields merge one by one, not letter by letter).
 - People who open a map through a share link without joining see a **snapshot** and refresh to update (decided 2026-10-31); only people on the map join the live channels.
 - Presence: avatars in the top bar, colored cursors, highlight on the block someone is editing.
+  Built in Phase 6.4 (`live/presence.ts`, `live/LivePresence.tsx`): presence carries only ids
+  (user, block being edited = the block an editor has selected); names and pictures come from
+  `map_people()`. Each person has one color (from their user id) for the avatar ring, cursor and
+  the dashed "… is editing" ring. Cursors are sent in map coordinates at most ~12×/s, not for
+  touch, and hidden after 15 s without moving.
 - Offline edits sync on reconnect.
-- Per-user undo.
+- Per-user undo. Built in Phase 6.4 (`live/undo.ts`): Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z or Ctrl/Cmd+Y
+  and toolbar buttons undo only this person's changes, never someone else's, and never overwrite
+  a field someone changed afterwards. Changes within 0.6 s (or until another block is selected)
+  are one step; a step can span the book and chapter documents. Text fields keep the browser's
+  own undo while typing.
 - AI-generated blocks are inserted into the shared document, so collaborators watch the map grow.
 - A snapshot job keeps `nodes` and `relations` in Postgres up to date.
 

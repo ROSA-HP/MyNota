@@ -468,6 +468,10 @@ export const en = {
     tidy: 'Tidy up',
     undo: 'Undo (Ctrl+Z)',
     redo: 'Redo (Ctrl+Shift+Z)',
+    live: {
+      editing: '{{name}} is editing',
+      hereNow: 'here now',
+    },
     zoomIn: 'Zoom in',
     zoomOut: 'Zoom out',
     fit: 'Fit map to screen',

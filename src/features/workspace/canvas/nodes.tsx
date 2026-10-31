@@ -10,6 +10,7 @@ import { masteryMapFor, type Mastery } from '@/features/study/mastery'
 import { cn } from '@/lib/cn'
 import type { ChapterColor, MapRow, NodeRow } from '@/lib/database.types'
 import { useChapterBuilder } from '../bookBuild'
+import { EditingTag } from '../live/LivePresence'
 import { useBuild } from '../buildStore'
 import { useWorkspace } from '../workspaceStore'
 import { useCanvasUi } from './canvasUi'
@@ -107,7 +108,7 @@ export function RootNode({ data, selected }: NodeProps<RootNodeT>) {
     <div
       {...useLongPress(node.id)}
       className={cn(
-        'flex h-16 w-[200px] flex-col items-center justify-center gap-0.5 rounded-neo-lg border-2 border-line bg-brand px-3 text-center text-brand-ink neo-shadow',
+        'relative flex h-16 w-[200px] flex-col items-center justify-center gap-0.5 rounded-neo-lg border-2 border-line bg-brand px-3 text-center text-brand-ink neo-shadow',
         selected && 'outline-3 outline-offset-2 outline-ink',
       )}
     >
@@ -119,6 +120,7 @@ export function RootNode({ data, selected }: NodeProps<RootNodeT>) {
       <span dir="auto" className="line-clamp-2 text-[17px] leading-tight font-bold">
         {node.title}
       </span>
+      <EditingTag nodeId={node.id} />
       <Handles linkable={false} />
     </div>
   )
@@ -229,6 +231,7 @@ export function SectionNode({ data, selected }: NodeProps<SectionNodeT>) {
         {t(`ws.shapes.${node.branch_view}`)} · {t('ws.blocks', { count: childCount })}
       </span>
       <SectionStatusChip sectionId={node.id} />
+      <EditingTag nodeId={node.id} />
       <Handles />
     </div>
   )
@@ -339,6 +342,7 @@ export function BlockNode({ data, selected }: NodeProps<BlockNodeT>) {
         </span>
       )}
       <MasteryDot nodeId={node.id} />
+      <EditingTag nodeId={node.id} />
       <Handles />
     </div>
   )

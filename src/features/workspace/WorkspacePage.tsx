@@ -22,6 +22,7 @@ import { useBuild } from './buildStore'
 import { MapCanvas } from './canvas/MapCanvas'
 import { useCanvasUi } from './canvas/canvasUi'
 import { LinksNotice } from './LinksNotice'
+import { useLivePresence } from './live/LivePresence'
 import { useLinks } from './linksStore'
 import { ConnectHint, DeleteConfirm, NodeMenu, StudyViewBanner } from './Overlays'
 import { AddNotesDialog } from './merge/AddNotesDialog'
@@ -187,6 +188,7 @@ function Workspace() {
   const [exportOpen, setExportOpen] = useState(false)
   const subject = useSubject(map?.subject_id)
   useDeckSync(mapId)
+  useLivePresence(mapId, userId)
   const setLinksTray = useCanvasUi((s) => s.setLinksTray)
   const started = useRef(false)
 

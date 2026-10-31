@@ -483,6 +483,10 @@ export const de: Messages = {
     tidy: 'Aufräumen',
     undo: 'Rückgängig (Strg+Z)',
     redo: 'Wiederholen (Strg+Umschalt+Z)',
+    live: {
+      editing: '{{name}} bearbeitet',
+      hereNow: 'gerade hier',
+    },
     zoomIn: 'Vergrößern',
     zoomOut: 'Verkleinern',
     fit: 'Karte einpassen',

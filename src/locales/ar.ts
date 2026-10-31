@@ -520,6 +520,10 @@ export const ar: Messages = {
     tidy: 'ترتيب تلقائي',
     undo: 'تراجع (Ctrl+Z)',
     redo: 'إعادة (Ctrl+Shift+Z)',
+    live: {
+      editing: 'جارٍ التعديل: {{name}}',
+      hereNow: 'موجود الآن',
+    },
     zoomIn: 'تكبير',
     zoomOut: 'تصغير',
     fit: 'ملاءمة الخريطة للشاشة',
