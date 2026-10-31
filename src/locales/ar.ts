@@ -137,6 +137,9 @@ export const ar: Messages = {
     },
   },
   library: {
+    leaveTitle: 'مغادرة «{{title}}»؟',
+    leaveBody:
+      'ستختفي الخريطة من مكتبتك وتفقد الوصول إليها حتى يدعوك المالك مجددًا. يبقى تقدّمك في بطاقاتها محفوظًا.',
     all: 'الكل',
     newSubject: 'مادة جديدة',
     noSubject: 'بلا مادة',
@@ -1376,6 +1379,19 @@ export const ar: Messages = {
     sent: 'شكرًا، أُرسل بلاغك',
     already: 'أبلغت عن هذه الخريطة من قبل.',
     ownMap: 'لا يمكنك الإبلاغ عن خريطتك.',
+  },
+  invites: {
+    title_zero: 'لا دعوات',
+    title_one: 'دعوة واحدة في انتظارك',
+    title_two: 'دعوتان في انتظارك',
+    title_few: '{{count}} دعوات في انتظارك',
+    title_many: '{{count}} دعوة في انتظارك',
+    title_other: '{{count}} دعوة في انتظارك',
+    from: 'من {{name}} · {{role}}',
+    accept: 'قبول',
+    decline: 'رفض',
+    accepted: 'انضممت إلى الخريطة',
+    declined: 'رُفضت الدعوة',
   },
   notFound: {
     title: 'الصفحة غير موجودة',

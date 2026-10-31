@@ -133,6 +133,9 @@ export const en = {
     },
   },
   library: {
+    leaveTitle: 'Leave “{{title}}”?',
+    leaveBody:
+      'The map disappears from your library and you lose access, unless the owner invites you again. Your flashcard progress on it is kept.',
     all: 'All',
     newSubject: 'New subject',
     noSubject: 'No subject',
@@ -1143,6 +1146,15 @@ export const en = {
     sent: 'Thanks, your report was sent',
     already: 'You already reported this map.',
     ownMap: 'You cannot report your own map.',
+  },
+  invites: {
+    title_one: '{{count}} invite waiting for you',
+    title_other: '{{count}} invites waiting for you',
+    from: 'From {{name}} · {{role}}',
+    accept: 'Accept',
+    decline: 'Decline',
+    accepted: 'You joined the map',
+    declined: 'Invite declined',
   },
   notFound: {
     title: 'Page not found',

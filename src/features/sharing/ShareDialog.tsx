@@ -1,4 +1,4 @@
-import { Check, Copy, Link2, RotateCcw, UserPlus } from 'lucide-react'
+import { Check, Copy, Flag, Link2, RotateCcw, UserPlus } from 'lucide-react'
 import { useEffect, useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router'
@@ -9,6 +9,7 @@ import { useAuth } from '@/features/auth/authStore'
 import { cn } from '@/lib/cn'
 import type { LinkAccess, MapPersonRow, ShareSettingsRow } from '@/lib/database.types'
 import { supabase } from '@/lib/supabase'
+import { ReportDialog } from './ReportDialog'
 import { shareError, shareUrl } from './shareApi'
 import { usePeople } from './usePeople'
 
@@ -167,6 +168,7 @@ function People({
   const navigate = useNavigate()
   const me = useAuth((s) => s.session?.user.id)
   const [confirm, setConfirm] = useState<string | null>(null)
+  const [reporting, setReporting] = useState(false)
 
   const run = async (key: string, call: () => PromiseLike<{ error: { code?: string } | null }>) => {
     if (confirm !== key) return setConfirm(key)
@@ -267,21 +269,31 @@ function People({
         })}
       </ul>
       {!owner && me && (
-        <Button
-          variant={confirm === 'leave' ? 'danger' : 'secondary'}
-          className="self-start"
-          onClick={async () => {
-            if (confirm !== 'leave') return setConfirm('leave')
-            const { error } = await supabase.rpc('member_remove', { p_map: mapId, p_user: me })
-            if (error) return toast(t(shareError(error)), 'danger')
-            toast(t('share.left'), 'success')
-            onLeft()
-            navigate('/library')
-          }}
-        >
-          {confirm === 'leave' ? t('share.confirmLeave') : t('share.leave')}
-        </Button>
+        <span className="flex flex-wrap gap-2">
+          <Button
+            variant={confirm === 'leave' ? 'danger' : 'secondary'}
+            className="self-start"
+            onClick={async () => {
+              if (confirm !== 'leave') return setConfirm('leave')
+              const { error } = await supabase.rpc('member_remove', { p_map: mapId, p_user: me })
+              if (error) return toast(t(shareError(error)), 'danger')
+              toast(t('share.left'), 'success')
+              onLeft()
+              navigate('/library')
+            }}
+          >
+            {confirm === 'leave' ? t('share.confirmLeave') : t('share.leave')}
+          </Button>
+          <Button
+            variant="ghost"
+            icon={<Flag size={16} aria-hidden />}
+            onClick={() => setReporting(true)}
+          >
+            {t('link.report')}
+          </Button>
+        </span>
       )}
+      {reporting && <ReportDialog open onClose={() => setReporting(false)} target={{ mapId }} />}
     </section>
   )
 }

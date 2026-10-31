@@ -137,6 +137,9 @@ export const de: Messages = {
     },
   },
   library: {
+    leaveTitle: '„{{title}}“ verlassen?',
+    leaveBody:
+      'Die Map verschwindet aus deiner Bibliothek und du verlierst den Zugriff, bis der Eigentümer dich wieder einlädt. Dein Lernfortschritt bleibt gespeichert.',
     all: 'Alle',
     newSubject: 'Neues Fach',
     noSubject: 'Ohne Fach',
@@ -1173,6 +1176,15 @@ export const de: Messages = {
     sent: 'Danke, deine Meldung wurde gesendet',
     already: 'Du hast diese Map schon gemeldet.',
     ownMap: 'Deine eigene Map kannst du nicht melden.',
+  },
+  invites: {
+    title_one: '{{count}} Einladung wartet auf dich',
+    title_other: '{{count}} Einladungen warten auf dich',
+    from: 'Von {{name}} · {{role}}',
+    accept: 'Annehmen',
+    decline: 'Ablehnen',
+    accepted: 'Du bist der Map beigetreten',
+    declined: 'Einladung abgelehnt',
   },
   notFound: {
     title: 'Seite nicht gefunden',

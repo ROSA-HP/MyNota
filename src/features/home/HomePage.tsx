@@ -5,6 +5,8 @@ import { Link } from 'react-router'
 import { Alert, Panel, Spinner, buttonClasses } from '@/components/ui'
 import { useAuth } from '@/features/auth/authStore'
 import { COVER, SubjectDot, useUpdated } from '@/features/library/mapBits'
+import { InvitesPanel } from '@/features/sharing/InvitesPanel'
+import { useInvites } from '@/features/sharing/invitesStore'
 import { dueToday, useOverview, type Overview } from '@/features/study/overviewStore'
 import { streak } from '@/features/study/limits'
 import { cn } from '@/lib/cn'
@@ -23,11 +25,13 @@ export function HomePage() {
 
   useEffect(() => {
     if (userId) void useOverview.getState().load(userId)
+    void useInvites.getState().load()
   }, [userId])
 
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-8 px-4 py-8 sm:px-8">
       <Greeting />
+      <InvitesPanel onAccepted={() => userId && void useOverview.getState().load(userId)} />
       {status === 'error' && !data ? (
         <Alert tone="danger">
           {t('home.loadFailed')}{' '}

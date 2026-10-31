@@ -5,6 +5,7 @@ import { Link, NavLink, Outlet, useLocation } from 'react-router'
 import { Badge, IconButton, Logo } from '@/components/ui'
 import { useAuth } from '@/features/auth/authStore'
 import { SearchPalette, SearchButton } from '@/features/search/SearchPalette'
+import { useInvites } from '@/features/sharing/invitesStore'
 import { useOverview } from '@/features/study/overviewStore'
 import { LanguageSelect } from '@/features/settings/LanguageSelect'
 import { ThemeToggle } from '@/features/settings/ThemeToggle'
@@ -24,6 +25,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const { t } = useTranslation()
   const profile = useAuth((s) => s.profile)
   const signOut = useAuth((s) => s.signOut)
+  const invites = useInvites((s) => s.invites.length)
   const due = useOverview((s) =>
     s.data ? Object.values(s.data.decks).reduce((n, d) => n + d.due, 0) : 0,
   )
@@ -38,6 +40,15 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         <NavLink to="/library" className={navLinkClass} onClick={onNavigate}>
           <BookOpen size={20} aria-hidden />
           {t('nav.library')}
+          {invites > 0 && (
+            <Badge
+              tone="warning"
+              className="ms-auto"
+              aria-label={t('invites.title', { count: invites })}
+            >
+              {invites}
+            </Badge>
+          )}
         </NavLink>
         <NavLink to="/flashcards" className={navLinkClass} onClick={onNavigate}>
           <Layers size={20} aria-hidden />
@@ -98,7 +109,9 @@ export function AppShell() {
 
   // Keeps the Flashcards badge current as the student moves around (at most every 30 s).
   useEffect(() => {
-    if (userId) void useOverview.getState().load(userId, 30_000)
+    if (!userId) return
+    void useOverview.getState().load(userId, 30_000)
+    void useInvites.getState().load(30_000)
   }, [userId, pathname])
 
   useEffect(() => {

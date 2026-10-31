@@ -3,8 +3,10 @@ import {
   BookOpen,
   ClipboardPaste,
   FileText,
+  Flag,
   FolderInput,
   KeyRound,
+  LogOut,
   MoreHorizontal,
   Pencil,
   Plus,
@@ -28,6 +30,11 @@ import {
   toast,
 } from '@/components/ui'
 import { useAuth } from '@/features/auth/authStore'
+import { InvitesPanel } from '@/features/sharing/InvitesPanel'
+import { useInvites } from '@/features/sharing/invitesStore'
+import { ReportDialog } from '@/features/sharing/ReportDialog'
+import { shareError } from '@/features/sharing/shareApi'
+import { supabase } from '@/lib/supabase'
 import { chapterColor } from '@/features/workspace/canvas/visuals'
 import { cn } from '@/lib/cn'
 import type { ChapterColor, MapRow, MapStatsRow, SubjectRow } from '@/lib/database.types'
@@ -100,12 +107,17 @@ function MapCard({
   subjects,
   movable,
   onMove,
+  onLeave,
+  onReport,
 }: {
   map: MapRow
   stats: MapStatsRow | undefined
   subjects: SubjectRow[]
   movable: boolean
   onMove: (subjectId: string | null) => void
+  /** Shared maps (not yours): leave it, or report it. */
+  onLeave?: () => void
+  onReport?: () => void
 }) {
   const { t } = useTranslation()
   const updated = useUpdated()
@@ -181,7 +193,7 @@ function MapCard({
           )}
         </div>
       </Panel>
-      {movable && (
+      {(movable || onLeave) && (
         <div ref={menuRef} className="absolute end-2 top-2 z-10">
           <button
             type="button"
@@ -198,32 +210,61 @@ function MapCard({
               role="menu"
               className="absolute end-0 top-11 w-56 rounded-neo-lg border-2 border-line bg-surface p-1.5 neo-shadow"
             >
-              <p className="flex items-center gap-1.5 px-2 py-1 text-xs font-bold text-ink-muted">
-                <FolderInput size={13} aria-hidden /> {t('library.moveTo')}
-              </p>
-              {[...subjects.map((s) => ({ id: s.id, name: s.name, color: s.color })), null].map(
-                (s) => (
+              {!movable && (
+                <>
                   <button
-                    key={s?.id ?? 'none'}
                     type="button"
-                    role="menuitemradio"
-                    aria-checked={(s?.id ?? null) === map.subject_id}
+                    role="menuitem"
                     onClick={() => {
                       setMenu(false)
-                      onMove(s?.id ?? null)
+                      onLeave?.()
                     }}
-                    className={cn(
-                      'flex min-h-10 w-full cursor-pointer items-center gap-2 rounded-lg px-2 text-start text-sm font-semibold hover:bg-paper-sunken',
-                      (s?.id ?? null) === map.subject_id && 'bg-paper-sunken',
-                    )}
+                    className="flex min-h-10 w-full cursor-pointer items-center gap-2 rounded-lg px-2 text-start text-sm font-semibold hover:bg-paper-sunken"
                   >
-                    {s ? <SubjectDot color={s.color} /> : <span className="size-3" />}
-                    <span dir="auto" className="truncate">
-                      {s ? s.name : t('library.noSubject')}
-                    </span>
+                    <LogOut size={15} aria-hidden className="rtl:-scale-x-100" /> {t('share.leave')}
                   </button>
-                ),
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setMenu(false)
+                      onReport?.()
+                    }}
+                    className="flex min-h-10 w-full cursor-pointer items-center gap-2 rounded-lg px-2 text-start text-sm font-semibold text-danger hover:bg-paper-sunken"
+                  >
+                    <Flag size={15} aria-hidden /> {t('link.report')}
+                  </button>
+                </>
               )}
+              {movable && (
+                <p className="flex items-center gap-1.5 px-2 py-1 text-xs font-bold text-ink-muted">
+                  <FolderInput size={13} aria-hidden /> {t('library.moveTo')}
+                </p>
+              )}
+              {movable &&
+                [...subjects.map((s) => ({ id: s.id, name: s.name, color: s.color })), null].map(
+                  (s) => (
+                    <button
+                      key={s?.id ?? 'none'}
+                      type="button"
+                      role="menuitemradio"
+                      aria-checked={(s?.id ?? null) === map.subject_id}
+                      onClick={() => {
+                        setMenu(false)
+                        onMove(s?.id ?? null)
+                      }}
+                      className={cn(
+                        'flex min-h-10 w-full cursor-pointer items-center gap-2 rounded-lg px-2 text-start text-sm font-semibold hover:bg-paper-sunken',
+                        (s?.id ?? null) === map.subject_id && 'bg-paper-sunken',
+                      )}
+                    >
+                      {s ? <SubjectDot color={s.color} /> : <span className="size-3" />}
+                      <span dir="auto" className="truncate">
+                        {s ? s.name : t('library.noSubject')}
+                      </span>
+                    </button>
+                  ),
+                )}
             </div>
           )}
         </div>
@@ -349,6 +390,11 @@ export function LibraryPage() {
     subject: null,
   })
   const [deleting, setDeleting] = useState<SubjectRow | null>(null)
+  const [leaving, setLeaving] = useState<MapRow | null>(null)
+  const [reporting, setReporting] = useState<string | null>(null)
+  useEffect(() => {
+    void useInvites.getState().load()
+  }, [])
   const [dropTarget, setDropTarget] = useState<string | null>(null)
   const [subjectMenu, setSubjectMenu] = useState<string | null>(null)
   const subjectMenuRef = useRef<HTMLDivElement>(null)
@@ -434,6 +480,10 @@ export function LibraryPage() {
           <Plus size={18} aria-hidden />
           {t('library.newMap')}
         </Link>
+      </div>
+
+      <div className="mt-6">
+        <InvitesPanel onAccepted={() => void reload()} />
       </div>
 
       {ready && ready.maps.length + subjects.length > 0 && (
@@ -589,6 +639,8 @@ export function LibraryPage() {
                           subjects={subjects}
                           movable={own(m)}
                           onMove={(sid) => move(m.id, sid)}
+                          onLeave={own(m) ? undefined : () => setLeaving(m)}
+                          onReport={own(m) ? undefined : () => setReporting(m.id)}
                         />
                       ))}
                     </div>
@@ -648,6 +700,40 @@ export function LibraryPage() {
       >
         <p>{t('library.subject.deleteBody')}</p>
       </Dialog>
+      <Dialog
+        open={Boolean(leaving)}
+        onClose={() => setLeaving(null)}
+        title={t('library.leaveTitle', { title: leaving?.title ?? '' })}
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setLeaving(null)}>
+              {t('common.cancel')}
+            </Button>
+            <Button
+              variant="danger"
+              onClick={async () => {
+                const m = leaving
+                setLeaving(null)
+                if (!m || !userId) return
+                const { error } = await supabase.rpc('member_remove', {
+                  p_map: m.id,
+                  p_user: userId,
+                })
+                if (error) return toast(t(shareError(error)), 'danger')
+                toast(t('share.left'), 'success')
+                void reload()
+              }}
+            >
+              {t('share.leave')}
+            </Button>
+          </>
+        }
+      >
+        <p>{t('library.leaveBody')}</p>
+      </Dialog>
+      {reporting && (
+        <ReportDialog open onClose={() => setReporting(null)} target={{ mapId: reporting }} />
+      )}
     </div>
   )
 }
