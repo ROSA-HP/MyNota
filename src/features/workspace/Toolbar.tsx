@@ -12,7 +12,9 @@ import {
   MousePointer2,
   PanelsTopLeft,
   Plus,
+  Redo2,
   StickyNote,
+  Undo2,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { toast } from '@/components/ui'
@@ -33,12 +35,14 @@ function ToolButton({
   onClick,
   children,
   showLabel,
+  disabled,
 }: {
   label: string
   active?: boolean
   onClick: () => void
   children: React.ReactNode
   showLabel?: boolean
+  disabled?: boolean
 }) {
   return (
     <button
@@ -47,8 +51,9 @@ function ToolButton({
       aria-pressed={active}
       title={label}
       onClick={onClick}
+      disabled={disabled}
       className={cn(
-        'flex h-11 min-w-11 cursor-pointer items-center justify-center gap-1.5 rounded-lg px-2.5 text-sm font-semibold whitespace-nowrap',
+        'flex h-11 min-w-11 cursor-pointer items-center justify-center gap-1.5 rounded-lg px-2.5 text-sm font-semibold whitespace-nowrap disabled:cursor-default disabled:opacity-35 disabled:hover:bg-transparent',
         active ? 'bg-ink text-paper' : 'text-ink hover:bg-paper-sunken',
       )}
     >
@@ -164,6 +169,8 @@ export function Toolbar() {
   const { zoomIn, zoomOut, fitView } = useReactFlow()
   const { zoom } = useViewport()
   const canEdit = useWorkspace((s) => s.role === 'owner' || s.role === 'editor')
+  const canUndo = useWorkspace((s) => s.canUndo)
+  const canRedo = useWorkspace((s) => s.canRedo)
   // With the details panel open the canvas is narrower: icons only.
   const compact = useWorkspace((s) => s.selectedId !== null || s.selectedRelationId !== null)
   const { connecting, startConnect, cancelConnect, openSearch } = useCanvasUi()
@@ -218,6 +225,20 @@ export function Toolbar() {
           <span aria-hidden className="mx-0.5 h-6 w-0.5 bg-line-soft" />
           <ToolButton label={t('ws.tidy')} onClick={tidy} showLabel={!compact}>
             <LayoutGrid size={19} aria-hidden />
+          </ToolButton>
+          <ToolButton
+            label={t('ws.undo')}
+            onClick={() => useWorkspace.getState().undo()}
+            disabled={!canUndo}
+          >
+            <Undo2 size={19} aria-hidden className="rtl:-scale-x-100" />
+          </ToolButton>
+          <ToolButton
+            label={t('ws.redo')}
+            onClick={() => useWorkspace.getState().redo()}
+            disabled={!canRedo}
+          >
+            <Redo2 size={19} aria-hidden className="rtl:-scale-x-100" />
           </ToolButton>
         </>
       )}

@@ -481,6 +481,8 @@ export const de: Messages = {
     add: 'Hinzufügen',
     connect: 'Verbinden',
     tidy: 'Aufräumen',
+    undo: 'Rückgängig (Strg+Z)',
+    redo: 'Wiederholen (Strg+Umschalt+Z)',
     zoomIn: 'Vergrößern',
     zoomOut: 'Verkleinern',
     fit: 'Karte einpassen',

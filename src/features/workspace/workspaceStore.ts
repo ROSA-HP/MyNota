@@ -23,6 +23,7 @@ import {
   type DocRows,
 } from './live/mapDoc'
 import { openSupabaseChannel, supabaseDocStore, type ChannelStatus } from './live/transport'
+import { MapUndo } from './live/undo'
 import {
   cacheMap,
   deleteNodes,
@@ -62,6 +63,9 @@ interface WorkspaceState {
   selectedId: string | null
   selectedRelationId: string | null
   saveState: SaveState
+  /** Undo and redo of this person's own changes (Phase 6.4). */
+  canUndo: boolean
+  canRedo: boolean
 
   load: (mapId: string, userId: string) => Promise<void>
   /** A map seen through its share link: read only, nothing is ever saved. */
@@ -78,6 +82,8 @@ interface WorkspaceState {
   updateRelation: (id: string, patch: Partial<RelationRow>) => void
   deleteRelation: (id: string) => void
   flush: () => Promise<void>
+  undo: () => void
+  redo: () => void
 }
 
 /**
@@ -86,6 +92,7 @@ interface WorkspaceState {
  * changes, after the document changes behind them are saved.
  */
 let live: LiveMap | null = null
+let undoer: MapUndo | null = null
 // Ids whose readable copy must be written (upserted, or deleted when gone).
 const snapNodes = new Set<string>()
 const snapRelations = new Set<string>()
@@ -223,6 +230,11 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
     role: 'owner' | 'editor' | 'viewer',
   ): Promise<boolean> {
     live?.close()
+    undoer?.clear()
+    const undo = new MapUndo((canUndo, canRedo) => {
+      if (undoer === undo) set({ canUndo, canRedo })
+    })
+    undoer = undo
     const canEdit = role === 'owner' || role === 'editor'
     const instance: LiveMap = new LiveMap(
       mapId,
@@ -231,6 +243,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
       { store: supabaseDocStore, cache: dexieDocCache, channel: openSupabaseChannel },
       {
         onChange: (c) => onChange(instance, c),
+        onDoc: (key, doc) => undo.track(key, doc),
         onStatus: (st) => {
           if (instance === live) set({ liveStatus: st })
         },
@@ -322,6 +335,8 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
     selectedId: null,
     selectedRelationId: null,
     saveState: 'saved',
+    canUndo: false,
+    canRedo: false,
 
     load: async (mapId, userId) => {
       if (get().mapId === mapId && live) {
@@ -440,6 +455,8 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
       snapRelations.clear()
       live?.close()
       live = null
+      undoer?.clear()
+      undoer = null
       set({
         mapId: null,
         status: 'idle',
@@ -454,6 +471,8 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
         selectedId: null,
         selectedRelationId: null,
         saveState: 'saved',
+        canUndo: false,
+        canRedo: false,
       })
     },
 
@@ -462,7 +481,11 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
       return r === 'owner' || r === 'editor'
     },
 
-    select: (id) => set({ selectedId: id, selectedRelationId: null }),
+    select: (id) => {
+      // Editing another block starts a new undo step.
+      if (id !== get().selectedId) undoer?.stopCapturing()
+      set({ selectedId: id, selectedRelationId: null })
+    },
     selectRelation: (id) => set({ selectedRelationId: id, selectedId: null }),
 
     addNodes: (rows, opts) => {
@@ -605,6 +628,13 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
       } finally {
         saving = null
       }
+    },
+
+    undo: () => {
+      if (get().canEdit()) undoer?.undo()
+    },
+    redo: () => {
+      if (get().canEdit()) undoer?.redo()
     },
   }
 })

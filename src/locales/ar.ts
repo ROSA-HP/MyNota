@@ -518,6 +518,8 @@ export const ar: Messages = {
     add: 'إضافة',
     connect: 'ربط',
     tidy: 'ترتيب تلقائي',
+    undo: 'تراجع (Ctrl+Z)',
+    redo: 'إعادة (Ctrl+Shift+Z)',
     zoomIn: 'تكبير',
     zoomOut: 'تصغير',
     fit: 'ملاءمة الخريطة للشاشة',

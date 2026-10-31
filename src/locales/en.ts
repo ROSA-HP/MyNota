@@ -466,6 +466,8 @@ export const en = {
     add: 'Add',
     connect: 'Connect',
     tidy: 'Tidy up',
+    undo: 'Undo (Ctrl+Z)',
+    redo: 'Redo (Ctrl+Shift+Z)',
     zoomIn: 'Zoom in',
     zoomOut: 'Zoom out',
     fit: 'Fit map to screen',

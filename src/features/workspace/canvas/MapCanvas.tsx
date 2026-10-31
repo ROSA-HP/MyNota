@@ -562,15 +562,29 @@ export function MapCanvas() {
     return () => clearTimeout(id)
   }, [visibleCount, fitView])
 
-  // Keyboard: L links the selection (search), Delete removes a block or link, Esc backs out.
+  // Keyboard: L links the selection (search), Delete removes a block or link, Esc backs out,
+  // Ctrl/Cmd+Z undoes this person's own changes (Shift+Z or Y redoes).
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const el = e.target as HTMLElement | null
+      // Inside a text field the browser undoes the typing itself.
       if (el && (el.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName)))
         return
-      if (e.ctrlKey || e.metaKey || e.altKey) return
       const ui = useCanvasUi.getState()
       const ws = useWorkspace.getState()
+      if ((e.ctrlKey || e.metaKey) && !e.altKey && canEdit) {
+        // Latin letter, or the key's position on Arabic and other layouts.
+        const k = /^[a-z]$/i.test(e.key)
+          ? e.key.toLowerCase()
+          : e.code.replace(/^Key/, '').toLowerCase()
+        if (k === 'z' || k === 'y') {
+          e.preventDefault()
+          if (k === 'y' || e.shiftKey) ws.redo()
+          else ws.undo()
+        }
+        return
+      }
+      if (e.ctrlKey || e.metaKey || e.altKey) return
       if (ui.picker || ui.search) return // the popover handles its own keys
       if (e.key === 'Escape') {
         if (ui.connecting) cancelConnect()

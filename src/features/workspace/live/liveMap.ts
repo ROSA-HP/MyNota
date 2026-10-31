@@ -50,6 +50,8 @@ export interface LiveHooks {
   onStatus?(status: ChannelStatus): void
   /** Unsaved changes (true) or everything saved (false); `failed` after a save error. */
   onSaving?(pending: boolean, failed: boolean): void
+  /** A document was opened or created here (undo starts tracking it). */
+  onDoc?(key: DocKey, doc: Y.Doc): void
 }
 
 export interface LiveDeps {
@@ -467,6 +469,7 @@ export class LiveMap {
 
   private attach(key: DocKey, doc: Y.Doc) {
     this.docs.set(key, doc)
+    this.hooks.onDoc?.(key, doc)
     doc.on('update', (update: Uint8Array, origin: unknown) => {
       if (this.closed) return
       if (origin !== REMOTE && origin !== CACHE) this.queue(key, update, true)
