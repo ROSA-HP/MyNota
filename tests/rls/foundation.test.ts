@@ -135,12 +135,17 @@ describe('profiles: access', () => {
     expect(new Set(r.rows.map((x) => x.id))).toEqual(new Set([owner, editor, viewer]))
   })
 
-  it('admins can read every profile', async () => {
-    const r = await asUser(adminUser, (db) =>
-      db.query('select count(*)::int as n from public.profiles'),
-    )
+  it('admins can read every profile, only with a two-factor session (Phase 7)', async () => {
+    const count = (aal: string) =>
+      asUser(adminUser, async (db) => {
+        await db.query(`select set_config('request.jwt.claims', $1, true)`, [
+          JSON.stringify({ sub: adminUser, role: 'authenticated', aal }),
+        ])
+        return (await db.query('select count(*)::int as n from public.profiles')).rows[0].n
+      })
     const total = (await admin('select count(*)::int as n from public.profiles')).rows[0].n
-    expect(r.rows[0].n).toBe(total)
+    expect(await count('aal2')).toBe(total)
+    expect(await count('aal1')).toBe(1) // only their own
   })
 
   it('users can update their own editable fields', async () => {

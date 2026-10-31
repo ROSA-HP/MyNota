@@ -3,6 +3,7 @@ import { create } from 'zustand'
 import type { ProfileRow } from '@/lib/database.types'
 import { PROFILE_COLUMNS, supabase } from '@/lib/supabase'
 import { useAiKey } from '@/features/settings/aiKeyStore'
+import { assurance } from './mfa'
 import { usePreferences } from '@/features/settings/preferencesStore'
 
 type Status = 'loading' | 'signedOut' | 'signedIn'
@@ -15,6 +16,11 @@ interface AuthState {
   notice: 'suspended' | null
   /** True after following a password-reset link. */
   recovering: boolean
+  /** Signed in with a password or Google, but the account's authenticator code is still due. */
+  mfaNeeded: boolean
+  /** This session passed the second factor (required for the admin area). */
+  mfaVerified: boolean
+  refreshAssurance: () => Promise<void>
   init: () => () => void
   refreshProfile: () => Promise<void>
   setProfile: (profile: ProfileRow) => void
@@ -38,13 +44,20 @@ export const useAuth = create<AuthState>((set, get) => {
       set({ status: 'signedIn', session, profile: null })
       return
     }
-    if (data.status === 'suspended') {
+    if (data.status !== 'active') {
       await supabase.auth.signOut()
       set({ status: 'signedOut', session: null, profile: null, notice: 'suspended' })
       return
     }
     const isFirstLoad = get().profile?.id !== data.id
-    set({ status: 'signedIn', session, profile: data })
+    const a = await assurance()
+    set({
+      status: 'signedIn',
+      session,
+      profile: data,
+      mfaNeeded: a.needed,
+      mfaVerified: a.verified,
+    })
     if (isFirstLoad) {
       usePreferences.getState().adoptFromProfile(data)
       void useAiKey.getState().load(data.id)
@@ -57,6 +70,8 @@ export const useAuth = create<AuthState>((set, get) => {
     profile: null,
     notice: null,
     recovering: false,
+    mfaNeeded: false,
+    mfaVerified: false,
 
     init: () => {
       if (initialized) return () => undefined
@@ -81,6 +96,8 @@ export const useAuth = create<AuthState>((set, get) => {
             else void loadProfile(session)
           } else {
             set({ session })
+            if (event === 'MFA_CHALLENGE_VERIFIED' || event === 'TOKEN_REFRESHED')
+              void get().refreshAssurance()
           }
         }, 0)
       })
@@ -96,12 +113,24 @@ export const useAuth = create<AuthState>((set, get) => {
       if (session) await loadProfile(session)
     },
 
+    refreshAssurance: async () => {
+      const a = await assurance()
+      set({ mfaNeeded: a.needed, mfaVerified: a.verified })
+    },
+
     setProfile: (profile) => set({ profile }),
 
     signOut: async () => {
       useAiKey.getState().clearMemory()
       await supabase.auth.signOut()
-      set({ status: 'signedOut', session: null, profile: null, recovering: false })
+      set({
+        status: 'signedOut',
+        session: null,
+        profile: null,
+        recovering: false,
+        mfaNeeded: false,
+        mfaVerified: false,
+      })
     },
 
     clearNotice: () => set({ notice: null }),

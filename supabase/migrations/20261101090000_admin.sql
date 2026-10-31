@@ -37,6 +37,27 @@ alter table public.profiles drop constraint profiles_status_valid;
 alter table public.profiles add constraint profiles_status_valid
   check (status in ('active', 'suspended', 'banned'));
 
+-- profiles.two_factor_enabled follows the account's verified authenticator apps (Supabase MFA).
+-- Called by the app after turning two-factor sign-in on or off; it only reads auth.mfa_factors,
+-- so nobody can mark themselves as protected without a verified factor.
+create or replace function public.two_factor_sync()
+returns boolean language plpgsql volatile security definer set search_path = '' as $$
+declare
+  me uuid := (select auth.uid());
+  enabled boolean;
+begin
+  if me is null then raise exception 'sign in first' using errcode = '42501'; end if;
+  select exists (select 1 from auth.mfa_factors f where f.user_id = me and f.status::text = 'verified')
+    into enabled;
+  update public.profiles p set two_factor_enabled = enabled
+  where p.id = me and p.two_factor_enabled is distinct from enabled;
+  return enabled;
+end;
+$$;
+
+revoke all on function public.two_factor_sync() from public, anon;
+grant execute on function public.two_factor_sync() to authenticated;
+
 -- ---------------------------------------------------------------------------
 -- Tables
 -- ---------------------------------------------------------------------------

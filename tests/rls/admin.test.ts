@@ -50,7 +50,7 @@ beforeAll(async () => {
   mapId = (
     await admin(
       `insert into public.maps (owner_id, type, title, link_access, link_token)
-       values ($1, 'notes', 'Spam map', 'view', 'tok_' || md5(random()::text)) returning id`,
+       values ($1, 'notes', 'Spam map', 'view', public.share_new_token()) returning id`,
       [owner],
     )
   ).rows[0].id
@@ -119,6 +119,32 @@ describe('who may use admin functions', () => {
     } finally {
       await admin(`update public.profiles set status = 'active' where id = $1`, [boss])
     }
+  })
+})
+
+describe('two-factor flag', () => {
+  it('follows verified authenticator apps only', async () => {
+    await admin(`insert into auth.mfa_factors (user_id, status) values ($1, 'unverified')`, [
+      student,
+    ])
+    await as(student, 'aal1', async (db) => {
+      expect((await rows(db, 'select public.two_factor_sync() as on'))[0]?.on).toBe(false)
+      // Nobody can set it directly.
+      expect(
+        await fails(db, 'update public.profiles set two_factor_enabled = true where id = $1', [
+          student,
+        ]),
+      ).toBe(PERMISSION_DENIED)
+    })
+    await admin(`update auth.mfa_factors set status = 'verified' where user_id = $1`, [student])
+    await as(student, 'aal1', async (db) => {
+      expect((await rows(db, 'select public.two_factor_sync() as on'))[0]?.on).toBe(true)
+      const p = await rows(db, 'select two_factor_enabled from public.profiles where id = $1', [
+        student,
+      ])
+      expect(p[0]?.two_factor_enabled).toBe(true)
+    })
+    await admin(`delete from auth.mfa_factors where user_id = $1`, [student])
   })
 })
 

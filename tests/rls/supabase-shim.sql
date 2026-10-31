@@ -27,6 +27,14 @@ language sql stable as $$
   )::uuid
 $$;
 
+-- Supabase MFA factors (only the columns our functions read).
+create table if not exists auth.mfa_factors (
+  id           uuid primary key default gen_random_uuid(),
+  user_id      uuid not null references auth.users (id) on delete cascade,
+  factor_type  text not null default 'totp',
+  status       text not null default 'unverified'
+);
+
 -- Same as Supabase: the whole JWT (tests set `aal` there for two-factor sessions).
 create or replace function auth.jwt() returns jsonb
 language sql stable as $$

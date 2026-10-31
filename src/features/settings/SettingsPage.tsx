@@ -18,6 +18,7 @@ import { PROFILE_COLUMNS, supabase } from '@/lib/supabase'
 import { z } from 'zod'
 import { usePreferences } from './preferencesStore'
 import { AiProvidersSection } from './AiProvidersSection'
+import { SecuritySection } from './SecuritySection'
 import { StudySection } from './StudySection'
 import { ThemeToggle } from './ThemeToggle'
 
@@ -166,6 +167,14 @@ export function SettingsPage() {
             <ThemeToggle showLabels className="self-start" />
           </div>
         </div>
+      </Section>
+
+      <Section
+        id="security"
+        title={t('settings.security.title')}
+        hint={t('settings.security.hint')}
+      >
+        <SecuritySection />
       </Section>
 
       <Section title={t('settings.account')}>

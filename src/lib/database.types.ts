@@ -10,7 +10,7 @@ export type ProfileRow = {
   name: string
   avatar_url: string | null
   role: 'student' | 'admin'
-  status: 'active' | 'suspended'
+  status: 'active' | 'suspended' | 'banned'
   two_factor_enabled: boolean
   ui_language: 'en' | 'ar' | 'de'
   theme: 'light' | 'dark' | 'system'
@@ -317,6 +317,26 @@ export type AiJobRow = {
   updated_at: string
 }
 
+/** A sign-in attempt (Phase 7); people read their own. */
+export type LoginEventRow = {
+  id: number
+  user_id: string | null
+  at: string
+  success: boolean
+  method: 'password' | 'google' | 'mfa' | 'magic_link'
+  device: string
+  country: string | null
+  ip_hash: string | null
+}
+
+/** Limits (`limits.*`, numbers) and feature switches (`features.*`, booleans). */
+export type AppSettingRow = {
+  key: string
+  value: number | boolean
+  updated_by: string | null
+  updated_at: string
+}
+
 type Table<Row, Insert, Update> = {
   Row: Row
   Insert: Insert
@@ -428,6 +448,9 @@ export type Database = {
         Pick<MapMemberRow, 'map_id' | 'user_id' | 'role'>,
         Partial<Pick<MapMemberRow, 'role'>>
       >
+      // Read only from the app (Phase 7): written by Edge Functions and admin functions.
+      login_events: Table<LoginEventRow, never, never>
+      app_settings: Table<AppSettingRow, never, never>
     }
     Views: { [_ in never]: never }
     Functions: {
@@ -473,6 +496,7 @@ export type Database = {
         }
         Returns: string
       }
+      two_factor_sync: { Args: never; Returns: boolean }
       doc_load: {
         Args: { p_map: string; p_keys: string[] }
         Returns: Array<{ doc_key: string; state: string | null; updates: string[]; upto: number }>

@@ -66,6 +66,12 @@ export const de: Messages = {
     },
   },
   auth: {
+    mfa: {
+      title: 'Anmeldung in zwei Schritten',
+      subtitle: 'Gib den 6-stelligen Code aus deiner Authenticator-App ein.',
+      submit: 'Weiter',
+      lost: 'Handy verloren? Wende dich an den Support, um die Anmeldung in zwei Schritten zu entfernen.',
+    },
     google: 'Weiter mit Google',
     signIn: {
       title: 'Willkommen zurück',
@@ -200,6 +206,40 @@ export const de: Messages = {
     },
   },
   settings: {
+    security: {
+      title: 'Sicherheit',
+      hint: 'Anmeldung in zwei Schritten und die Geräte, die mit deinem Konto angemeldet sind.',
+      twoFactor: 'Anmeldung in zwei Schritten',
+      twoFactorHint:
+        'Nach dem Passwort nach einem Code aus einer Authenticator-App fragen (Google Authenticator, Microsoft Authenticator, 1Password, …).',
+      on: 'An',
+      off: 'Aus',
+      turnOn: 'Einschalten',
+      turnOff: 'Ausschalten',
+      confirmOff: 'Ja, ausschalten',
+      turnedOn: 'Die Anmeldung in zwei Schritten ist an.',
+      turnedOff: 'Die Anmeldung in zwei Schritten ist aus.',
+      offFailed:
+        'Ausschalten hat nicht geklappt. Melde dich mit deinem Code neu an und versuche es noch einmal.',
+      since: 'An seit {{date}}',
+      adminNeeds:
+        'Admins müssen die Anmeldung in zwei Schritten einschalten, um den Admin-Bereich zu nutzen.',
+      step1: 'Scanne diesen Code mit deiner Authenticator-App oder tippe den Schlüssel ab.',
+      step2: 'Gib den 6-stelligen Code aus der App ein.',
+      qrAlt: 'QR-Code für deine Authenticator-App',
+      secret: 'Schlüssel',
+      code: 'Code',
+      verify: 'Prüfen und einschalten',
+      codeInvalid: 'Gib die 6 Ziffern aus der App ein.',
+      codeWrong:
+        'Der Code hat nicht gepasst. Prüfe die Uhrzeit deines Handys und nimm den neuesten Code.',
+      devices: 'Geräte und Anmeldungen',
+      signedIn: 'Angemeldet',
+      failed: 'Fehlgeschlagene Anmeldung',
+      noSignIns: 'Noch keine Anmeldungen erfasst.',
+      signOutOthers: 'Alle anderen Geräte abmelden',
+      othersDone: 'Andere Geräte sind abgemeldet.',
+    },
     study: {
       title: 'Lernen',
       hint: 'Wie viele Karten pro Tag. Die Limits gelten für alle deine Maps zusammen.',
