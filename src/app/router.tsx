@@ -11,6 +11,7 @@ import { LandingPage } from '@/features/landing/LandingPage'
 import { LibraryPage } from '@/features/library/LibraryPage'
 import { NewMapPage } from '@/features/new-map/NewMapPage'
 import { SettingsPage } from '@/features/settings/SettingsPage'
+import { LinkPage } from '@/features/sharing/LinkPage'
 import { DeckPage } from '@/features/study/deck/DeckPage'
 import { StudyPage } from '@/features/study/StudyPage'
 import { WorkspacePage } from '@/features/workspace/WorkspacePage'
@@ -47,6 +48,8 @@ export const router = createBrowserRouter([
   { path: '/forgot-password', element: <ForgotPasswordPage /> },
   { path: '/reset-password', element: <ResetPasswordPage /> },
   { path: '/auth/callback', element: <AuthCallbackPage /> },
+  // A map shared by link: open to everyone (read only); signing in unlocks join / copy / report.
+  { path: '/s/:token', element: <LinkPage /> },
   {
     element: (
       <RequireAuth>

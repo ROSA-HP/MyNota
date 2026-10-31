@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { MapRow, NodeRow, RelationRow, SourceRow } from '@/lib/database.types'
+import type { LinkView, MapRow, NodeRow, RelationRow, SourceRow } from '@/lib/database.types'
 import {
   cacheMap,
   deleteNodes,
@@ -33,6 +33,8 @@ interface WorkspaceState {
   saveState: SaveState
 
   load: (mapId: string, userId: string) => Promise<void>
+  /** A map seen through its share link: read only, nothing is ever saved. */
+  showLink: (view: LinkView) => void
   reset: () => void
   canEdit: () => boolean
   select: (id: string | null) => void
@@ -144,6 +146,29 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
         else if (get().status !== 'ready') set({ status: 'error' })
         // With a cached copy we stay usable (read-only) while offline.
       }
+    },
+
+    showLink: (view) => {
+      get().reset()
+      const now = view.map.updated_at
+      set({
+        mapId: view.map.id,
+        userId: null,
+        status: 'ready',
+        fromCache: false,
+        map: {
+          ...view.map,
+          owner_id: '',
+          subject_id: null,
+          link_access: view.access,
+          link_expires_at: null,
+          updated_at: now,
+        },
+        role: 'viewer',
+        nodes: byId(view.nodes),
+        relations: byId(view.relations),
+        sources: view.sources,
+      })
     },
 
     reset: () => {
