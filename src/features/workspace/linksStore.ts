@@ -127,7 +127,7 @@ export const useLinks = create<LinksState>((set) => ({
         existing: Object.values(now.relations),
         max,
       }).filter((r) => now.nodes[r.from_node] && now.nodes[r.to_node])
-      if (suggestions.length) now.addRelations(suggestions, { saveNow: true })
+      if (suggestions.length) now.addRelations(suggestions, { saveNow: true, ai: true })
       set({
         status: {
           state: 'done',

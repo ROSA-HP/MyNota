@@ -181,7 +181,7 @@ export const useBuild = create<BuildState>((set, get) => {
             : []
         }),
       )
-      useWorkspace.getState().addNodes(nodes, { saveNow: true })
+      useWorkspace.getState().addNodes(nodes, { saveNow: true, ai: true })
       set({
         outlineStatus: { state: 'done' },
         order: nodes.map((n) => n.id),
@@ -273,8 +273,8 @@ export const useBuild = create<BuildState>((set, get) => {
         lang: opts.sourceLanguage,
       })
       const ws = useWorkspace.getState()
-      ws.addNodes(nodes, { saveNow: true })
-      ws.addRelations(relations, { saveNow: true })
+      ws.addNodes(nodes, { saveNow: true, ai: true })
+      ws.addRelations(relations, { saveNow: true, ai: true })
       setSection(sectionId, { state: 'done' })
     } catch (e) {
       void finishJob(jobId, {

@@ -3,6 +3,7 @@ import type { LinkView, MapRow, NodeRow, RelationRow, SourceRow } from '@/lib/da
 import { dexieDocCache } from './live/docCache'
 import { LiveMap, type LiveChange } from './live/liveMap'
 import {
+  AI,
   BOOK_DOC,
   LOCAL,
   REMOTE,
@@ -74,11 +75,15 @@ interface WorkspaceState {
   canEdit: () => boolean
   select: (id: string | null) => void
   selectRelation: (id: string | null) => void
-  addNodes: (nodes: NodeRow[], opts?: { saveNow?: boolean }) => void
+  /** `ai`: written by the AI (not undoable; see live/mapDoc.ts › AI). */
+  addNodes: (nodes: NodeRow[], opts?: { saveNow?: boolean; ai?: boolean }) => void
   updateNode: (id: string, patch: Partial<NodeRow>) => void
-  updateNodes: (patches: Array<{ id: string; patch: Partial<NodeRow> }>) => void
+  updateNodes: (
+    patches: Array<{ id: string; patch: Partial<NodeRow> }>,
+    opts?: { ai?: boolean },
+  ) => void
   deleteNode: (id: string) => void
-  addRelations: (relations: RelationRow[], opts?: { saveNow?: boolean }) => void
+  addRelations: (relations: RelationRow[], opts?: { saveNow?: boolean; ai?: boolean }) => void
   updateRelation: (id: string, patch: Partial<RelationRow>) => void
   deleteRelation: (id: string) => void
   flush: () => Promise<void>
@@ -490,14 +495,15 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
 
     addNodes: (rows, opts) => {
       if (!rows.length || !live || !get().canEdit()) return
+      const origin = opts?.ai ? AI : LOCAL
       for (const [key, list] of groupNodes(rows))
-        if (list.length) live.write(key, (d) => list.forEach((n) => putNode(d, n)))
+        if (list.length) live.write(key, (d) => list.forEach((n) => putNode(d, n)), origin)
       if (opts?.saveNow) scheduleSave(0)
     },
 
     updateNode: (id, patch) => get().updateNodes([{ id, patch }]),
 
-    updateNodes: (patches) => {
+    updateNodes: (patches, opts) => {
       if (!live || !get().canEdit()) return
       const at = new Date().toISOString()
       const byDoc = new Map<DocKey, typeof patches>()
@@ -507,8 +513,10 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
         byDoc.set(key, [...(byDoc.get(key) ?? []), p])
       }
       for (const [key, list] of byDoc)
-        live.write(key, (d) =>
-          list.forEach(({ id, patch }) => patchNode(d, id, { ...patch, updated_at: at })),
+        live.write(
+          key,
+          (d) => list.forEach(({ id, patch }) => patchNode(d, id, { ...patch, updated_at: at })),
+          opts?.ai ? AI : LOCAL,
         )
     },
 
@@ -544,7 +552,9 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
         const key = docOf('r:', r.id) ?? keyOfRelation(r)
         byDoc.set(key, [...(byDoc.get(key) ?? []), r])
       }
-      for (const [key, list] of byDoc) live.write(key, (d) => list.forEach((r) => putRelation(d, r)))
+      const origin = opts?.ai ? AI : LOCAL
+      for (const [key, list] of byDoc)
+        live.write(key, (d) => list.forEach((r) => putRelation(d, r)), origin)
       if (opts?.saveNow) scheduleSave(0)
     },
 

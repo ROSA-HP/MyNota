@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import * as Y from 'yjs'
 import { makeNode } from '@/ai/pipeline/convert'
 import {
+  AI,
   LOCAL,
   REMOTE,
   SEED,
@@ -40,6 +41,8 @@ describe('MapUndo', () => {
     undo.track('book', a)
     const n = makeNode({ map_id: MAP, level: 'chapter', title: 'Cells' })
     a.transact(() => putNode(a, n), SEED) // converted map: not undoable
+    const built = makeNode({ map_id: MAP, level: 'section', title: 'Built', parent_id: n.id })
+    a.transact(() => putNode(a, built), AI) // written by the AI: not undoable either
     expect(undo.canUndo).toBe(false)
 
     a.transact(() => patchNode(a, n.id, { title: 'Mine' }), LOCAL)
@@ -55,6 +58,7 @@ describe('MapUndo', () => {
 
     expect(undo.redo()).toBe(true)
     expect(readNode(a, n.id, MAP)?.title).toBe('Mine')
+    expect(readNode(a, built.id, MAP)?.title).toBe('Built')
   })
 
   it('does not overwrite a field someone else changed after us', () => {

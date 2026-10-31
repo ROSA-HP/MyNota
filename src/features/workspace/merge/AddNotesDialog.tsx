@@ -248,8 +248,8 @@ export function AddNotesDialog({ open, onClose }: { open: boolean; onClose: () =
         paragraphs: notes.map((p) => ({ n: offset + p.n, text: p.text })),
       })
       useWorkspace.setState((s) => ({ sources: [...s.sources, row] }))
-      if (add.length) ws.addNodes(add, { saveNow: true })
-      if (patches.length) ws.updateNodes(patches)
+      if (add.length) ws.addNodes(add, { saveNow: true, ai: true })
+      if (patches.length) ws.updateNodes(patches, { ai: true })
       useCanvasUi.getState().setSpotlight(add.filter((n) => n.level === 'block').map((n) => n.id))
       toast(t('ws.merge.applied', { count: changes }), 'success')
       reset()

@@ -23,6 +23,9 @@ const REL = 'r:'
 export const LOCAL = 'mynota:local'
 /** Turning existing rows into a document: saved, but not undoable. */
 export const SEED = 'mynota:seed'
+/** Blocks and links written by the AI (building, merging notes, suggestions): saved and sent,
+ * but not undoable, so Ctrl+Z never removes a build. */
+export const AI = 'mynota:ai'
 /** Changes that came from someone else or from the server. */
 export const REMOTE = 'mynota:remote'
 
