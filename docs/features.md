@@ -50,6 +50,12 @@ One deck per map, scheduled with FSRS (`ts-fsrs`). Every card links back to its 
   are one step; a step can span the book and chapter documents. Text fields keep the browser's
   own undo while typing.
 - AI-generated blocks are inserted into the shared document, so collaborators watch the map grow.
+  Built in Phase 6.5: AI writes (building, "Add notes", link suggestions) use their own origin,
+  so they are saved and sent like any edit but Ctrl+Z never removes them.
+- Book maps open with the book document only (Phase 6.5). A chapter's document loads when the
+  chapter is on screen at the sections or blocks level, when one of its blocks is selected, or
+  before an edit to it is applied; until then it is shown from the readable copy and live changes
+  to it are not followed. Opened without a connection, all documents with a device copy are used.
 - A snapshot job keeps `nodes` and `relations` in Postgres up to date.
 
 ## Search

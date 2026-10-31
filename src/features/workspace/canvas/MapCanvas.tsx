@@ -205,6 +205,40 @@ export function MapCanvas() {
     [rtl, layout.width],
   )
 
+  // Book maps: a chapter's live document loads when the chapter is on screen at the sections or
+  // blocks level (Phase 6.5). Checked a moment after the view stops changing.
+  useEffect(() => {
+    if (!book) return
+    let timer: ReturnType<typeof setTimeout> | null = null
+    const check = () => {
+      timer = null
+      const { transform, width, height } = store.getState()
+      const [tx, ty, z] = transform
+      if (!width || !height || levelFor(z, book) === 'chapters') return
+      const x0 = -tx / z
+      const y0 = -ty / z
+      const x1 = x0 + width / z
+      const y1 = y0 + height / z
+      const ids = layout.regions
+        .filter((r) => r.kind === 'chapter')
+        .filter((r) => {
+          const b = toScreen(r)
+          return b.x < x1 && b.x + b.w > x0 && b.y < y1 && b.y + b.h > y0
+        })
+        .map((r) => r.sectionId)
+      if (ids.length) useWorkspace.getState().showChapters(ids)
+    }
+    const schedule = () => {
+      if (!timer) timer = setTimeout(check, 250)
+    }
+    schedule()
+    const unsubscribe = store.subscribe(schedule)
+    return () => {
+      unsubscribe()
+      if (timer) clearTimeout(timer)
+    }
+  }, [book, store, layout.regions, toScreen])
+
   /** The focus unit a node belongs to: its chapter (book) or its section (notes map). */
   const groupOf = useCallback((id: string) => focusGroupOf(nodes, id), [nodes])
   const cover = useCanvasUi((s) => s.cover)

@@ -1,3 +1,4 @@
+import type * as Y from 'yjs'
 import { create } from 'zustand'
 import type { LinkView, MapRow, NodeRow, RelationRow, SourceRow } from '@/lib/database.types'
 import { dexieDocCache } from './live/docCache'
@@ -75,6 +76,8 @@ interface WorkspaceState {
   canEdit: () => boolean
   select: (id: string | null) => void
   selectRelation: (id: string | null) => void
+  /** Book maps: loads the live documents of these chapters (they came on screen). */
+  showChapters: (chapterIds: string[]) => void
   /** `ai`: written by the AI (not undoable; see live/mapDoc.ts › AI). */
   addNodes: (nodes: NodeRow[], opts?: { saveNow?: boolean; ai?: boolean }) => void
   updateNode: (id: string, patch: Partial<NodeRow>) => void
@@ -98,6 +101,20 @@ interface WorkspaceState {
  */
 let live: LiveMap | null = null
 let undoer: MapUndo | null = null
+
+/**
+ * Book maps open lazily (Phase 6.5): only the book document at first; a chapter's document is
+ * loaded when the chapter comes on screen, is selected, or is edited. Until then its blocks are
+ * shown from the readable copy (`saved`), and changes others make to it are not followed.
+ */
+interface LazyBook {
+  saved: DocRows
+  split: Map<DocKey, DocRows>
+  /** Chapters whose documents are loaded or being loaded (followed for live changes). */
+  wanted: Set<DocKey>
+  loading: Map<DocKey, Promise<boolean>>
+}
+let lazy: LazyBook | null = null
 // Ids whose readable copy must be written (upserted, or deleted when gone).
 const snapNodes = new Set<string>()
 const snapRelations = new Set<string>()
@@ -233,9 +250,15 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
     userId: string,
     rows: DocRows,
     role: 'owner' | 'editor' | 'viewer',
+    lazyBook = false,
   ): Promise<boolean> {
     live?.close()
     undoer?.clear()
+    const split = splitRows(rows)
+    const plan: LazyBook | null = lazyBook
+      ? { saved: rows, split, wanted: new Set([BOOK_DOC]), loading: new Map() }
+      : null
+    lazy = plan
     const undo = new MapUndo((canUndo, canRedo) => {
       if (undoer === undo) set({ canUndo, canRedo })
     })
@@ -245,7 +268,12 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
       mapId,
       userId,
       canEdit,
-      { store: supabaseDocStore, cache: dexieDocCache, channel: openSupabaseChannel },
+      {
+        store: supabaseDocStore,
+        cache: dexieDocCache,
+        channel: openSupabaseChannel,
+        follows: (key) => !plan || plan.wanted.has(key),
+      },
       {
         onChange: (c) => onChange(instance, c),
         onDoc: (key, doc) => undo.track(key, doc),
@@ -262,8 +290,11 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
       },
     )
     live = instance
-    const split = splitRows(rows)
     try {
+      if (plan) {
+        await instance.load([BOOK_DOC], split)
+        return live === instance
+      }
       await instance.load([...split.keys()], split)
       // The book document may know chapters the readable copy does not have yet.
       const known = new Set(instance.docs.keys())
@@ -280,6 +311,100 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
       return false
     }
     return live === instance
+  }
+
+  /** What the canvas shows: the loaded documents, plus saved rows of chapters not loaded yet. */
+  function shownRows(): DocRows {
+    const rows = live?.rows() ?? { nodes: [], relations: [] }
+    if (!lazy || !live) return rows
+    const nodes = byId(rows.nodes)
+    const relations = byId(rows.relations)
+    for (const [key, b] of lazy.split) {
+      if (live.docs.has(key)) continue
+      for (const n of b.nodes) nodes[n.id] ??= n
+      for (const r of b.relations) relations[r.id] ??= r
+    }
+    return { nodes: Object.values(nodes), relations: Object.values(relations) }
+  }
+
+  /**
+   * Loads the documents of book chapters that are not loaded yet. Resolves true when all of
+   * them are loaded (always true for maps that are not lazy).
+   */
+  function ensureDocs(keys: Array<DocKey | null>): Promise<boolean> {
+    const instance = live
+    const plan = lazy
+    if (!instance || !plan) return Promise.resolve(true)
+    const todo = [...new Set(keys)].filter(
+      (k): k is DocKey => k !== null && k !== BOOK_DOC && !instance.docs.has(k),
+    )
+    if (!todo.length) return Promise.resolve(true)
+    const fresh = todo.filter((k) => !plan.loading.has(k))
+    if (fresh.length) {
+      fresh.forEach((k) => plan.wanted.add(k))
+      const p = instance.load(fresh, plan.split).then(
+        () => true,
+        () => false,
+      )
+      fresh.forEach((k) => plan.loading.set(k, p))
+      void p.then((ok) => {
+        if (live !== instance || lazy !== plan) return
+        if (ok) return afterChaptersLoaded(fresh)
+        // Could not load (offline): try again next time.
+        fresh.forEach((k) => {
+          plan.wanted.delete(k)
+          plan.loading.delete(k)
+        })
+      })
+    }
+    return Promise.all(todo.map((k) => plan.loading.get(k) ?? Promise.resolve(false))).then((r) =>
+      r.every(Boolean),
+    )
+  }
+
+  /** Saved rows of the loaded chapters that their documents no longer have are removed. */
+  function afterChaptersLoaded(keys: DocKey[]) {
+    if (!lazy) return
+    const s = get()
+    let nodes: Record<string, NodeRow> | null = null
+    let relations: Record<string, RelationRow> | null = null
+    for (const key of keys) {
+      const b = lazy.split.get(key)
+      for (const n of b?.nodes ?? []) {
+        if (docOf('n:', n.id) || !(nodes ?? s.nodes)[n.id]) continue
+        nodes ??= { ...s.nodes }
+        Reflect.deleteProperty(nodes, n.id)
+      }
+      for (const r of b?.relations ?? []) {
+        if (docOf('r:', r.id) || !(relations ?? s.relations)[r.id]) continue
+        relations ??= { ...s.relations }
+        Reflect.deleteProperty(relations, r.id)
+      }
+    }
+    if (nodes || relations) set({ ...(nodes && { nodes }), ...(relations && { relations }) })
+    pruneOrphans()
+    healReadableCopy(lazy.saved)
+  }
+
+  /** The document a node is (or will be) in, also for chapters not loaded yet. */
+  function keyOfNodeId(id: string): DocKey | null {
+    const loaded = docOf('n:', id)
+    if (loaded) return loaded
+    const nodes = get().nodes
+    const n = nodes[id]
+    return n ? docKeyOfNode(n, (p) => nodes[p]) : null
+  }
+
+  /** Writes into a document, loading its chapter first when needed (lazy book maps). */
+  function writeTo(key: DocKey, fn: (doc: Y.Doc) => void, origin: unknown) {
+    const instance = live
+    if (!instance) return
+    if (instance.docs.has(key) || !lazy || key === BOOK_DOC) return instance.write(key, fn, origin)
+    void ensureDocs([key]).then((ok) => {
+      if (live !== instance) return
+      if (ok) instance.write(key, fn, origin)
+      else set({ saveState: 'error' }) // the chapter could not be opened: the change is lost
+    })
   }
 
   /** Brings the readable copy in line with the documents (an editor's device does it on open). */
@@ -374,7 +499,8 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
       if (get().mapId !== mapId) return
 
       if (snap) {
-        const ok = await openLive(mapId, userId, snap, snap.role)
+        // A book opens with the book document only; chapters load as they come on screen.
+        const ok = await openLive(mapId, userId, snap, snap.role, snap.map.type === 'book')
         if (get().mapId !== mapId) return
         if (!ok) {
           // Documents unavailable: show the saved rows read-only.
@@ -388,7 +514,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
             sources: snap.sources,
           })
         }
-        const rows = live?.rows() ?? { nodes: [], relations: [] }
+        const rows = shownRows()
         set({
           status: 'ready',
           fromCache: false,
@@ -409,7 +535,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
         const ok = await openLive(mapId, userId, cached, cached.role)
         if (get().mapId !== mapId) return
         if (ok) {
-          const rows = live?.rows() ?? { nodes: [], relations: [] }
+          const rows = shownRows()
           return set({
             status: 'ready',
             fromCache: false,
@@ -450,6 +576,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
     },
 
     reset: () => {
+      lazy = null
       if (saveTimer) clearTimeout(saveTimer)
       if (orphanTimer) clearTimeout(orphanTimer)
       saveTimer = null
@@ -490,14 +617,18 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
       // Editing another block starts a new undo step.
       if (id !== get().selectedId) undoer?.stopCapturing()
       set({ selectedId: id, selectedRelationId: null })
+      // A block of a chapter not loaded yet: load it, so editing goes into the live document.
+      if (id) void ensureDocs([keyOfNodeId(id)])
     },
     selectRelation: (id) => set({ selectedRelationId: id, selectedId: null }),
+
+    showChapters: (ids) => void ensureDocs(ids),
 
     addNodes: (rows, opts) => {
       if (!rows.length || !live || !get().canEdit()) return
       const origin = opts?.ai ? AI : LOCAL
       for (const [key, list] of groupNodes(rows))
-        if (list.length) live.write(key, (d) => list.forEach((n) => putNode(d, n)), origin)
+        if (list.length) writeTo(key, (d) => list.forEach((n) => putNode(d, n)), origin)
       if (opts?.saveNow) scheduleSave(0)
     },
 
@@ -508,12 +639,12 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
       const at = new Date().toISOString()
       const byDoc = new Map<DocKey, typeof patches>()
       for (const p of patches) {
-        const key = docOf('n:', p.id)
+        const key = keyOfNodeId(p.id)
         if (!key) continue
         byDoc.set(key, [...(byDoc.get(key) ?? []), p])
       }
       for (const [key, list] of byDoc)
-        live.write(
+        writeTo(
           key,
           (d) => list.forEach(({ id, patch }) => patchNode(d, id, { ...patch, updated_at: at })),
           opts?.ai ? AI : LOCAL,
@@ -535,13 +666,17 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
         b[kind].push(x)
         byDoc.set(key, b)
       }
-      ids.forEach((n) => add(docOf('n:', n), 'nodes', n))
-      rels.forEach((r) => add(docOf('r:', r.id), 'relations', r.id))
+      ids.forEach((n) => add(keyOfNodeId(n), 'nodes', n))
+      rels.forEach((r) => add(docOf('r:', r.id) ?? keyOfRelation(r), 'relations', r.id))
       for (const [key, b] of byDoc)
-        live.write(key, (d) => {
-          b.relations.forEach((r) => removeRelation(d, r))
-          b.nodes.forEach((n) => removeNode(d, n))
-        })
+        writeTo(
+          key,
+          (d) => {
+            b.relations.forEach((r) => removeRelation(d, r))
+            b.nodes.forEach((n) => removeNode(d, n))
+          },
+          LOCAL,
+        )
       scheduleSave(0)
     },
 
@@ -554,21 +689,23 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
       }
       const origin = opts?.ai ? AI : LOCAL
       for (const [key, list] of byDoc)
-        live.write(key, (d) => list.forEach((r) => putRelation(d, r)), origin)
+        writeTo(key, (d) => list.forEach((r) => putRelation(d, r)), origin)
       if (opts?.saveNow) scheduleSave(0)
     },
 
     updateRelation: (id, patch) => {
-      const key = docOf('r:', id)
+      const rel = get().relations[id]
+      const key = docOf('r:', id) ?? (rel ? keyOfRelation(rel) : null)
       if (!key || !live || !get().canEdit()) return
       const at = new Date().toISOString()
-      live.write(key, (d) => patchRelation(d, id, { ...patch, updated_at: at }))
+      writeTo(key, (d) => patchRelation(d, id, { ...patch, updated_at: at }), LOCAL)
     },
 
     deleteRelation: (id) => {
-      const key = docOf('r:', id)
+      const rel = get().relations[id]
+      const key = docOf('r:', id) ?? (rel ? keyOfRelation(rel) : null)
       if (!key || !live || !get().canEdit()) return
-      live.write(key, (d) => removeRelation(d, id))
+      writeTo(key, (d) => removeRelation(d, id), LOCAL)
       scheduleSave(0)
     },
 
