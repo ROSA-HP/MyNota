@@ -42,10 +42,23 @@ export interface CachedMap {
   mapId: string
   userId: string
   map: MapRow
+  /** The role the server last confirmed, so editing can continue offline (Phase 6). */
+  role?: 'owner' | 'editor' | 'viewer'
   nodes: NodeRow[]
   relations: RelationRow[]
   sources: SourceRow[]
   cachedAt: string
+}
+
+/** A map's live (Yjs) document as last seen on this device, including changes not yet saved. */
+export interface CachedDoc {
+  /** `${userId}:${mapId}:${docKey}` */
+  id: string
+  userId: string
+  mapId: string
+  key: string
+  state: Uint8Array
+  savedAt: string
 }
 
 class LocalDb extends Dexie {
@@ -53,6 +66,7 @@ class LocalDb extends Dexie {
   maps!: EntityTable<CachedMap, 'mapId'>
   settings!: EntityTable<DeviceSetting, 'id'>
   files!: EntityTable<StoredFile, 'id'>
+  docs!: EntityTable<CachedDoc, 'id'>
 
   constructor() {
     super('mynota')
@@ -70,6 +84,13 @@ class LocalDb extends Dexie {
       maps: 'mapId, userId',
       settings: 'id',
       files: 'id, userId, mapId',
+    })
+    this.version(4).stores({
+      keys: 'id',
+      maps: 'mapId, userId',
+      settings: 'id',
+      files: 'id, userId, mapId',
+      docs: 'id, [userId+mapId]',
     })
   }
 }

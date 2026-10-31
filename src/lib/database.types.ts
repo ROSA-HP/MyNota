@@ -473,6 +473,15 @@ export type Database = {
         }
         Returns: string
       }
+      doc_load: {
+        Args: { p_map: string; p_keys: string[] }
+        Returns: Array<{ doc_key: string; state: string | null; updates: string[]; upto: number }>
+      }
+      doc_push: { Args: { p_map: string; p_key: string; p_update: string }; Returns: number }
+      doc_compact: {
+        Args: { p_map: string; p_key: string; p_state: string; p_upto: number }
+        Returns: boolean
+      }
     }
     Enums: { [_ in never]: never }
     CompositeTypes: { [_ in never]: never }

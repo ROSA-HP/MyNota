@@ -38,14 +38,19 @@ export async function fetchMap(mapId: string, userId: string): Promise<MapSnapsh
     sources: sources.data ?? [],
     role: role.data,
   }
-  void cacheMap(snapshot, userId)
+  void cacheMap(snapshot, userId, snapshot.role)
   return snapshot
 }
 
-export async function cacheMap(s: Omit<MapSnapshot, 'role'>, userId: string): Promise<void> {
+export async function cacheMap(
+  s: Omit<MapSnapshot, 'role'>,
+  userId: string,
+  role?: MapSnapshot['role'],
+): Promise<void> {
   const row: CachedMap = {
     mapId: s.map.id,
     userId,
+    role,
     map: s.map,
     nodes: s.nodes,
     relations: s.relations,

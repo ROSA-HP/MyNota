@@ -27,9 +27,11 @@ export function useDeckSync(mapId: string | undefined) {
   useEffect(() => {
     if (!canEdit || deckStatus !== 'ready' || deckMap !== mapId || fromCache) return
     const id = setTimeout(() => {
-      useDeck
+      // Cards point at blocks in the readable copy: write it first.
+      void useWorkspace
         .getState()
-        .syncMade(Object.values(useWorkspace.getState().nodes))
+        .flush()
+        .then(() => useDeck.getState().syncMade(Object.values(useWorkspace.getState().nodes)))
         .catch(() => undefined) // cards are made again on the next change or visit
     }, SYNC_DELAY_MS)
     return () => clearTimeout(id)
