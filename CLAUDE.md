@@ -42,7 +42,8 @@ React + TypeScript (strict) + Vite · Tailwind CSS v4 · React Flow (`@xyflow/re
 
 - **Browser**: text extraction, AI calls with the user's key, layout, canvas, FSRS scheduling, local cache.
 - **Postgres**: all persistent data. **Every table has RLS enabled in the same migration that creates it.** Permissions are enforced in the database, never only in the UI.
-- **Edge Functions**: share-link resolution, invites, rate limiting, admin actions, audit logging.
+- **Sharing** (share links, invites, members, copy, reports, their rate limits and `share_events` log) runs in `SECURITY DEFINER` Postgres functions, not Edge Functions (decided 2026-10-31: one migration to apply, covered by the RLS tests). Invites wait for the invitee to accept; only existing accounts can be invited (email invites to new people later).
+- **Edge Functions**: admin actions and audit logging (Phase 7), and anything that needs a server secret (e.g. sending email).
 - **Realtime**: one Yjs document per chapter + one book-level document. Postgres keeps a readable snapshot for search, flashcards, admin, and export.
 - **Map layout** is MyNota's own small top-down layout (`src/features/workspace/canvas/layout.ts`), not ELK.js (decided 2026-10-30).
 - **Uploaded PDFs and photos stay on the device** (IndexedDB). Only the extracted paragraphs and page numbers are saved to Postgres, so maps work everywhere; page previews work on the device that has the file (decided 2026-10-30).

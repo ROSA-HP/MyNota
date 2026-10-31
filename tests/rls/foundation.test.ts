@@ -402,18 +402,10 @@ describe('map_members', () => {
     expect(r.rowCount).toBe(0)
   })
 
-  it('owner can add a member', async () => {
-    const r = await asUser(owner, (db) =>
-      db.query(
-        `insert into public.map_members (map_id, user_id, role) values ($1, $2, 'viewer') returning invited_by`,
-        [mapId, stranger],
-      ),
-    )
-    expect(r.rows[0].invited_by).toBe(owner)
-  })
-
-  it('editors and viewers cannot add members', async () => {
-    for (const u of [editor, viewer]) {
+  // Phase 5: memberships come only from invite_respond() / link_join() and change through
+  // member_set_role() / member_remove() (tests/rls/sharing.test.ts).
+  it('nobody writes memberships directly, not even the owner', async () => {
+    for (const u of [owner, editor, viewer]) {
       expect(
         await errorCode(
           asUser(u, (db) =>
@@ -424,55 +416,30 @@ describe('map_members', () => {
           ),
         ),
       ).toBe(PERMISSION_DENIED)
+      expect(
+        await errorCode(
+          asUser(u, (db) =>
+            db.query(`update public.map_members set role = 'editor' where map_id = $1`, [mapId]),
+          ),
+        ),
+      ).toBe(PERMISSION_DENIED)
+      expect(
+        await errorCode(
+          asUser(u, (db) => db.query(`delete from public.map_members where map_id = $1`, [mapId])),
+        ),
+      ).toBe(PERMISSION_DENIED)
     }
   })
 
   it('the owner cannot also be a member', async () => {
     expect(
       await errorCode(
-        asUser(owner, (db) =>
-          db.query(
-            `insert into public.map_members (map_id, user_id, role) values ($1, $2, 'editor')`,
-            [mapId, owner],
-          ),
-        ),
+        admin(`insert into public.map_members (map_id, user_id, role) values ($1, $2, 'editor')`, [
+          mapId,
+          owner,
+        ]),
       ),
     ).toBe('23514')
-  })
-
-  it('a viewer cannot promote themselves', async () => {
-    const r = await asUser(viewer, (db) =>
-      db.query(`update public.map_members set role = 'editor' where map_id = $1 and user_id = $2`, [
-        mapId,
-        viewer,
-      ]),
-    )
-    expect(r.rowCount).toBe(0)
-  })
-
-  it('owner can change roles', async () => {
-    const r = await asUser(owner, (db) =>
-      db.query(`update public.map_members set role = 'editor' where map_id = $1 and user_id = $2`, [
-        mapId,
-        viewer,
-      ]),
-    )
-    expect(r.rowCount).toBe(1)
-  })
-
-  it('a member can leave but cannot remove others', async () => {
-    await asUser(viewer, async (db) => {
-      const other = await db.query(
-        `delete from public.map_members where map_id = $1 and user_id = $2`,
-        [mapId, editor],
-      )
-      expect(other.rowCount).toBe(0)
-      const self = await db.query(
-        `delete from public.map_members where map_id = $1 and user_id = $2`,
-        [mapId, viewer],
-      )
-      expect(self.rowCount).toBe(1)
-    })
   })
 
   it('a removed member loses access to the map', async () => {

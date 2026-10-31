@@ -216,6 +216,57 @@ export type ReviewLogRow = {
   reviewed_at: string
 }
 
+export type MapRole = 'owner' | 'editor' | 'viewer'
+export type LinkAccess = 'off' | 'view' | 'edit'
+
+/** share_settings() / share_link_set() / share_link_reset() (owner only). */
+export type ShareSettingsRow = {
+  link_access: LinkAccess
+  link_token: string | null
+  link_expires_at: string | null
+}
+
+/** map_people(): owner, members and (for the owner) pending invites. */
+export type MapPersonRow = {
+  kind: 'owner' | 'member' | 'invite'
+  user_id: string
+  username: string
+  name: string
+  avatar_url: string | null
+  role: MapRole
+  invite_id: string | null
+  since: string
+}
+
+/** my_invites(): invites waiting for the caller's answer. */
+export type MyInviteRow = {
+  invite_id: string
+  map_id: string
+  map_title: string
+  map_type: MapRow['type']
+  cover_color: ChapterColor
+  role: 'editor' | 'viewer'
+  inviter_username: string | null
+  inviter_name: string | null
+  created_at: string
+}
+
+/** link_open(): a map seen through its share link (read only). */
+export type LinkView = {
+  map: Pick<
+    MapRow,
+    'id' | 'title' | 'type' | 'cover_color' | 'languages' | 'updated_at' | 'created_at'
+  >
+  access: 'view' | 'edit'
+  owner: { username: string; name: string } | null
+  role: MapRole | null
+  nodes: NodeRow[]
+  relations: RelationRow[]
+  sources: SourceRow[]
+}
+
+export type ReportReason = 'spam' | 'inappropriate' | 'copyright' | 'harmful' | 'other'
+
 /** One search_all() result (Phase 4.5). source: title is the paragraph number, node_id its chapter. */
 export type SearchResultRow = {
   kind: 'map' | 'node' | 'card' | 'source'
@@ -391,6 +442,37 @@ export type Database = {
         Returns: Array<{ day: string; reviews: number }>
       }
       search_all: { Args: { q: string; max_results?: number }; Returns: SearchResultRow[] }
+      share_settings: { Args: { p_map: string }; Returns: ShareSettingsRow[] }
+      share_link_set: {
+        Args: { p_map: string; p_access: LinkAccess; p_expires_at?: string | null }
+        Returns: ShareSettingsRow[]
+      }
+      share_link_reset: { Args: { p_map: string }; Returns: ShareSettingsRow[] }
+      invite_member: {
+        Args: { p_map: string; p_who: string; p_role: 'editor' | 'viewer' }
+        Returns: Array<{ invite_id: string; invitee_id: string; username: string; name: string }>
+      }
+      invite_cancel: { Args: { p_invite: string }; Returns: undefined }
+      invite_respond: { Args: { p_invite: string; p_accept: boolean }; Returns: string }
+      member_set_role: {
+        Args: { p_map: string; p_user: string; p_role: 'editor' | 'viewer' }
+        Returns: undefined
+      }
+      member_remove: { Args: { p_map: string; p_user: string }; Returns: undefined }
+      map_people: { Args: { p_map: string }; Returns: MapPersonRow[] }
+      my_invites: { Args: never; Returns: MyInviteRow[] }
+      link_open: { Args: { p_token: string }; Returns: LinkView }
+      link_join: { Args: { p_token: string }; Returns: string }
+      copy_map: { Args: { p_map?: string | null; p_token?: string | null }; Returns: string }
+      report_map: {
+        Args: {
+          p_reason: ReportReason
+          p_details?: string
+          p_map?: string | null
+          p_token?: string | null
+        }
+        Returns: string
+      }
     }
     Enums: { [_ in never]: never }
     CompositeTypes: { [_ in never]: never }

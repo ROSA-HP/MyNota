@@ -114,14 +114,17 @@ Outline subsections are orientation for the details pass only; they are not stor
 ## Security and admin
 
 **login_events**: user_id, at, success, device, country, ip_hash
-**share_events**: map_id, actor_id, action (`link_created` | `link_reset` | `invite_sent` | `member_added` | `member_removed` | `role_changed`), target_user_id, at
-**reports**: map_id, reporter_id, reason, status (`open` | `resolved`), outcome, handled_by
+**map_invites** (Phase 5): map_id, invitee_id, role (`editor` | `viewer`), invited_by, status (`pending` | `accepted` | `declined` | `cancelled`), created_at, responded_at; one pending invite per person and map. Read by the map owner and the invitee.
+**share_events**: map_id, actor_id, action (`link_created` | `link_changed` | `link_reset` | `link_joined` | `invite_sent` | `invite_cancelled` | `invite_accepted` | `invite_declined` | `member_removed` | `member_left` | `role_changed` | `map_copied` | `map_reported`), target_user_id, at. Read by the map owner and the actor; also the rate-limit counter for sharing.
+**reports**: map_id, reporter_id, reason (`spam` | `inappropriate` | `copyright` | `harmful` | `other`), details, status (`open` | `resolved`), outcome, handled_by; one open report per person and map; read only by the reporter (admins in Phase 7).
+
+**Sharing functions** (`20261031170000_sharing.sql`, `SECURITY DEFINER`): `share_settings`, `share_link_set(map, access, expires_at)`, `share_link_reset`, `invite_member(map, username_or_email, role)`, `invite_cancel`, `invite_respond(invite, accept)`, `member_set_role`, `member_remove` (owner removes, or a member leaves), `map_people`, `my_invites`, `link_open(token)` (also for anon: map, nodes, accepted relations, sources), `link_join(token)` (edit links: become editor), `copy_map(map | token)`, `report_map`. `map_members` has no client write grants any more. Errors: `MN400` invalid, `MN404` not found, `MN409` already done, `MN410` link off/expired, `MN429` too many, `42501` not allowed.
 **audit_log**: actor_id, action, target_type, target_id, reason, at — includes every admin view of map content
 **rate_limits** (counters): key, window_start, count
 
 ## RLS summary
 
-- Read a map and its nodes/relations/cards/sources: owner, member, or valid link token (view via Edge Function).
+- Read a map and its nodes/relations/cards/sources: owner, member, or valid link token (read only, through `link_open()`).
 - Write: owner or editor.
 - `cards`: read by everyone on the map, written by owner and editors.
 - `card_progress`, `review_logs`: only the user themself (and only for maps they can open); review logs are never changed, and only deleted by undo within an hour (`20261031130000_review_undo.sql`).

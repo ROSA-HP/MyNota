@@ -14,7 +14,7 @@ Permissions are enforced in the database, not the UI, and the user's API key nev
 - RLS on every table, created in the same migration as the table.
 - Read only what you own or what is shared with you; write only as owner or editor.
 - Admin role checked in the database and Edge Functions, never only by hiding UI.
-- Share-link access resolved by an Edge Function that validates token, access level, and expiry.
+- Share-link access resolved by a `SECURITY DEFINER` Postgres function (`link_open`, `share_link_map`) that validates token, access level, expiry and that the owner is active (decided 2026-10-31, instead of an Edge Function). The token column is never readable through the table API; only the owner gets it from `share_settings()`.
 - Write tests for RLS policies.
 
 ## API keys
@@ -39,7 +39,7 @@ Permissions are enforced in the database, not the UI, and the user's API key nev
 
 ## Rate limiting
 
-Edge Functions with a `rate_limits` counters table, plus Supabase's built-in auth limits.
+Sharing limits are counted from `share_events` inside the sharing functions (Phase 5): link created 20/hour, link reset 10/hour, invites 30/hour, copies 20/hour, reports 5/day (error `MN429`). Other limits: Supabase's built-in auth limits, and Edge Functions with a `rate_limits` counters table later (Phase 7). Public link views are not limited yet (no IP in the database).
 
 | What | Why |
 |---|---|
