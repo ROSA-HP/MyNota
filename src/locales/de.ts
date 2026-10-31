@@ -1020,6 +1020,54 @@ export const de: Messages = {
     },
     scope: 'Durchsucht alle Maps, die dir gehören oder die du öffnen kannst',
   },
+  export: {
+    open: 'Exportieren',
+    title: '„{{title}}“ exportieren',
+    format: 'Format',
+    formats: {
+      pdf: {
+        name: 'PDF',
+        hint: 'Die Map als Bild, danach die Gliederung mit Zusammenfassungen und Details.',
+      },
+      png: {
+        name: 'PNG-Bild',
+        hint: 'Die Map, wie sie aussieht, scharf genug zum Drucken.',
+      },
+      md: {
+        name: 'Markdown',
+        hint: 'Die Gliederung als Text, für Notiz-Apps wie Obsidian.',
+      },
+    },
+    include: 'Was exportieren',
+    scope: {
+      book: 'Ganzes Buch',
+      map: 'Ganze Map',
+      chapter: 'Kapitel {{n}}',
+      section: 'Abschnitt {{n}}',
+      screen: 'Was gerade zu sehen ist',
+    },
+    paper: 'Papier',
+    papers: {
+      'a4-landscape': 'A4 quer',
+      'a4-portrait': 'A4 hoch',
+      'letter-landscape': 'Letter quer',
+    },
+    opts: {
+      details: 'Block-Details',
+      links: 'Verbindungen zwischen Blöcken',
+      cards: 'Karteikarten',
+      light: 'Helle Farben (spart Tinte)',
+    },
+    download: {
+      pdf: 'PDF herunterladen',
+      png: 'PNG herunterladen',
+      md: 'Markdown herunterladen',
+    },
+    local: 'Wird auf diesem Gerät erstellt. Nichts wird hochgeladen.',
+    done: 'Export fertig',
+    failed: 'Der Export hat nicht geklappt: {{error}}',
+    madeWith: 'Aus MyNota exportiert am {{date}}',
+  },
   notFound: {
     title: 'Seite nicht gefunden',
     body: 'Diese Seite existiert nicht oder wurde verschoben.',

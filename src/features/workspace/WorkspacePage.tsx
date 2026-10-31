@@ -1,12 +1,22 @@
 import { useEffect, useRef, useState } from 'react'
 import { ReactFlowProvider } from '@xyflow/react'
-import { ChevronRight, Eye, GitMerge, Layers, PanelLeft, Share2, Sparkles } from 'lucide-react'
+import {
+  ChevronRight,
+  Download,
+  Eye,
+  GitMerge,
+  Layers,
+  PanelLeft,
+  Share2,
+  Sparkles,
+} from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Link, useLocation, useNavigate, useParams } from 'react-router'
 import { Alert, Badge, IconButton, Logo, Spinner, buttonClasses } from '@/components/ui'
 import { useAuth } from '@/features/auth/authStore'
 import { useDeck } from '@/features/study/deckStore'
 import { deckCounts } from '@/features/study/mastery'
+import { ExportDialog } from '@/features/export/ExportDialog'
 import { SearchButton, SearchPalette } from '@/features/search/SearchPalette'
 import { useDeckSync } from '@/features/study/useDeckSync'
 import type { BookBuildRequest, BuildRequest } from '@/features/new-map/buildRequest'
@@ -182,6 +192,7 @@ function Workspace() {
   const [outlineOpen, setOutlineOpen] = useState(false)
   const linksTray = useCanvasUi((s) => s.linksTray)
   const [addNotesOpen, setAddNotesOpen] = useState(false)
+  const [exportOpen, setExportOpen] = useState(false)
   const subject = useSubject(map?.subject_id)
   useDeckSync(mapId)
   const setLinksTray = useCanvasUi((s) => s.setLinksTray)
@@ -340,6 +351,9 @@ function Workspace() {
         )}
         <div className="ms-auto flex items-center gap-2">
           <SearchButton compact />
+          <IconButton label={t('export.open')} onClick={() => setExportOpen(true)}>
+            <Download size={18} aria-hidden />
+          </IconButton>
           <AddNotesButton onOpen={() => setAddNotesOpen(true)} />
           <SuggestionsButton />
           <StudyButton mapId={mapId} />
@@ -421,6 +435,7 @@ function Workspace() {
       <LinkSearch />
       <DeleteConfirm />
       <SearchPalette />
+      <ExportDialog open={exportOpen} onClose={() => setExportOpen(false)} />
       <AddNotesDialog open={addNotesOpen} onClose={() => setAddNotesOpen(false)} />
     </div>
   )

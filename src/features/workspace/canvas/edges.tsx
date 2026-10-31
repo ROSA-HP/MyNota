@@ -247,6 +247,8 @@ export function RelationEdge({
             'nodrag nopan pointer-events-auto absolute flex items-center gap-1',
             data.dimmed && 'pointer-events-none opacity-20',
           )}
+          data-relation-label=""
+          data-suggested={suggested ? '' : undefined}
           style={{ transform: `translate(-50%, -50%) translate(${label.x}px, ${label.y}px)` }}
         >
           {editing ? (

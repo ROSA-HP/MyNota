@@ -39,7 +39,7 @@ Each phase ends with something a student can actually use. Before starting a pha
 
 **Done when**: a full textbook becomes a navigable book map.
 
-## Phase 4 — Study
+## Phase 4 — Study (done 2026-10-31)
 
 - `cards`, `card_progress`, `review_logs`; auto, AI, and manual cards
 - FSRS scheduling; deck overview; study session; card browser

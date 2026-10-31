@@ -992,6 +992,54 @@ export const en = {
     },
     scope: 'Searches every map you own or can open',
   },
+  export: {
+    open: 'Export',
+    title: 'Export “{{title}}”',
+    format: 'Format',
+    formats: {
+      pdf: {
+        name: 'PDF',
+        hint: 'The map as a picture, then the outline with summaries and details.',
+      },
+      png: {
+        name: 'PNG image',
+        hint: 'The map as it looks, sharp enough to print.',
+      },
+      md: {
+        name: 'Markdown',
+        hint: 'The outline as text, for notes apps like Obsidian.',
+      },
+    },
+    include: 'What to include',
+    scope: {
+      book: 'Whole book',
+      map: 'Whole map',
+      chapter: 'Chapter {{n}}',
+      section: 'Section {{n}}',
+      screen: 'What is on screen',
+    },
+    paper: 'Paper',
+    papers: {
+      'a4-landscape': 'A4 landscape',
+      'a4-portrait': 'A4 portrait',
+      'letter-landscape': 'Letter landscape',
+    },
+    opts: {
+      details: 'Block details',
+      links: 'Links between blocks',
+      cards: 'Flashcards',
+      light: 'Light colors (saves ink)',
+    },
+    download: {
+      pdf: 'Download PDF',
+      png: 'Download PNG',
+      md: 'Download Markdown',
+    },
+    local: 'Made on this device. Nothing is uploaded.',
+    done: 'Export ready',
+    failed: 'The export did not work: {{error}}',
+    madeWith: 'Exported from MyNota on {{date}}',
+  },
   notFound: {
     title: 'Page not found',
     body: 'This page does not exist or was moved.',

@@ -54,6 +54,14 @@ One deck per map, scheduled with FSRS (`ts-fsrs`). Every card links back to its 
 - Built in Phase 4.5: `search_all()` (see `docs/data-model.md`); the palette opens with Ctrl/Cmd+K or the search button in the top bar, has tabs All / Blocks / Cards / Source text, highlights matches with the same normalization, and Enter opens `/maps/:id?node=…` (cards open in the deck's card browser). The outline filter in a map dims everything on the canvas that does not match (matches and the path above them stay bright).
 - Later: search by meaning with embeddings created using the user's own key.
 
+## Export (Phase 4.6)
+
+- From the map's top bar (download icon). Everything is made in the browser; nothing is uploaded.
+- **PDF**: the map picture first (a book gets one page per built chapter), then the outline with summaries, details, links and (optionally) flashcards. Outline pages are laid out by the browser and added as images, so Arabic, German and formulas look exactly as on screen (the text is not selectable). Paper: A4 landscape / portrait, Letter landscape.
+- **PNG**: the map (or one chapter/section, or what is on screen) at blocks level, 2× for print, light theme, optional light colors (white regions).
+- **Markdown**: the outline for notes apps (Obsidian): headings down to sections, blocks as lists, links as → / ←, cards as `front :: back`; model text is escaped.
+- Pictures leave out the minimap, handles, build buttons, mastery dots and suggested (not yet accepted) links; selection, focus, filter and hidden details are switched off while the picture is taken and restored after.
+
 ## Admin dashboard
 
 Separate area at `/admin` with its own layout. Admin role verified in the database; 2FA required.

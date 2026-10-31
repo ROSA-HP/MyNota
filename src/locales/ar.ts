@@ -1217,6 +1217,54 @@ export const ar: Messages = {
     },
     scope: 'يبحث في كل خريطة تملكها أو يمكنك فتحها',
   },
+  export: {
+    open: 'تصدير',
+    title: 'تصدير «{{title}}»',
+    format: 'الصيغة',
+    formats: {
+      pdf: {
+        name: 'PDF',
+        hint: 'الخريطة كصورة، ثم المخطط مع الملخصات والتفاصيل.',
+      },
+      png: {
+        name: 'صورة PNG',
+        hint: 'الخريطة كما تبدو، بدقة تكفي للطباعة.',
+      },
+      md: {
+        name: 'Markdown',
+        hint: 'المخطط كنص، لتطبيقات الملاحظات مثل Obsidian.',
+      },
+    },
+    include: 'ما الذي يُصدَّر',
+    scope: {
+      book: 'الكتاب كله',
+      map: 'الخريطة كلها',
+      chapter: 'الفصل {{n}}',
+      section: 'القسم {{n}}',
+      screen: 'ما يظهر على الشاشة',
+    },
+    paper: 'الورق',
+    papers: {
+      'a4-landscape': 'A4 أفقي',
+      'a4-portrait': 'A4 عمودي',
+      'letter-landscape': 'Letter أفقي',
+    },
+    opts: {
+      details: 'تفاصيل الكتل',
+      links: 'الروابط بين الكتل',
+      cards: 'البطاقات',
+      light: 'ألوان فاتحة (توفّر الحبر)',
+    },
+    download: {
+      pdf: 'نزّل PDF',
+      png: 'نزّل PNG',
+      md: 'نزّل Markdown',
+    },
+    local: 'يُصنع على هذا الجهاز. لا يُرفع أي شيء.',
+    done: 'التصدير جاهز',
+    failed: 'لم ينجح التصدير: {{error}}',
+    madeWith: 'صُدّر من MyNota في {{date}}',
+  },
   notFound: {
     title: 'الصفحة غير موجودة',
     body: 'هذه الصفحة غير موجودة أو تم نقلها.',

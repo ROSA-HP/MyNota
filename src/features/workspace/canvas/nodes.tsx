@@ -254,7 +254,7 @@ function MasteryDot({ nodeId }: { nodeId: string }) {
       role="img"
       aria-label={t(`deck.mastery.${m}`)}
       title={t(`deck.mastery.${m}`)}
-      className="absolute -end-1.5 -top-1.5 size-4 rounded-full border-2 border-line"
+      className="mynota-no-export absolute -end-1.5 -top-1.5 size-4 rounded-full border-2 border-line"
       style={{ background: MASTERY_FILL[m] }}
     />
   )
@@ -426,7 +426,7 @@ function BuildChapterButton({ chapter, big }: { chapter: ChapterSummary; big?: b
   if (!canEdit || live === 'running' || live === 'queued') return null
   if (!canBuild)
     return (
-      <Link to="/settings" className="nodrag text-sm font-semibold underline">
+      <Link to="/settings" className="mynota-no-export nodrag text-sm font-semibold underline">
         {t('ws.build.needKey')}
       </Link>
     )
@@ -439,7 +439,7 @@ function BuildChapterButton({ chapter, big }: { chapter: ChapterSummary; big?: b
         build([chapter.id])
       }}
       className={cn(
-        'nodrag nopan inline-flex cursor-pointer items-center gap-2 self-start rounded-neo border-2 border-line bg-surface font-semibold text-ink neo-shadow-sm hover:bg-paper-sunken',
+        'mynota-no-export nodrag nopan inline-flex cursor-pointer items-center gap-2 self-start rounded-neo border-2 border-line bg-surface font-semibold text-ink neo-shadow-sm hover:bg-paper-sunken',
         big ? 'zt-button' : 'h-11 px-4 text-sm',
       )}
     >

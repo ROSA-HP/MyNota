@@ -375,7 +375,7 @@ export function MapCanvas() {
       dimmed.size
         ? edges.map((e) =>
             dimmed.has(e.source) || dimmed.has(e.target)
-              ? { ...e, className: 'is-dimmed', data: { ...e.data, dimmed: true } }
+              ? { ...e, className: cn(e.className, 'is-dimmed'), data: { ...e.data, dimmed: true } }
               : e,
           )
         : edges
@@ -486,6 +486,7 @@ export function MapCanvas() {
         source: r.from_node,
         target: r.to_node,
         type: 'relation',
+        className: r.status === 'suggested' ? 'is-suggested' : undefined,
         data: { relation: r, canEdit, selected: r.id === selectedRelationId, rtl },
         markerEnd:
           r.direction === 'backward'
