@@ -121,14 +121,11 @@ function docOf(prefix: 'n:' | 'r:', id: string): DocKey | null {
 }
 
 /** Fields that make up the readable copy (timestamps and authorship are the server's). */
-const sameNode = (a: NodeRow, b: NodeRow) => {
-  const strip = ({ created_by: _a, created_at: _b, updated_at: _c, ...rest }: NodeRow) => rest
-  return JSON.stringify(strip(a)) === JSON.stringify(strip(b))
-}
-const sameRelation = (a: RelationRow, b: RelationRow) => {
-  const strip = ({ created_by: _a, created_at: _b, updated_at: _c, ...rest }: RelationRow) => rest
-  return JSON.stringify(strip(a)) === JSON.stringify(strip(b))
-}
+const SERVER_FIELDS = new Set(['created_by', 'created_at', 'updated_at'])
+const readable = (row: NodeRow | RelationRow) =>
+  JSON.stringify(Object.entries(row).filter(([k]) => !SERVER_FIELDS.has(k)))
+const sameNode = (a: NodeRow, b: NodeRow) => readable(a) === readable(b)
+const sameRelation = (a: RelationRow, b: RelationRow) => readable(a) === readable(b)
 
 export const useWorkspace = create<WorkspaceState>((set, get) => {
   function scheduleSave(delay = SAVE_DELAY_MS) {

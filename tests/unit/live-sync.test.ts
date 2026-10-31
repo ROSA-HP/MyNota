@@ -102,10 +102,10 @@ class FakeHub {
 
 class MemoryCache implements DocCache {
   data = new Map<string, Uint8Array>()
-  async load(_u: string, _m: string) {
+  async load() {
     return new Map(this.data)
   }
-  async save(_u: string, _m: string, key: string, state: Uint8Array) {
+  async save(...[, , key, state]: Parameters<DocCache['save']>) {
     this.data.set(key, state)
   }
 }
