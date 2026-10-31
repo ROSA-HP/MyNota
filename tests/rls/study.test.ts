@@ -179,6 +179,17 @@ describe('progress and review logs are personal', () => {
     ).toBe('23514')
   })
 
+  it('review logs: undo takes back only your own recent answer', async () => {
+    const log = `insert into public.review_logs (card_id, user_id, map_id, rating, state, reviewed_at) values ($1, $2, $3, 1, 0, $4) returning id`
+    const recent = (await admin(log, [cardId, viewer, mapId, new Date().toISOString()])).rows[0].id
+    const old = (await admin(log, [cardId, viewer, mapId, '2026-01-01T00:00:00Z'])).rows[0].id
+    const del = 'delete from public.review_logs where id = $1'
+    expect((await asUser(owner, (db) => db.query(del, [recent]))).rowCount).toBe(0)
+    expect((await asUser(viewer, (db) => db.query(del, [old]))).rowCount).toBe(0)
+    expect((await asUser(viewer, (db) => db.query(del, [recent]))).rowCount).toBe(1)
+    await admin('delete from public.review_logs where id = any($1)', [[recent, old]])
+  })
+
   it('deck_stats and study_activity count only the caller’s rows', async () => {
     const stats = await asUser(owner, (db) => db.query('select * from public.deck_stats(null)'))
     expect(stats.rows).toEqual([

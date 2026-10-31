@@ -102,7 +102,7 @@ Outline subsections are orientation for the details pass only; they are not stor
 - FSRS fields: due, stability, difficulty, elapsed_days, scheduled_days, learning_steps, reps, lapses, state (0 new, 1 learning, 2 review, 3 relearning), last_review
 - Mastered = review state with stability ≥ 21 days; struggling = relearning, or 2+ lapses and not mastered.
 
-**review_logs** (per user, insert-only)
+**review_logs** (per user; insert-only, except that a student may delete their own answer within an hour — the study session's undo)
 - card_id, user_id, map_id, rating (1–4), state before the answer, elapsed_days, scheduled_days, duration_ms, reviewed_at
 
 **profiles**: daily_new_limit (default 10), daily_review_limit (default 100) (decided 2026-10-31). Read separately from the rest of the profile.
@@ -122,6 +122,6 @@ Outline subsections are orientation for the details pass only; they are not stor
 - Read a map and its nodes/relations/cards/sources: owner, member, or valid link token (view via Edge Function).
 - Write: owner or editor.
 - `cards`: read by everyone on the map, written by owner and editors.
-- `card_progress`, `review_logs`: only the user themself (and only for maps they can open); review logs are never changed.
+- `card_progress`, `review_logs`: only the user themself (and only for maps they can open); review logs are never changed, and only deleted by undo within an hour (`20261031130000_review_undo.sql`).
 - Admin tables and admin reads: role = `admin` verified in the database.
 - Every admin read of map content writes an `audit_log` row.

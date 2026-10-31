@@ -36,7 +36,7 @@ This file holds the rules that apply to every task. Detailed specs live in `docs
 
 ## Tech stack
 
-React + TypeScript (strict) + Vite · Tailwind CSS v4 · React Flow (`@xyflow/react`) · Zustand · Zod · Yjs · Dexie (IndexedDB) · Supabase JS · pdf.js · Tesseract.js (ara, deu, eng) · KaTeX · lucide-react · ts-fsrs · Vitest.
+React + TypeScript (strict) + Vite · Tailwind CSS v4 · React Flow (`@xyflow/react`) · Zustand · Zod · Yjs · Dexie (IndexedDB) · Supabase JS · pdf.js · Tesseract.js (ara, deu, eng) · KaTeX · lucide-react · ts-fsrs (5.x; 6.0 changed the API, decided 2026-10-31) · Vitest.
 
 ## Architecture rules
 

@@ -29,6 +29,8 @@ interface DeckState {
   /** Manual cards are deleted; made cards are hidden so a sync never makes them again. */
   removeCard: (id: string) => Promise<void>
   setProgress: (rows: CardProgressRow[]) => void
+  /** Puts one card's progress back as it was (undefined: the card was new). */
+  restoreProgress: (cardId: string, prev: CardProgressRow | undefined) => void
   reset: () => void
 }
 
@@ -179,6 +181,13 @@ export const useDeck = create<DeckState>((set, get) => ({
         ),
       },
     }),
+
+  restoreProgress: (cardId, prev) => {
+    const next = { ...get().progress }
+    if (prev) next[cardId] = prev
+    else Reflect.deleteProperty(next, cardId)
+    set({ progress: next })
+  },
 
   reset: () => set({ mapId: null, status: 'idle', cards: {}, progress: {} }),
 }))

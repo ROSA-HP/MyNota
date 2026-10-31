@@ -9,6 +9,7 @@ import { LandingPage } from '@/features/landing/LandingPage'
 import { LibraryPage } from '@/features/library/LibraryPage'
 import { NewMapPage } from '@/features/new-map/NewMapPage'
 import { SettingsPage } from '@/features/settings/SettingsPage'
+import { StudyPage } from '@/features/study/StudyPage'
 import { WorkspacePage } from '@/features/workspace/WorkspacePage'
 import { AppShell } from './AppShell'
 import { RedirectIfAuthed, RequireAuth } from './guards'
@@ -67,6 +68,14 @@ export const router = createBrowserRouter([
     element: (
       <RequireAuth>
         <WorkspacePage />
+      </RequireAuth>
+    ),
+  },
+  {
+    path: '/maps/:mapId/study',
+    element: (
+      <RequireAuth>
+        <StudyPage />
       </RequireAuth>
     ),
   },

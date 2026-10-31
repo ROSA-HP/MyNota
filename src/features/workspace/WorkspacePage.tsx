@@ -5,6 +5,8 @@ import { useTranslation } from 'react-i18next'
 import { Link, useLocation, useNavigate, useParams } from 'react-router'
 import { Alert, Badge, IconButton, Logo, Spinner, buttonClasses } from '@/components/ui'
 import { useAuth } from '@/features/auth/authStore'
+import { useDeck } from '@/features/study/deckStore'
+import { deckCounts } from '@/features/study/mastery'
 import { useDeckSync } from '@/features/study/useDeckSync'
 import type { BookBuildRequest, BuildRequest } from '@/features/new-map/buildRequest'
 import { useKeyFor } from '@/features/settings/aiKeyStore'
@@ -12,6 +14,7 @@ import { cn } from '@/lib/cn'
 import type { SubjectRow } from '@/lib/database.types'
 import { supabase } from '@/lib/supabase'
 import { BuildBanner } from './BuildBanner'
+import { FocusFromUrl } from './FocusFromUrl'
 import { useBuild } from './buildStore'
 import { MapCanvas } from './canvas/MapCanvas'
 import { useCanvasUi } from './canvas/canvasUi'
@@ -106,6 +109,30 @@ function SuggestionsButton() {
 }
 
 /** Opens "Add notes" (merge new notes into this map). Not while the map is being built. */
+/** Opens a study session for this map; the badge counts cards due now. */
+function StudyButton({ mapId }: { mapId: string }) {
+  const { t } = useTranslation()
+  const due = useDeck((s) =>
+    s.mapId === mapId && s.status === 'ready'
+      ? deckCounts(Object.values(s.cards), s.progress).due
+      : 0,
+  )
+  const hasCards = useDeck(
+    (s) => s.mapId === mapId && Object.values(s.cards).some((c) => !c.suspended),
+  )
+  if (!hasCards) return null
+  return (
+    <Link
+      to={`/maps/${mapId}/study`}
+      className={buttonClasses({ variant: 'secondary', size: 'sm' })}
+    >
+      <Layers size={16} aria-hidden />
+      <span className="hidden md:inline">{t('ws.study')}</span>
+      {due > 0 && <Badge tone="brand">{due}</Badge>}
+    </Link>
+  )
+}
+
 function AddNotesButton({ onOpen }: { onOpen: () => void }) {
   const { t } = useTranslation()
   const canEdit = useWorkspace((s) => s.role === 'owner' || s.role === 'editor')
@@ -313,19 +340,7 @@ function Workspace() {
         <div className="ms-auto flex items-center gap-2">
           <AddNotesButton onOpen={() => setAddNotesOpen(true)} />
           <SuggestionsButton />
-          <span
-            className={buttonClasses({
-              variant: 'secondary',
-              size: 'sm',
-              className:
-                'pointer-events-none hidden bg-paper-sunken! text-ink-muted! shadow-none! md:inline-flex',
-            })}
-            aria-disabled
-            title={t('ws.comingIn', { n: 4 })}
-          >
-            <Layers size={16} aria-hidden /> {t('ws.study')}
-            <Badge>{t('ws.comingIn', { n: 4 })}</Badge>
-          </span>
+          <StudyButton mapId={mapId} />
           <span
             className={buttonClasses({
               size: 'sm',
@@ -357,6 +372,7 @@ function Workspace() {
 
         <main id="main" className="relative min-w-0 flex-1">
           <MapCanvas />
+          <FocusFromUrl />
           <div className="pointer-events-none absolute inset-x-0 top-3 flex justify-center px-3 [&>*]:pointer-events-auto">
             <ConnectHint />
           </div>
