@@ -18,6 +18,10 @@ export type ProfileRow = {
   updated_at: string
 }
 
+/** Flashcards: new cards and reviews per day (Settings › Study). Read on their own, so the
+ *  profile query does not depend on the Phase 4 migration. */
+export type StudyLimits = { daily_new_limit: number; daily_review_limit: number }
+
 export type SubjectRow = {
   id: string
   owner_id: string
@@ -160,6 +164,67 @@ export type SourceRow = {
 
 export type AiProvider = 'gemini' | 'anthropic' | 'openai_compatible'
 
+export type CardType = 'basic' | 'reversed' | 'vocab' | 'cloze'
+
+export type CardRow = {
+  id: string
+  map_id: string
+  node_id: string | null
+  type: CardType
+  front: string
+  back: string
+  languages: string[]
+  /** auto: from a block's type · ai: the AI's card ideas · manual: written by hand */
+  origin: 'auto' | 'ai' | 'manual'
+  /** Made cards: the rule that made it ('type', 'q:<n>'), so syncing never adds it twice. */
+  source_key: string | null
+  /** A made card the student removed (hidden, so syncing never makes it again). */
+  suspended: boolean
+  created_by: string | null
+  created_at: string
+  updated_at: string
+}
+
+/** FSRS state of one card for one student (0 new, 1 learning, 2 review, 3 relearning). */
+export type CardProgressRow = {
+  card_id: string
+  user_id: string
+  map_id: string
+  due: string
+  stability: number
+  difficulty: number
+  elapsed_days: number
+  scheduled_days: number
+  learning_steps: number
+  reps: number
+  lapses: number
+  state: 0 | 1 | 2 | 3
+  last_review: string | null
+  updated_at: string
+}
+
+export type ReviewLogRow = {
+  id: string
+  card_id: string
+  user_id: string
+  map_id: string
+  rating: 1 | 2 | 3 | 4
+  state: 0 | 1 | 2 | 3
+  elapsed_days: number
+  scheduled_days: number
+  duration_ms: number | null
+  reviewed_at: string
+}
+
+export type DeckStatsRow = {
+  map_id: string
+  total: number
+  new_cards: number
+  due: number
+  learning: number
+  mastered: number
+}
+
 /** Library card numbers (Postgres function map_stats, read under RLS). */
 export type MapStatsRow = {
   map_id: string
@@ -199,9 +264,12 @@ export type Database = {
   public: {
     Tables: {
       profiles: Table<
-        ProfileRow,
+        ProfileRow & StudyLimits,
         never,
-        Partial<Pick<ProfileRow, 'username' | 'name' | 'avatar_url' | 'ui_language' | 'theme'>>
+        Partial<
+          Pick<ProfileRow, 'username' | 'name' | 'avatar_url' | 'ui_language' | 'theme'> &
+            StudyLimits
+        >
       >
       subjects: Table<
         SubjectRow,
@@ -262,6 +330,35 @@ export type Database = {
           Partial<Pick<AiJobRow, 'id' | 'chapter_node_id' | 'node_id' | 'status'>>,
         Partial<Pick<AiJobRow, 'status' | 'tokens_in' | 'tokens_out' | 'duration_ms' | 'error'>>
       >
+      cards: Table<
+        CardRow,
+        Pick<CardRow, 'map_id' | 'front'> &
+          Partial<
+            Pick<
+              CardRow,
+              | 'id'
+              | 'node_id'
+              | 'type'
+              | 'back'
+              | 'languages'
+              | 'origin'
+              | 'source_key'
+              | 'suspended'
+            >
+          >,
+        Partial<Pick<CardRow, 'type' | 'front' | 'back' | 'languages' | 'node_id' | 'suspended'>>
+      >
+      card_progress: Table<
+        CardProgressRow,
+        Omit<CardProgressRow, 'updated_at' | 'user_id'> & Partial<Pick<CardProgressRow, 'user_id'>>,
+        Partial<Omit<CardProgressRow, 'card_id' | 'user_id' | 'map_id' | 'updated_at'>>
+      >
+      review_logs: Table<
+        ReviewLogRow,
+        Omit<ReviewLogRow, 'id' | 'user_id' | 'reviewed_at'> &
+          Partial<Pick<ReviewLogRow, 'id' | 'user_id' | 'reviewed_at'>>,
+        never
+      >
       map_members: Table<
         MapMemberRow,
         Pick<MapMemberRow, 'map_id' | 'user_id' | 'role'>,
@@ -275,6 +372,11 @@ export type Database = {
       is_admin: { Args: never; Returns: boolean }
       is_active_user: { Args: never; Returns: boolean }
       map_stats: { Args: { map_ids: string[] }; Returns: MapStatsRow[] }
+      deck_stats: { Args: { map_ids?: string[] | null }; Returns: DeckStatsRow[] }
+      study_activity: {
+        Args: { days?: number; tz?: string }
+        Returns: Array<{ day: string; reviews: number }>
+      }
     }
     Enums: { [_ in never]: never }
     CompositeTypes: { [_ in never]: never }

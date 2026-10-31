@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { Link, useLocation, useNavigate, useParams } from 'react-router'
 import { Alert, Badge, IconButton, Logo, Spinner, buttonClasses } from '@/components/ui'
 import { useAuth } from '@/features/auth/authStore'
+import { useDeckSync } from '@/features/study/useDeckSync'
 import type { BookBuildRequest, BuildRequest } from '@/features/new-map/buildRequest'
 import { useKeyFor } from '@/features/settings/aiKeyStore'
 import { cn } from '@/lib/cn'
@@ -155,6 +156,7 @@ function Workspace() {
   const linksTray = useCanvasUi((s) => s.linksTray)
   const [addNotesOpen, setAddNotesOpen] = useState(false)
   const subject = useSubject(map?.subject_id)
+  useDeckSync(mapId)
   const setLinksTray = useCanvasUi((s) => s.setLinksTray)
   const started = useRef(false)
 

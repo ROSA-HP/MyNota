@@ -87,19 +87,27 @@ Outline subsections are orientation for the details pass only; they are not stor
 
 ## Flashcards
 
-**cards**
-- id, map_id, node_id (nullable)
-- type: `basic` | `reversed` | `vocab` | `cloze`
+**cards** (built 2026-10-31, migration `20261031120000_flashcards.sql`)
+- id, map_id, node_id (nullable; deleting the block deletes its cards)
+- type: `basic` | `reversed` | `vocab` | `cloze` (cloze text marks the gap as `{{…}}`)
 - front, back, languages
-- created_by: `auto` | `ai` | `manual`
+- origin: `auto` (from a block's type) | `ai` (the AI's card ideas, "make cards") | `manual`
+- source_key: for made cards, the rule that made it (`type`, `q:<hash>`, `c:<hash>`, `v:<hash>`); unique per block, so a sync never makes a card twice
+- suspended: a made card the student removed stays hidden, so it is not made again
+- created_by (the user who saved it)
+- Cards are made on the device: after blocks change (2 s quiet), for editors, from `question` / `cloze` details first, else one card for definition, vocabulary, formula, key_fact and event blocks.
 
-**card_progress** (per user)
-- card_id, user_id
-- FSRS fields: stability, difficulty, due, reps, lapses, state
-- last_review
+**card_progress** (per user, primary key card_id + user_id)
+- card_id, user_id, map_id
+- FSRS fields: due, stability, difficulty, elapsed_days, scheduled_days, learning_steps, reps, lapses, state (0 new, 1 learning, 2 review, 3 relearning), last_review
+- Mastered = review state with stability ≥ 21 days; struggling = relearning, or 2+ lapses and not mastered.
 
-**review_logs**
-- card_id, user_id, rating (1–4), reviewed_at, elapsed_days
+**review_logs** (per user, insert-only)
+- card_id, user_id, map_id, rating (1–4), state before the answer, elapsed_days, scheduled_days, duration_ms, reviewed_at
+
+**profiles**: daily_new_limit (default 10), daily_review_limit (default 100) (decided 2026-10-31). Read separately from the rest of the profile.
+
+**Functions** (`SECURITY INVOKER`, RLS applies): `deck_stats(map_ids)` (total, new, due, learning, mastered per map for the caller), `study_activity(days, tz)` (reviews per day).
 
 ## Security and admin
 
@@ -113,6 +121,7 @@ Outline subsections are orientation for the details pass only; they are not stor
 
 - Read a map and its nodes/relations/cards/sources: owner, member, or valid link token (view via Edge Function).
 - Write: owner or editor.
-- `card_progress`, `review_logs`: only the user themself.
+- `cards`: read by everyone on the map, written by owner and editors.
+- `card_progress`, `review_logs`: only the user themself (and only for maps they can open); review logs are never changed.
 - Admin tables and admin reads: role = `admin` verified in the database.
 - Every admin read of map content writes an `audit_log` row.
