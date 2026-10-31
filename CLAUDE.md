@@ -17,6 +17,7 @@ This file holds the rules that apply to every task. Detailed specs live in `docs
 | `docs/design-system.md` | Any UI: colors, fonts, components, RTL, tablet |
 | `docs/screens.md` | Any screen or user flow |
 | `docs/roadmap.md` | Phase scope and "done when" criteria |
+| `docs/migrations.md` | The list of database migrations, how to check which are applied, and how to apply them |
 | `docs/open-questions.md` | Undecided items. Ask the user when you reach one |
 
 ## Non-negotiable decisions

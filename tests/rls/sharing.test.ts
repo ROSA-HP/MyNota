@@ -493,3 +493,60 @@ describe('copy and report', () => {
       expect(await code(asUser(owner, (db) => db.query(sql)))).toBe(PERMISSION_DENIED)
   })
 })
+
+describe('two friends share a map safely (Phase 5 "done when")', () => {
+  it('invite → accept → edit; link → view; reset → old link dead; stranger sees nothing', async () => {
+    await asUser(owner, async (db) => {
+      // Lina invites Mona as editor; Mona accepts and can edit the map.
+      const inv = await one<{ invite_id: string }>(
+        db,
+        `select * from public.invite_member($1, 'sh_friend', 'editor')`,
+        [mapId],
+      )
+      await as(db, friend)
+      await db.query(`select public.invite_respond($1, true)`, [inv.invite_id])
+      const upd = await db.query(
+        `update public.nodes set title = 'Osmosis (edited)' where id = $1`,
+        [blockId],
+      )
+      expect(upd.rowCount).toBe(1)
+      // Mona cannot share further or see the link secret.
+      expect(await fails(db, `select * from public.share_settings($1)`, [mapId])).toBe(
+        PERMISSION_DENIED,
+      )
+      expect(
+        await fails(db, `select * from public.invite_member($1, 'sh_stranger', 'viewer')`, [mapId]),
+      ).toBe(PERMISSION_DENIED)
+      // Lina turns on a view link: a stranger can read through it, but not write or list.
+      await as(db, owner)
+      const { link_token } = await one<{ link_token: string }>(
+        db,
+        `select * from public.share_link_set($1, 'view')`,
+        [mapId],
+      )
+      await as(db, stranger)
+      expect(
+        (
+          await one<{ j: { nodes: unknown[] } }>(db, `select public.link_open($1) as j`, [
+            link_token,
+          ])
+        ).j.nodes,
+      ).toHaveLength(4)
+      expect(
+        (await db.query(`update public.nodes set title = 'x' where id = $1`, [blockId])).rowCount,
+      ).toBe(0)
+      expect((await db.query(`select id from public.maps where id = $1`, [mapId])).rowCount).toBe(0)
+      // Lina resets the link: the old one is dead for everyone.
+      await as(db, owner)
+      await db.query(`select * from public.share_link_reset($1)`, [mapId])
+      await as(db, stranger)
+      expect(await fails(db, `select public.link_open($1)`, [link_token])).toBe('MN404')
+      // Mona leaves; she loses access.
+      await as(db, friend)
+      await db.query(`select public.member_remove($1, $2)`, [mapId, friend])
+      expect(
+        (await db.query(`select id from public.nodes where map_id = $1`, [mapId])).rowCount,
+      ).toBe(0)
+    })
+  })
+})

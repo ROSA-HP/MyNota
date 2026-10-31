@@ -19,8 +19,8 @@
 | 8 | Deck overview (`/maps/:id/deck`) | Tiles: due now, new (per-day limit), learning, mastered; study due + new / only due / practice all; table by chapter (book) or section (notes) with mastery bar, due, new, Study; unbuilt chapters say so. Flashcards (`/flashcards`) lists every deck |
 | 9 | Study session | Big card, tap/space to flip, Again / Hard / Good / Easy, swipe on tablet, "Show on map", end summary |
 | 10 | Card browser (`/maps/:id/deck?tab=cards`) | Search (Arabic-normalized), chapter, type, Due and Struggling filters; mastery dot, front, back, type, next; editor beside the list (sheet below 1280 px): type, front/back (cloze sentence), block, stats, delete (two-step), reset own progress, save; new card; "Make cards with AI". Viewers read only |
-| 11 | Share dialog | Invite with role, member list, link access (off / view / edit), copy, reset, expiry |
-| 12 | Shared link page | Read-only map, "Sign in to edit", "Copy to my library", report |
+| 11 | Share dialog | Owner: invite by username or account email with a role, people list (owner, members with role select and remove, pending invites with cancel), share link off / view / edit, copy, expiry (until off, 1/7/30 days), reset. Editors and viewers: people list, Leave, Report. Avatars of the people on the map in the top bar |
+| 12 | Shared link page (`/s/:token`) | Read-only map for anyone (outline, details, hide details, focus, export). Signed out: Copy / Sign in to edit / Report go to sign-in and finish after it. Signed in: Join and edit (edit links), Copy to my library, Report; people on the map get Open map. Pages for a broken (reset) link and a turned-off or expired one. Invites waiting for an answer show on Home and in the Library (Accept / Decline); shared maps in the Library have Leave and Report |
 | 13 | Settings | Profile · AI providers (keys, test, remember toggle, recommended models) · Appearance (theme, UI language) · Study (daily limits) · Security (2FA, devices) · Data (export, delete account) |
 | 14 | Admin | Pages in `docs/features.md` |
 

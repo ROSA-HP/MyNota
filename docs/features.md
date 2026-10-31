@@ -29,6 +29,7 @@ One deck per map, scheduled with FSRS (`ts-fsrs`). Every card links back to its 
   - Viewers get "Copy to my library".
 - **Report** button on shared maps.
 - All sharing actions are recorded in `share_events`.
+- As built in Phase 5 (decided 2026-10-31): Postgres `SECURITY DEFINER` functions instead of Edge Functions; invites wait until the invitee accepts (Accept / Decline on Home and in the Library); invites go to existing accounts only (username or the account's email), others get the link; email invites to new people later. Viewers and link visitors can copy a map (blocks, accepted links, source text; flashcards are made again, progress is never copied). Rate limits: invites 30/h, new links 20/h, resets 10/h, copies 20/h, reports 5/day.
 
 ## Real-time co-editing (Phase 6)
 

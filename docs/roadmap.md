@@ -49,7 +49,7 @@ Each phase ends with something a student can actually use. Before starting a pha
 
 **Done when**: a student can study a chapter end to end.
 
-## Phase 5 — Sharing
+## Phase 5 — Sharing (done 2026-10-31)
 
 - Invites with roles; share links (view / edit, reset, expiry) via Edge Functions
 - Shared-link page; copy to library; reports
