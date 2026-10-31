@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
+import { testedFor } from '@/ai/recommended'
 import type { ParseKeys } from 'i18next'
 import { CircleCheck, ExternalLink, KeyRound, Link2, Trash } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
@@ -114,6 +115,7 @@ function ProviderCard({ provider }: { provider: AiProvider }) {
     models.length ? models : key ? [{ id: key.model, label: key.model }] : []
   ).map((m) => ({ value: m.id, label: m.label === m.id ? m.id : `${m.label} (${m.id})` }))
 
+  const tested = testedFor(provider)
   const keyUrl = KEY_URLS[provider]
   const masked = key?.apiKey ? `${key.apiKey.slice(0, 4)}…${key.apiKey.slice(-4)}` : null
 
@@ -158,6 +160,21 @@ function ProviderCard({ provider }: { provider: AiProvider }) {
           {t('settings.default')}
         </label>
       </div>
+
+      {tested.length > 0 && (
+        <p className="text-sm text-ink-muted">
+          {t('settings.testedModels')}{' '}
+          {tested.map((m, i) => (
+            <span key={m.model}>
+              {i > 0 && ', '}
+              <span className="font-mono font-semibold text-ink" dir="ltr">
+                {m.model}
+              </span>{' '}
+              ({m.score}/100)
+            </span>
+          ))}
+        </p>
+      )}
 
       {key && !editing && (
         <div className="flex flex-col gap-4">

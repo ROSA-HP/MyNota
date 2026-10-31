@@ -14,5 +14,5 @@
     "skipLibCheck": true,
     "paths": { "@/*": ["./src/*"] }
   },
-  "include": ["vite.config.ts", "vitest.rls.config.ts", "tests/rls"]
+  "include": ["vite.config.ts", "vitest.rls.config.ts", "vitest.eval.config.ts", "tests/rls"]
 }

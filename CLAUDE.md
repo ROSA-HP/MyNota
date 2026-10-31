@@ -19,6 +19,8 @@ This file holds the rules that apply to every task. Detailed specs live in `docs
 | `docs/roadmap.md` | Phase scope and "done when" criteria |
 | `docs/migrations.md` | The list of database migrations, how to check which are applied, and how to apply them |
 | `docs/open-questions.md` | Undecided items. Ask the user when you reach one |
+| `docs/migrations.md` | Applying database migrations, dashboard settings, Edge Function deploys |
+| `docs/launch.md` | What must be done before students use MyNota (Phase 7 checklist) |
 
 ## Non-negotiable decisions
 

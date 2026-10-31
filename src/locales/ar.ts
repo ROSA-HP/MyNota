@@ -287,6 +287,7 @@ export const ar: Messages = {
     aiHint:
       'يستخدم MyNota مفتاح الذكاء الاصطناعي الخاص بك. يُحفظ على هذا الجهاز فقط ولا يُرسل إلا إلى المزوّد، ولا يصل أبدًا إلى خوادم MyNota. اختر المزوّد الذي تستخدمه الخرائط الجديدة افتراضيًا.',
     recommended: 'مُوصى به',
+    testedModels: 'نماذج جرّبها MyNota:',
     keyLabel: 'مفتاح API',
     keyLabelOptional: 'مفتاح API (اختياري للنماذج المحلية)',
     keyPlaceholder: 'الصق مفتاحك',

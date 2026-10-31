@@ -85,7 +85,8 @@ Functions are used for login country, account deletion and admin actions on othe
 (deploy steps in `docs/migrations.md`); branding stays teal `#0D9488` with the current logo.
 Steps: 7.0 CI · 7.1 admin database · 7.2 2FA · 7.3 admin dashboard · 7.4 limits and login
 events · 7.5 data rights and legal pages · 7.6 error monitoring · 7.7 prompt test set, models
-list, launch checklist.
+list, launch checklist. All built 2026-11-01 on branch `phase-7`; what is left needs the Supabase
+project, hosting, a legal review and real AI keys: see `docs/launch.md`.
 
 ## After launch
 

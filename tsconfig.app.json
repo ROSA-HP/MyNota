@@ -20,5 +20,5 @@
     "skipLibCheck": true,
     "paths": { "@/*": ["./src/*"] }
   },
-  "include": ["src", "tests/unit", "tests/setup.ts"]
+  "include": ["src", "tests/unit", "tests/prompt-set", "tests/setup.ts"]
 }

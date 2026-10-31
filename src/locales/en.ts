@@ -275,6 +275,7 @@ export const en = {
     aiHint:
       "MyNota uses your own AI key. It is stored only on this device and sent only to the provider, never to MyNota's servers. Choose which one new maps use by default.",
     recommended: 'Recommended',
+    testedModels: 'Tested with MyNota:',
     keyLabel: 'API key',
     keyLabelOptional: 'API key (optional for local models)',
     keyPlaceholder: 'Paste your key',

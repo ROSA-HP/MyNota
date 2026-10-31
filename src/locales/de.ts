@@ -284,6 +284,7 @@ export const de: Messages = {
     aiHint:
       'MyNota nutzt deinen eigenen KI-Schlüssel. Er wird nur auf diesem Gerät gespeichert und nur an den Anbieter gesendet, nie an die Server von MyNota. Wähle, welchen neue Karten standardmäßig nutzen.',
     recommended: 'Empfohlen',
+    testedModels: 'Mit MyNota getestet:',
     keyLabel: 'API-Schlüssel',
     keyLabelOptional: 'API-Schlüssel (für lokale Modelle optional)',
     keyPlaceholder: 'Schlüssel einfügen',

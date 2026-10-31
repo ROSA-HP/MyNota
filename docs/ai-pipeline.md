@@ -223,3 +223,13 @@ Build a test set before launch: about 10 real chapters across subjects and all t
 - **Structure** (manual): a teacher agrees with the outline.
 
 Results produce the recommended-models list shown in Settings.
+
+As built in Phase 7.7: `src/ai/eval/quality.ts` scores a run automatically (coverage, unsourced
+and out-of-range sources, blocks marked `added`, crowded parents, the style rules, failed
+passes; 0-100 with coverage 50, faithfulness 30, visual rules 20). `src/ai/eval/run.ts` builds a
+sample like the app (outline, then details per section on the normalized outline).
+`tests/prompt-set/samples/` holds the test set (4 original samples now: en textbook, de
+textbook, ar textbook, en messy notes; add real chapters to reach about 10). Run it with your own
+key: `MYNOTA_EVAL_PROVIDER=… MYNOTA_EVAL_MODEL=… MYNOTA_EVAL_KEY=… npm run eval:prompts`; it is
+skipped without a key and never runs in CI. Results go to `tests/prompt-set/results/`; chosen
+models go into `src/ai/recommended.ts`, which Settings shows under each provider.
