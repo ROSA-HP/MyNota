@@ -27,8 +27,15 @@ language sql stable as $$
   )::uuid
 $$;
 
+-- Same as Supabase: the whole JWT (tests set `aal` there for two-factor sessions).
+create or replace function auth.jwt() returns jsonb
+language sql stable as $$
+  select coalesce(nullif(current_setting('request.jwt.claims', true), ''), '{}')::jsonb
+$$;
+
 grant usage on schema public, auth, extensions to anon, authenticated, service_role;
 grant execute on function auth.uid() to anon, authenticated, service_role;
+grant execute on function auth.jwt() to anon, authenticated, service_role;
 
 -- Supabase's default privileges grant everything on new public tables to the API roles;
 -- our migrations must revoke what they do not want, so emulate that default here.

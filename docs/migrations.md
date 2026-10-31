@@ -19,6 +19,7 @@ security and is meant to run **once**, in order.
 | 9 | `20261031150000_search.sql` | 4.5 | `pg_trgm`, search columns and indexes, `search_normalize()`, `search_all()` |
 | 10 | `20261031170000_sharing.sql` | 5 | `map_invites`, `share_events`, `reports`, all sharing functions; members change only through them |
 | 11 | `20261031190000_live_docs.sql` | 6 | `map_docs`, `map_doc_updates`, `doc_load()`, `doc_push()`, `doc_compact()`, who may join a map's live (Realtime) channels. **Also one dashboard setting, below** |
+| 12 | `20261101090000_admin.sql` | 7.1 | `audit_log`, `login_events`, `user_flags`, `app_settings` (limits and feature switches); the `admin_*` functions (admin + two-factor session checked in the database, every action audited); status `banned` |
 
 ## Which ones does my database already have?
 

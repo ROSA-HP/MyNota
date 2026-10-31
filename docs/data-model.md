@@ -127,6 +127,8 @@ Outline subsections are orientation for the details pass only; they are not stor
 
 **Sharing functions** (`20261031170000_sharing.sql`, `SECURITY DEFINER`): `share_settings`, `share_link_set(map, access, expires_at)`, `share_link_reset`, `invite_member(map, username_or_email, role)`, `invite_cancel`, `invite_respond(invite, accept)`, `member_set_role`, `member_remove` (owner removes, or a member leaves), `map_people`, `my_invites`, `link_open(token)` (also for anon: map, nodes, accepted relations, sources), `link_join(token)` (edit links: become editor), `copy_map(map | token)`, `report_map`. `map_members` has no client write grants any more. Errors: `MN400` invalid, `MN404` not found, `MN409` already done, `MN410` link off/expired, `MN429` too many, `42501` not allowed.
 **audit_log**: actor_id, action, target_type, target_id, reason, at — includes every admin view of map content
+
+As built in Phase 7.1 (`20261101090000_admin.sql`): `audit_log` (also `details` jsonb with before/after), `login_events` (also `method`; users read their own; written only by the auth-events Edge Function), `user_flags` (accounts marked from Login activity), `app_settings` (`limits.*` numbers and `features.*` switches; everyone signed in reads). Profile status gains `banned`. Admins work only through `admin_*` functions that require `admin_ok()`: an active admin whose JWT has `aal = 'aal2'` (signed in with a second factor); reading all profiles needs it too. Actions on other people need a reason (≥ 3 characters), and viewing map content (`admin_map_content`) is always audited.
 **rate_limits** (counters): key, window_start, count
 
 ## RLS summary
