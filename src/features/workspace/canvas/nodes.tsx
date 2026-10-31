@@ -5,6 +5,8 @@ import { Link } from 'react-router'
 import { useTranslation } from 'react-i18next'
 import { Spinner } from '@/components/ui'
 import { useKeyFor } from '@/features/settings/aiKeyStore'
+import { useDeck } from '@/features/study/deckStore'
+import { masteryMapFor, type Mastery } from '@/features/study/mastery'
 import { cn } from '@/lib/cn'
 import type { ChapterColor, MapRow, NodeRow } from '@/lib/database.types'
 import { useChapterBuilder } from '../bookBuild'
@@ -171,6 +173,7 @@ export function SectionNode({ data, selected }: NodeProps<SectionNodeT>) {
   const { node, childCount, expanded } = data
   const c = chapterColor(data.color === undefined ? node.color : data.color)
   const longPress = useLongPress(node.id)
+  const cover = useCanvasUi((s) => s.cover)
   if (expanded) {
     const more = childCount - expanded.blockTitles.length
     return (
@@ -194,11 +197,17 @@ export function SectionNode({ data, selected }: NodeProps<SectionNodeT>) {
           {t(`ws.shapes.${node.branch_view}`)} · {t('ws.blocks', { count: childCount })}
         </span>
         <span aria-hidden className="h-0.5 shrink-0" style={{ background: c.fill }} />
-        {expanded.blockTitles.map((title, i) => (
-          <span key={i} dir="auto" className="zt-body truncate font-semibold">
-            {title}
-          </span>
-        ))}
+        {expanded.blockTitles.map((title, i) =>
+          cover ? (
+            <span key={i} aria-hidden className="zt-body truncate text-ink-faint">
+              ••••••
+            </span>
+          ) : (
+            <span key={i} dir="auto" className="zt-body truncate font-semibold">
+              {title}
+            </span>
+          ),
+        )}
         {more > 0 && <span className="zt-small text-ink-muted">+{more}</span>}
         <Handles />
       </div>
@@ -225,17 +234,45 @@ export function SectionNode({ data, selected }: NodeProps<SectionNodeT>) {
   )
 }
 
+const MASTERY_FILL: Record<Mastery, string> = {
+  new: 'var(--surface)',
+  learning: 'var(--warning)',
+  struggling: 'var(--danger)',
+  mastered: 'var(--success)',
+}
+
+/** The block's mastery dot (its cards' progress for this student), when dots are on. */
+function MasteryDot({ nodeId }: { nodeId: string }) {
+  const { t } = useTranslation()
+  const on = useCanvasUi((s) => s.showMastery)
+  const m = useDeck((s) =>
+    on && s.status === 'ready' ? (masteryMapFor(s.cards, s.progress)[nodeId] ?? null) : null,
+  )
+  if (!m) return null
+  return (
+    <span
+      role="img"
+      aria-label={t(`deck.mastery.${m}`)}
+      title={t(`deck.mastery.${m}`)}
+      className="absolute -end-1.5 -top-1.5 size-4 rounded-full border-2 border-line"
+      style={{ background: MASTERY_FILL[m] }}
+    />
+  )
+}
+
 export function BlockNode({ data, selected }: NodeProps<BlockNodeT>) {
   const { t } = useTranslation()
   const { node, color, step } = data
   const c = chapterColor(color)
   const Icon = node.type ? TYPE_ICON[node.type] : null
   const typeLabel = node.type ? t(`ws.types.${node.type}`) : null
+  const covered = useCanvasUi((s) => s.cover && !selected && !s.revealed.includes(node.id))
   return (
     <div
       {...useLongPress(node.id)}
       className={cn(
-        'flex h-[66px] w-[210px] items-center gap-2 rounded-neo border-2 bg-surface px-2 py-1.5 text-ink',
+        'relative flex h-[66px] w-[210px] items-center gap-2 rounded-neo border-2 bg-surface px-2 py-1.5 text-ink',
+        covered && 'border-dashed bg-surface-muted',
         selected ? 'border-[2.5px] neo-shadow outline-3 outline-offset-2' : '',
       )}
       style={{
@@ -258,39 +295,50 @@ export function BlockNode({ data, selected }: NodeProps<BlockNodeT>) {
           <Icon size={15} role="img" aria-label={typeLabel ?? undefined} />
         </span>
       ) : null}
-      <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+      {covered ? (
         <span
-          dir="auto"
-          className={cn(
-            'line-clamp-2 text-sm leading-tight',
-            node.importance === 'core'
-              ? 'font-bold'
-              : node.importance === 'extra'
-                ? 'font-medium text-ink-muted'
-                : 'font-semibold',
-          )}
+          className="flex min-w-0 flex-1 flex-col gap-1.5"
+          aria-label={t('ws.studyView.covered')}
         >
-          {node.title}
+          <span aria-hidden className="h-2.5 w-4/5 rounded-full bg-line-soft" />
+          <span aria-hidden className="h-2.5 w-1/2 rounded-full bg-line-soft" />
         </span>
-        <span className="flex items-center gap-1.5">
-          {node.importance === 'core' && (
-            <span className="rounded-[5px] border-[1.5px] border-line bg-brand-soft px-1 text-[11px] leading-tight font-semibold">
-              {t('ws.core')}
-            </span>
-          )}
-          {node.importance === 'extra' && (
-            <span className="text-[11px] text-ink-faint">{t('ws.extra')}</span>
-          )}
-          {node.ai_added && (
-            <Sparkles
-              size={12}
-              className="text-ink-muted"
-              role="img"
-              aria-label={t('ws.aiAddedBadge')}
-            />
-          )}
+      ) : (
+        <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+          <span
+            dir="auto"
+            className={cn(
+              'line-clamp-2 text-sm leading-tight',
+              node.importance === 'core'
+                ? 'font-bold'
+                : node.importance === 'extra'
+                  ? 'font-medium text-ink-muted'
+                  : 'font-semibold',
+            )}
+          >
+            {node.title}
+          </span>
+          <span className="flex items-center gap-1.5">
+            {node.importance === 'core' && (
+              <span className="rounded-[5px] border-[1.5px] border-line bg-brand-soft px-1 text-[11px] leading-tight font-semibold">
+                {t('ws.core')}
+              </span>
+            )}
+            {node.importance === 'extra' && (
+              <span className="text-[11px] text-ink-faint">{t('ws.extra')}</span>
+            )}
+            {node.ai_added && (
+              <Sparkles
+                size={12}
+                className="text-ink-muted"
+                role="img"
+                aria-label={t('ws.aiAddedBadge')}
+              />
+            )}
+          </span>
         </span>
-      </span>
+      )}
+      <MasteryDot nodeId={node.id} />
       <Handles />
     </div>
   )

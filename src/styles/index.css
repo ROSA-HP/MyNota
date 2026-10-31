@@ -356,6 +356,12 @@
   outline: 3px dashed var(--brand);
   outline-offset: 3px;
 }
+/* Focus mode: everything outside the focused section or chapter steps back. */
+.mynota-flow .react-flow__node.is-dimmed,
+.mynota-flow .react-flow__edge.is-dimmed {
+  opacity: 0.22;
+  pointer-events: none;
+}
 /* Block under the pointer while dragging a new link. */
 .mynota-flow .react-flow__node.is-link-target > * {
   outline: 3px solid var(--brand);

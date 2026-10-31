@@ -52,7 +52,14 @@ export type BranchEdgeT = Edge<Record<string, never>, 'branch'>
 export type TreeEdgeT = Edge<{ rtl: boolean }, 'tree'>
 export type StepEdgeT = Edge<Record<string, never>, 'step'>
 export type RelationEdgeT = Edge<
-  { relation: RelationRow; canEdit: boolean; selected: boolean; rtl: boolean },
+  {
+    relation: RelationRow
+    canEdit: boolean
+    selected: boolean
+    rtl: boolean
+    /** Focus mode: outside the focused part of the map. */
+    dimmed?: boolean
+  },
   'relation'
 >
 
@@ -236,7 +243,10 @@ export function RelationEdge({
           />
         )}
         <div
-          className="nodrag nopan pointer-events-auto absolute flex items-center gap-1"
+          className={cn(
+            'nodrag nopan pointer-events-auto absolute flex items-center gap-1',
+            data.dimmed && 'pointer-events-none opacity-20',
+          )}
           style={{ transform: `translate(-50%, -50%) translate(${label.x}px, ${label.y}px)` }}
         >
           {editing ? (
@@ -503,7 +513,10 @@ function EndHandle({
   )
 }
 
-export type BundleEdgeT = Edge<{ count: number; label: string; rtl: boolean }, 'bundle'>
+export type BundleEdgeT = Edge<
+  { count: number; label: string; rtl: boolean; dimmed?: boolean },
+  'bundle'
+>
 
 /**
  * Zoomed out: the links between two cards (sections or chapters) drawn as one line, thicker for
@@ -527,7 +540,10 @@ export function BundleEdge({ id, source, target, data }: EdgeProps<BundleEdgeT>)
       />
       <EdgeLabelRenderer>
         <div
-          className="mynota-zoomtext nodrag nopan pointer-events-none absolute"
+          className={cn(
+            'mynota-zoomtext nodrag nopan pointer-events-none absolute',
+            data.dimmed && 'opacity-20',
+          )}
           style={{ transform: `translate(-50%, -50%) translate(${label.x}px, ${label.y}px)` }}
         >
           <span

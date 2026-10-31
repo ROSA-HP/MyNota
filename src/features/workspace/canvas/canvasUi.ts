@@ -40,6 +40,27 @@ interface CanvasUiState {
   openMenu: (nodeId: string, x: number, y: number) => void
   closeMenu: () => void
   askDelete: (nodeId: string | null) => void
+  /** Study views (docs/features.md › Flashcards): mastery dots on blocks (remembered per device). */
+  showMastery: boolean
+  setShowMastery: (on: boolean) => void
+  /** Hide details: block titles are covered until tapped, to test recall. */
+  cover: boolean
+  revealed: string[]
+  setCover: (on: boolean) => void
+  reveal: (nodeId: string) => void
+  revealAll: () => void
+  /** Focus mode: one section (notes map) or chapter (book) stays bright, the rest is dimmed. */
+  focusId: string | null
+  setFocus: (id: string | null) => void
+}
+
+const MASTERY_KEY = 'mynota.mastery'
+function readMastery(): boolean {
+  try {
+    return localStorage.getItem(MASTERY_KEY) !== 'off'
+  } catch {
+    return true
+  }
 }
 
 export const useCanvasUi = create<CanvasUiState>((set, get) => ({
@@ -84,4 +105,22 @@ export const useCanvasUi = create<CanvasUiState>((set, get) => ({
   openMenu: (nodeId, x, y) => set({ menu: { nodeId, x, y } }),
   closeMenu: () => set({ menu: null }),
   askDelete: (nodeId) => set({ confirmDelete: nodeId, menu: null }),
+  showMastery: readMastery(),
+  setShowMastery: (on) => {
+    try {
+      localStorage.setItem(MASTERY_KEY, on ? 'on' : 'off')
+    } catch {
+      // private mode: the choice lasts for this visit only
+    }
+    set({ showMastery: on })
+  },
+  cover: false,
+  revealed: [],
+  setCover: (on) => set({ cover: on, revealed: [] }),
+  reveal: (nodeId) => {
+    if (!get().revealed.includes(nodeId)) set({ revealed: [...get().revealed, nodeId] })
+  },
+  revealAll: () => set({ cover: false, revealed: [] }),
+  focusId: null,
+  setFocus: (id) => set({ focusId: id }),
 }))

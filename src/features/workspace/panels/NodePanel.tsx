@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { Plus, Trash, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { BlockCards } from '@/features/study/BlockCards'
 import { NODE_TYPES, RELATION_TYPES } from '@/ai/schemas/common'
 import { Badge, Button, IconButton, SelectField, TextField } from '@/components/ui'
 import { cn } from '@/lib/cn'
@@ -359,6 +360,8 @@ export function NodePanel({ node, onClose }: { node: NodeRow; onClose: () => voi
             <p className="text-sm text-ink-muted">{t('ws.panel.noLinks')}</p>
           )}
         </div>
+
+        {isBlock && map && <BlockCards mapId={map.id} nodeId={node.id} canEdit={canEdit} />}
 
         <div className="flex flex-col gap-2">
           <span className="flex items-center gap-2 text-sm font-semibold">

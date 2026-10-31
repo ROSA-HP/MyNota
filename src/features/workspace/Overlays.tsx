@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { Link2, Plus, SquarePen, Trash } from 'lucide-react'
+import { Link2, Plus, SquarePen, Trash, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Button, Dialog } from '@/components/ui'
 import { useCanvasUi } from './canvas/canvasUi'
@@ -147,6 +147,57 @@ export function ConnectHint() {
       className="rounded-full border-2 border-line bg-brand-soft px-4 py-2 text-sm font-semibold text-ink neo-shadow-sm"
     >
       {text}
+    </div>
+  )
+}
+
+/** Shows which study view is on (focus, hidden details) with a way out; Esc leaves focus. */
+export function StudyViewBanner() {
+  const { t } = useTranslation()
+  const focusId = useCanvasUi((s) => s.focusId)
+  const cover = useCanvasUi((s) => s.cover)
+  const title = useWorkspace((s) => (focusId ? (s.nodes[focusId]?.title ?? '') : ''))
+
+  useEffect(() => {
+    if (!focusId) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') useCanvasUi.getState().setFocus(null)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [focusId])
+
+  if (!focusId && !cover) return null
+  return (
+    <div className="flex flex-wrap items-center justify-center gap-2" role="status">
+      {focusId && (
+        <span className="flex items-center gap-2 rounded-full border-2 border-line bg-surface py-1 ps-4 pe-1 text-sm font-semibold neo-shadow-sm">
+          <span dir="auto">{t('ws.studyView.focusOn', { name: title })}</span>
+          <span className="hidden font-normal text-ink-muted md:inline">
+            {t('ws.studyView.focusHint')}
+          </span>
+          <button
+            type="button"
+            aria-label={t('ws.studyView.leaveFocus')}
+            onClick={() => useCanvasUi.getState().setFocus(null)}
+            className="flex size-8 cursor-pointer items-center justify-center rounded-full hover:bg-paper-sunken pointer-coarse:size-11"
+          >
+            <X size={16} aria-hidden />
+          </button>
+        </span>
+      )}
+      {cover && (
+        <span className="flex items-center gap-2 rounded-full border-2 border-line bg-surface py-1 ps-4 pe-1 text-sm font-semibold neo-shadow-sm">
+          {t('ws.studyView.coverHint')}
+          <button
+            type="button"
+            onClick={() => useCanvasUi.getState().revealAll()}
+            className="min-h-8 cursor-pointer rounded-full px-3 text-brand hover:bg-paper-sunken pointer-coarse:min-h-11"
+          >
+            {t('ws.studyView.showAll')}
+          </button>
+        </span>
+      )}
     </div>
   )
 }

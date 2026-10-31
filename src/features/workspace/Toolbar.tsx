@@ -2,6 +2,9 @@ import { useReactFlow, useStore, useViewport } from '@xyflow/react'
 import { motionMs } from '@/lib/motion'
 import {
   BookOpen,
+  CircleDot,
+  EyeOff,
+  Focus,
   LayoutGrid,
   Link2,
   Maximize,
@@ -12,10 +15,13 @@ import {
   StickyNote,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { toast } from '@/components/ui'
+import { useDeck } from '@/features/study/deckStore'
 import { cn } from '@/lib/cn'
 import { useCanvasUi } from './canvas/canvasUi'
 import { anchorBeside } from './canvas/linking'
 import { FIT } from './canvas/fit'
+import { focusGroupOf } from './canvas/focus'
 import { findRoot } from './canvas/layout'
 import { useAddChild } from './canvas/MapCanvas'
 import { levelFor, zoomForLevel, type ZoomLevel } from './canvas/zoom'
@@ -103,12 +109,63 @@ function LevelSwitch() {
   )
 }
 
-/** Bottom toolbar: select, add, connect, tidy up, detail level, zoom. */
+/** Study views: mastery dots, hide details (recall), focus on one section or chapter. */
+function StudyViews() {
+  const { t } = useTranslation()
+  const { fitView } = useReactFlow()
+  const showMastery = useCanvasUi((s) => s.showMastery)
+  const cover = useCanvasUi((s) => s.cover)
+  const focusId = useCanvasUi((s) => s.focusId)
+  const hasCards = useDeck((s) => s.status === 'ready' && Object.keys(s.cards).length > 0)
+
+  const focus = () => {
+    const ui = useCanvasUi.getState()
+    if (ui.focusId) return ui.setFocus(null)
+    const ws = useWorkspace.getState()
+    const group = ws.selectedId ? focusGroupOf(ws.nodes, ws.selectedId) : null
+    if (!group) return toast(t('ws.studyView.pickFocus'))
+    ui.setFocus(group)
+    ui.lockView()
+    void fitView({
+      nodes: [{ id: `region:${group}` }, { id: group }],
+      ...FIT,
+      duration: motionMs(400),
+    })
+  }
+
+  return (
+    <>
+      {hasCards && (
+        <ToolButton
+          label={t('ws.studyView.mastery')}
+          active={showMastery}
+          onClick={() => useCanvasUi.getState().setShowMastery(!showMastery)}
+        >
+          <CircleDot size={19} aria-hidden />
+        </ToolButton>
+      )}
+      <ToolButton
+        label={t('ws.studyView.hide')}
+        active={cover}
+        onClick={() => useCanvasUi.getState().setCover(!cover)}
+      >
+        <EyeOff size={19} aria-hidden />
+      </ToolButton>
+      <ToolButton label={t('ws.studyView.focus')} active={focusId !== null} onClick={focus}>
+        <Focus size={19} aria-hidden />
+      </ToolButton>
+    </>
+  )
+}
+
+/** Bottom toolbar: select, add, connect, tidy up, detail level, study views, zoom. */
 export function Toolbar() {
   const { t } = useTranslation()
   const { zoomIn, zoomOut, fitView } = useReactFlow()
   const { zoom } = useViewport()
   const canEdit = useWorkspace((s) => s.role === 'owner' || s.role === 'editor')
+  // With the details panel open the canvas is narrower: icons only.
+  const compact = useWorkspace((s) => s.selectedId !== null || s.selectedRelationId !== null)
   const { connecting, startConnect, cancelConnect, openSearch } = useCanvasUi()
   const addChild = useAddChild()
 
@@ -132,14 +189,14 @@ export function Toolbar() {
     <div
       role="toolbar"
       aria-label={t('ws.tools')}
-      className="flex items-center gap-1 rounded-neo-lg border-2 border-line bg-surface p-1 neo-shadow"
+      className="flex max-w-full items-center gap-1 overflow-x-auto rounded-neo-lg border-2 border-line bg-surface p-1 neo-shadow [scrollbar-width:thin]"
     >
       <ToolButton label={t('ws.select')} active={!connecting} onClick={cancelConnect}>
         <MousePointer2 size={19} aria-hidden className="rtl:-scale-x-100" />
       </ToolButton>
       {canEdit && (
         <>
-          <ToolButton label={t('ws.add')} onClick={add} showLabel>
+          <ToolButton label={t('ws.add')} onClick={add} showLabel={!compact}>
             <Plus size={19} aria-hidden />
           </ToolButton>
           <ToolButton
@@ -154,18 +211,20 @@ export function Toolbar() {
               if (sources[0]) openSearch(sources, anchorBeside(sources[0]))
               else startConnect()
             }}
-            showLabel
+            showLabel={!compact}
           >
             <Link2 size={19} aria-hidden />
           </ToolButton>
           <span aria-hidden className="mx-0.5 h-6 w-0.5 bg-line-soft" />
-          <ToolButton label={t('ws.tidy')} onClick={tidy} showLabel>
+          <ToolButton label={t('ws.tidy')} onClick={tidy} showLabel={!compact}>
             <LayoutGrid size={19} aria-hidden />
           </ToolButton>
         </>
       )}
       <span aria-hidden className="mx-0.5 h-6 w-0.5 bg-line-soft" />
       <LevelSwitch />
+      <span aria-hidden className="mx-0.5 h-6 w-0.5 bg-line-soft" />
+      <StudyViews />
       <span aria-hidden className="mx-0.5 h-6 w-0.5 bg-line-soft" />
       <ToolButton
         label={t('ws.zoomOut')}

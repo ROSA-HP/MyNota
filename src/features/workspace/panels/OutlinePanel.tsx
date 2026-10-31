@@ -13,6 +13,7 @@ import { childrenIndex, findRoot } from '../canvas/layout'
 import { OUTLINE_DRAG_TYPE } from '../canvas/linking'
 import { chapterColor } from '../canvas/visuals'
 import { chapterSummaries, type ChapterSummary } from '../canvas/zoom'
+import { useCanvasUi } from '../canvas/canvasUi'
 import { useWorkspace } from '../workspaceStore'
 
 /** Whole map as a tree; click flies to the node. The filter matches titles and summaries. */
@@ -41,11 +42,14 @@ export function OutlinePanel({ onNavigate }: { onNavigate?: () => void }) {
     (c) => (c.progress === 'waiting' || c.progress === 'partial') && !live[c.id],
   )
   const q = filter.trim()
+  const cover = useCanvasUi((s) => s.cover)
+  const revealed = useCanvasUi((s) => s.revealed)
+  const hiddenTitle = (n: NodeRow) => cover && n.level === 'block' && !revealed.includes(n.id)
 
   const matches = (n: NodeRow): boolean =>
     !q ||
-    matchesQuery(n.title, q) ||
-    matchesQuery(n.summary, q) ||
+    (!hiddenTitle(n) && matchesQuery(n.title, q)) ||
+    (!hiddenTitle(n) && matchesQuery(n.summary, q)) ||
     (kids.get(n.id) ?? []).some(matches)
 
   const go = (n: NodeRow) => {
@@ -61,6 +65,9 @@ export function OutlinePanel({ onNavigate }: { onNavigate?: () => void }) {
     }
     onNavigate?.()
   }
+
+  // Hide details: block titles stay covered here too, until revealed on the map.
+  const hidden = (n: NodeRow) => hiddenTitle(n) && n.id !== selectedId
 
   const renderNode = (n: NodeRow, depth: number, color: NodeRow['color']): React.ReactNode => {
     if (!matches(n)) return null
@@ -78,7 +85,7 @@ export function OutlinePanel({ onNavigate }: { onNavigate?: () => void }) {
           {children.length > 0 ? (
             <button
               type="button"
-              aria-label={n.title}
+              aria-label={hiddenTitle(n) ? t('ws.studyView.covered') : n.title}
               aria-expanded={open}
               disabled={!canEdit && !q}
               onClick={() => canEdit && update(n.id, { collapsed: !n.collapsed })}
@@ -130,7 +137,14 @@ export function OutlinePanel({ onNavigate }: { onNavigate?: () => void }) {
                     : '',
             )}
           >
-            {n.title}
+            {hidden(n) ? (
+              <span className="tracking-widest text-ink-faint">
+                <span aria-hidden>••••••</span>
+                <span className="sr-only">{t('ws.studyView.covered')}</span>
+              </span>
+            ) : (
+              n.title
+            )}
           </button>
           {chapterById.get(n.id) ? (
             <ChapterChip chapter={chapterById.get(n.id) as ChapterSummary} />

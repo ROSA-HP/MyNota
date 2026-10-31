@@ -81,7 +81,8 @@ function Study({ mapId, data }: { mapId: string; data: StudyData }) {
   const navigate = useNavigate()
   const [params] = useSearchParams()
   const userId = useAuth((s) => s.session?.user.id) ?? ''
-  const chapterId = params.get('chapter')
+  // ?chapter= (a chapter or section) or ?block= (one block and the blocks under it).
+  const chapterId = params.get('chapter') ?? params.get('block')
   const dueOnly = params.get('due') === '1'
   const practiceAll = params.get('practice') === '1'
   const chapter = chapterId ? data.nodes.find((n) => n.id === chapterId) : undefined

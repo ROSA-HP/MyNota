@@ -20,7 +20,7 @@ import { MapCanvas } from './canvas/MapCanvas'
 import { useCanvasUi } from './canvas/canvasUi'
 import { LinksNotice } from './LinksNotice'
 import { useLinks } from './linksStore'
-import { ConnectHint, DeleteConfirm, NodeMenu } from './Overlays'
+import { ConnectHint, DeleteConfirm, NodeMenu, StudyViewBanner } from './Overlays'
 import { AddNotesDialog } from './merge/AddNotesDialog'
 import { LinksTray, useSuggestions } from './panels/LinksTray'
 import { LinkPicker, LinkSearch } from './LinkPopovers'
@@ -373,8 +373,9 @@ function Workspace() {
         <main id="main" className="relative min-w-0 flex-1">
           <MapCanvas />
           <FocusFromUrl />
-          <div className="pointer-events-none absolute inset-x-0 top-3 flex justify-center px-3 [&>*]:pointer-events-auto">
+          <div className="pointer-events-none absolute inset-x-0 top-3 flex flex-col items-center gap-2 px-3 [&>*]:pointer-events-auto">
             <ConnectHint />
+            <StudyViewBanner />
           </div>
           <div
             className={cn(

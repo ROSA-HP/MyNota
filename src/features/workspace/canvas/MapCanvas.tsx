@@ -23,6 +23,7 @@ import type { NodeRow } from '@/lib/database.types'
 import { useBuild } from '../buildStore'
 import { useWorkspace } from '../workspaceStore'
 import { useCanvasUi } from './canvasUi'
+import { focusGroupOf } from './focus'
 import { OUTLINE_DRAG_TYPE, anchorBeside, createLinkedBlock, linkNodes, nodeIdAt } from './linking'
 import { edgeTypes } from './edges'
 import { childrenIndex, computeLayout, mirrorBox, type Box } from './layout'
@@ -151,6 +152,7 @@ export function MapCanvas() {
   const failedSections = useBuild((s) => s.sections)
   const { connecting, connectFrom, multi, pick, cancelConnect, openMenu, askDelete } = useCanvasUi()
   const spotlight = useCanvasUi((s) => s.spotlight)
+  const focusId = useCanvasUi((s) => s.focusId)
   const { fitView } = useReactFlow()
   const [drag, setDrag] = useState<Record<string, { x: number; y: number }>>({})
   // While a link is being dragged: the block under the pointer, highlighted as the drop target.
@@ -201,6 +203,11 @@ export function MapCanvas() {
     [rtl, layout.width],
   )
 
+  /** The focus unit a node belongs to: its chapter (book) or its section (notes map). */
+  const groupOf = useCallback((id: string) => focusGroupOf(nodes, id), [nodes])
+  const cover = useCanvasUi((s) => s.cover)
+  const revealed = useCanvasUi((s) => s.revealed)
+
   const flowNodes = useMemo<Node[]>(() => {
     const out: Node[] = []
     for (const region of layout.regions) {
@@ -216,12 +223,19 @@ export function MapCanvas() {
         zIndex: -1,
       }
       const chapter = chapterById.get(region.sectionId)
+      const regionDim = focusId !== null && groupOf(region.sectionId) !== focusId
       if (region.kind === 'chapter' && chapter) {
-        out.push({ ...base, type: 'chapterRegion', data: { chapter, level } })
+        out.push({
+          ...base,
+          className: cn(regionDim && 'is-dimmed'),
+          type: 'chapterRegion',
+          data: { chapter, level },
+        })
         continue
       }
       out.push({
         ...base,
+        className: cn(regionDim && 'is-dimmed'),
         type: 'region',
         data: {
           color: nodes[region.sectionId]?.color ?? null,
@@ -247,10 +261,17 @@ export function MapCanvas() {
         position: pos,
         width: box.w,
         height: box.h,
-        className: cn(marked && 'is-marked', linkTarget === n.id && 'is-link-target'),
+        className: cn(
+          marked && 'is-marked',
+          linkTarget === n.id && 'is-link-target',
+          focusId !== null && !isRoot && groupOf(n.id) !== focusId && 'is-dimmed',
+        ),
         selected: n.id === selectedId,
         draggable: canEdit && level === 'blocks' && !isChapter,
-        ariaLabel: n.title,
+        ariaLabel:
+          cover && n.level === 'block' && n.id !== selectedId && !revealed.includes(n.id)
+            ? t('ws.studyView.covered')
+            : n.title,
       }
       if (isRoot) {
         out.push({ ...common, type: 'root', data: { node: n, mapType: map?.type ?? null } })
@@ -316,11 +337,28 @@ export function MapCanvas() {
     chapterById,
     colorOf,
     spotlight,
+    focusId,
+    groupOf,
+    cover,
+    revealed,
+    t,
   ])
 
   const flowEdges = useMemo<Edge[]>(() => {
     const out: Edge[] = []
     const shown = new Set(flowNodes.map((n) => n.id))
+    // Focus mode: a line touching a dimmed card is dimmed with it.
+    const dimmed = new Set(
+      flowNodes.filter((n) => n.className?.includes('is-dimmed')).map((n) => n.id),
+    )
+    const dim = (edges: Edge[]) =>
+      dimmed.size
+        ? edges.map((e) =>
+            dimmed.has(e.source) || dimmed.has(e.target)
+              ? { ...e, className: 'is-dimmed', data: { ...e.data, dimmed: true } }
+              : e,
+          )
+        : edges
     const branch = (source: string, target: string): Edge => ({
       id: `h:${target}`,
       source,
@@ -367,7 +405,7 @@ export function MapCanvas() {
           zIndex: 0, // under the cards (they stay clickable), above the regions
         })
       }
-      return out
+      return dim(out)
     }
 
     const visible = (id: string) => shown.has(id)
@@ -440,7 +478,7 @@ export function MapCanvas() {
         zIndex: 0, // links pass under blocks so a block stays clickable; labels stay on top
       })
     }
-    return out
+    return dim(out)
   }, [
     flowNodes,
     list,
@@ -490,6 +528,8 @@ export function MapCanvas() {
   const fitted = useRef(0)
   useEffect(() => {
     useCanvasUi.getState().lockView(false)
+    useCanvasUi.getState().setFocus(null)
+    useCanvasUi.getState().setCover(false)
     fitted.current = 0
   }, [mapId])
   useEffect(() => {
@@ -623,6 +663,7 @@ export function MapCanvas() {
             ui.toggleMulti(node.id)
           } else {
             ui.clearMulti()
+            if (ui.cover) ui.reveal(node.id)
             select(node.id)
           }
         }}

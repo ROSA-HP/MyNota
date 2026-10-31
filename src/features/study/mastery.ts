@@ -73,3 +73,20 @@ export function deckCounts(
   }
   return out
 }
+
+let cached: {
+  cards: Record<string, CardRow>
+  progress: Record<string, CardProgressRow>
+  out: Record<string, Mastery>
+} | null = null
+
+/** masteryByBlock for the loaded deck, computed once per change (many blocks read it). */
+export function masteryMapFor(
+  cards: Record<string, CardRow>,
+  progress: Record<string, CardProgressRow>,
+): Record<string, Mastery> {
+  if (cached && cached.cards === cards && cached.progress === progress) return cached.out
+  const out = masteryByBlock(Object.values(cards), progress)
+  cached = { cards, progress, out }
+  return out
+}
