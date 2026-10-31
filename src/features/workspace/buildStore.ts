@@ -5,7 +5,7 @@ import { toProviderSchema } from '@/ai/jsonSchema'
 import { blockNodes, outlineText, sectionNodes } from '@/ai/pipeline/convert'
 import { DETAILS_PROMPT_VERSION, detailsPrompt } from '@/ai/prompts/details.v1'
 import { OUTLINE_PROMPT_VERSION, outlinePrompt } from '@/ai/prompts/outline.v1'
-import { SYSTEM_PROMPT, type Paragraph } from '@/ai/prompts/shared'
+import { SYSTEM_PROMPT, versionFor, type Paragraph, type SourceMode } from '@/ai/prompts/shared'
 import { createAdapter } from '@/ai/providers'
 import { AiQueue } from '@/ai/queue'
 import { DetailsResponseSchema, detailsSchemaFor } from '@/ai/schemas/details'
@@ -19,6 +19,7 @@ import {
 import { generateStructured } from '@/ai/structured'
 import type { ProviderAdapter } from '@/ai/types'
 import type { ActiveKey } from '@/features/settings/aiKeyStore'
+import { useLinks } from './linksStore'
 import { useWorkspace } from './workspaceStore'
 import type { AiProvider, NodeRow } from '@/lib/database.types'
 
@@ -39,6 +40,8 @@ export interface BuildOptions {
   detailLevel: 'brief' | 'standard' | 'detailed'
   /** Book maps: the book's title for the prompts (each chapter is built under its own node). */
   bookTitle?: string
+  /** Notes maps: lecture notes get the notes-mode rules (fix order, merge repeats). */
+  mode?: SourceMode
 }
 
 export type ChapterBuildState = 'queued' | 'running' | 'done' | 'failed' | 'stopped'
@@ -123,7 +126,7 @@ export const useBuild = create<BuildState>((set, get) => {
       pass: 'outline',
       provider: adapter.provider,
       model: adapter.model,
-      prompt_version: OUTLINE_PROMPT_VERSION,
+      prompt_version: versionFor(OUTLINE_PROMPT_VERSION, opts.mode),
       chapter_node_id: opts.rootId,
     })
     try {
@@ -137,6 +140,7 @@ export const useBuild = create<BuildState>((set, get) => {
               chapterTitle: opts.title,
               sourceLanguage: opts.sourceLanguage,
               paragraphs: opts.paragraphs,
+              mode: opts.mode,
             }),
             schema: outlineSchemaFor(opts.paragraphs.length),
             jsonSchema: toProviderSchema(OutlineResponseSchema),
@@ -222,7 +226,7 @@ export const useBuild = create<BuildState>((set, get) => {
       pass: 'details',
       provider: adapter.provider,
       model: adapter.model,
-      prompt_version: DETAILS_PROMPT_VERSION,
+      prompt_version: versionFor(DETAILS_PROMPT_VERSION, opts.mode),
       chapter_node_id: opts.rootId,
       node_id: sectionId,
     })
@@ -243,6 +247,7 @@ export const useBuild = create<BuildState>((set, get) => {
               explanationLanguage: opts.explanationLanguage,
               detailLevel: opts.detailLevel,
               paragraphs,
+              mode: opts.mode,
             }),
             schema: detailsSchemaFor(opts.paragraphs.length),
             jsonSchema: toProviderSchema(DetailsResponseSchema),
@@ -298,6 +303,12 @@ export const useBuild = create<BuildState>((set, get) => {
     settle()
   }
 
+  /** After a chapter (or a notes map) is fully built: suggest links between its sections. */
+  async function suggestLinks(opts: BuildOptions, key: ActiveKey) {
+    if (get().phase !== 'done' || bookStopped) return
+    await useLinks.getState().run({ kind: 'chapter', chapterId: opts.rootId }, key)
+  }
+
   return {
     mapId: null,
     provider: null,
@@ -330,6 +341,8 @@ export const useBuild = create<BuildState>((set, get) => {
       if (looping) return
       looping = true
       void (async () => {
+        let built = 0
+        let lastKey: ActiveKey = key
         for (let next = pending.shift(); next; next = pending.shift()) {
           if (bookStopped) break
           const { job, key: k } = next
@@ -344,7 +357,14 @@ export const useBuild = create<BuildState>((set, get) => {
             phase === 'done' ? 'done' : phase === 'stopped' ? 'stopped' : 'failed'
           set({ chapters: { ...get().chapters, [job.rootId]: state } })
           if (state === 'stopped') bookStopped = true
+          if (state === 'done') {
+            built += 1
+            lastKey = k
+          }
         }
+        // A book with new chapters: one more pass for links between chapters.
+        if (!bookStopped && built > 0 && useWorkspace.getState().map?.type === 'book')
+          await useLinks.getState().run({ kind: 'book' }, lastKey)
         if (bookStopped) {
           pending.length = 0
           set({
@@ -362,6 +382,7 @@ export const useBuild = create<BuildState>((set, get) => {
     },
 
     resume: async (opts, key) => {
+      if (!looping) bookStopped = false
       controller?.abort()
       const nodes = useWorkspace.getState().nodes
       const all = Object.values(nodes)
@@ -413,9 +434,11 @@ export const useBuild = create<BuildState>((set, get) => {
         return
       }
       await runDetails(key, todo)
+      await suggestLinks(opts, key)
     },
 
     start: async (opts, key) => {
+      if (!looping) bookStopped = false // a single build (notes map), not part of a book queue
       controller?.abort() // a previous run of this store, if any (not a book stop)
       ctx = { opts, outline: null, sectionRanges: {} }
       controller = new AbortController()
@@ -430,6 +453,7 @@ export const useBuild = create<BuildState>((set, get) => {
       })
       const ok = await runOutline(key, makeQueue(), controller.signal)
       if (ok) await runDetails(key, get().order)
+      await suggestLinks(opts, key)
     },
 
     retryOutline: async (key) => {
@@ -449,6 +473,7 @@ export const useBuild = create<BuildState>((set, get) => {
     },
 
     stop: () => {
+      useLinks.getState().stop()
       bookStopped = true
       controller?.abort()
       controller = null
@@ -457,6 +482,7 @@ export const useBuild = create<BuildState>((set, get) => {
 
     clear: () => {
       get().stop()
+      useLinks.getState().reset()
       pending.length = 0
       ctx = null
       set({

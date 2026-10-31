@@ -1,10 +1,12 @@
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { createPortal } from 'react-dom'
 import {
   BaseEdge,
   EdgeLabelRenderer,
   useInternalNode,
   useReactFlow,
+  useStore,
+  type ReactFlowState,
   type Edge,
   type EdgeProps,
   type InternalNode,
@@ -25,6 +27,7 @@ import { cn } from '@/lib/cn'
 import type { RelationRow, RelationType } from '@/lib/database.types'
 import { useWorkspace } from '../workspaceStore'
 import { useCanvasUi } from './canvasUi'
+import { bezierAt, labelSize, pickLabelPoint } from './labelPlacement'
 import { existingLink, nodeIdAt } from './linking'
 
 /**
@@ -143,12 +146,41 @@ function floatingPath(a: Rect, b: Rect, rtl: boolean) {
     c2 = { x: p2.x, y: p2.y - sa * k }
   }
   const path = `M${p1.x},${p1.y} C${c1.x},${c1.y} ${c2.x},${c2.y} ${p2.x},${p2.y}`
-  // Point on the cubic at t = 0.5 for the label.
-  const label = {
-    x: 0.125 * p1.x + 0.375 * c1.x + 0.375 * c2.x + 0.125 * p2.x,
-    y: 0.125 * p1.y + 0.375 * c1.y + 0.375 * c2.y + 0.125 * p2.y,
-  }
-  return { path, label, p1, p2 }
+  const at = bezierAt(p1, c1, c2, p2)
+  // Point on the cubic at t = 0.5 for the label (useLabelPoint moves it off other cards).
+  const label = at(0.5)
+  return { path, label, p1, p2, at }
+}
+
+/**
+ * The label position of a link between `source` and `target`: on the curve, nearest the middle,
+ * not covering another card. Re-computed when nodes move; re-renders only when it changes.
+ */
+function useLabelPoint(source: string, target: string, rtl: boolean, labelWidth: number) {
+  return useStore(
+    useCallback(
+      (st: ReactFlowState) => {
+        const a = rectOf(st.nodeLookup.get(source))
+        const b = rectOf(st.nodeLookup.get(target))
+        if (!a || !b) return null
+        const obstacles: Rect[] = []
+        for (const n of st.nodeLookup.values()) {
+          if (
+            n.id === source ||
+            n.id === target ||
+            n.type === 'region' ||
+            n.type === 'chapterRegion'
+          )
+            continue
+          const r = rectOf(n)
+          if (r) obstacles.push(r)
+        }
+        return pickLabelPoint(floatingPath(a, b, rtl).at, obstacles, { w: labelWidth, h: 26 })
+      },
+      [source, target, rtl, labelWidth],
+    ),
+    (x, y) => x?.x === y?.x && x?.y === y?.y,
+  )
 }
 
 /** A labelled link between two nodes. Suggested (AI) links are dashed with accept / dismiss. */
@@ -162,16 +194,21 @@ export function RelationEdge({
 }: EdgeProps<RelationEdgeT>) {
   const { t } = useTranslation()
   const update = useWorkspace((s) => s.updateRelation)
-  const remove = useWorkspace((s) => s.deleteRelation)
   const selectRelation = useWorkspace((s) => s.selectRelation)
   const s = rectOf(useInternalNode(source))
   const tg = rectOf(useInternalNode(target))
   const [editing, setEditing] = useState(false)
   const pickerOpen = useCanvasUi((u) => u.picker?.relationId === data?.relation.id)
+  const rel = data?.relation
+  const labelText = rel ? rel.label || t(`ws.relations.${rel.type}`) : ''
+  // Suggested links also carry accept / dismiss buttons beside the label.
+  const labelWidth = labelSize(labelText).w + (rel?.status === 'suggested' ? 60 : 0)
+  const placed = useLabelPoint(source, target, data?.rtl ?? false, labelWidth)
   if (!s || !tg || !data) return null
   const { relation, canEdit, selected } = data
   const suggested = relation.status === 'suggested'
-  const { path, label, p1, p2 } = floatingPath(s, tg, data.rtl)
+  const { path, label: middle, p1, p2 } = floatingPath(s, tg, data.rtl)
+  const label = placed ?? middle
   const text = relation.label || t(`ws.relations.${relation.type}`)
   const showTools = selected && canEdit && !suggested && !pickerOpen
   return (
@@ -242,7 +279,7 @@ export function RelationEdge({
                 type="button"
                 aria-label={t('ws.panel.dismiss')}
                 title={t('ws.panel.dismiss')}
-                onClick={() => remove(relation.id)}
+                onClick={() => update(relation.id, { status: 'dismissed' })}
                 className="flex size-6 cursor-pointer items-center justify-center rounded-full border-[1.5px] border-line bg-surface text-ink"
               >
                 <X size={13} strokeWidth={3} aria-hidden />
@@ -474,8 +511,10 @@ export type BundleEdgeT = Edge<{ count: number; label: string; rtl: boolean }, '
 export function BundleEdge({ id, source, target, data }: EdgeProps<BundleEdgeT>) {
   const s = rectOf(useInternalNode(source))
   const tg = rectOf(useInternalNode(target))
+  const placed = useLabelPoint(source, target, data?.rtl ?? false, labelSize(data?.label ?? '').w)
   if (!s || !tg || !data) return null
-  const { path, label } = floatingPath(s, tg, data.rtl)
+  const { path, label: middle } = floatingPath(s, tg, data.rtl)
+  const label = placed ?? middle
   const width = 2.5 + Math.min(data.count, 6) * 0.6
   return (
     <>

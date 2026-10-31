@@ -58,6 +58,7 @@ export function makeRelation(
     label: '',
     direction: 'forward',
     status: 'accepted',
+    confidence: null,
     origin: 'user',
     created_by: null,
     created_at: t,

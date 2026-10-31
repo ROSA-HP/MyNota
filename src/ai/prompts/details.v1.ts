@@ -4,8 +4,10 @@ import {
   TYPE_RULES,
   languageName,
   languageRules,
+  NOTES_DETAILS_RULES,
   numbered,
   type Paragraph,
+  type SourceMode,
 } from './shared'
 
 export const DETAILS_PROMPT_VERSION = 'details.v1'
@@ -20,6 +22,7 @@ export interface DetailsPromptInput {
   explanationLanguage: string | null
   detailLevel: 'brief' | 'standard' | 'detailed'
   paragraphs: Paragraph[]
+  mode?: SourceMode
 }
 
 const DETAIL_LEVEL: Record<DetailsPromptInput['detailLevel'], string> = {
@@ -73,7 +76,7 @@ RULES
   the same attributes.
 - Language: ${languageRules(i.sourceLanguage, i.explanationLanguage)}
 - ${DETAIL_LEVEL[i.detailLevel]}
-
+${i.mode === 'notes' ? `\n${NOTES_DETAILS_RULES}\n` : ''}
 OUTPUT FORMAT
 JSON: {"blocks": [...], "relations": [...], "flashcards": [...]}.
 - Each block has a short unique "key" ("b1", "b2", ...). "parent" is another block's key,

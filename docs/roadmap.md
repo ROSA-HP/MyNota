@@ -30,12 +30,12 @@ Each phase ends with something a student can actually use. Before starting a pha
 
 - PDF and photo upload (files stay on the device; only extracted text syncs), pdf.js extraction, Tesseract OCR
 - Chapter detection and extraction review screen
-- PDF and image `sources`; page numbers in the source view
+- PDF and image `sources`; page numbers in the source view (built 2026-10-31: page previews from the device copy)
 - Chapter regions (colored), semantic zoom, outline panel (built 2026-10-31: chapter tabs and regions, Chapters / Sections / Blocks levels, bundled links, build or continue chapters from the map and the outline)
-- Cross-links pass with suggested-links tray
+- Cross-links pass with suggested-links tray (built 2026-10-31)
 - Claude and OpenAI-compatible adapters; cost estimate
 - Flexible linking (asked for 2026-10-30): drag from any side of a block, inline link picker (kind 1–9, label, arrow), "Link to…" search across the book (L), link toolbar (kind, swap, both ways, edit label, delete), drag a link end to another block, link several selected blocks, drag from the outline
-- Notes mode, merge mode, subjects
+- Notes mode, merge mode ("Add notes"), subjects (built 2026-10-31)
 
 **Done when**: a full textbook becomes a navigable book map.
 

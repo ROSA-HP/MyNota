@@ -62,6 +62,7 @@ const relation = (from: string, to: string, extra: Partial<RelationRow> = {}): R
   label: '',
   direction: 'forward',
   status: 'accepted',
+  confidence: null,
   origin: 'user',
   created_by: null,
   created_at: '',

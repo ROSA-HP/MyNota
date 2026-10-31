@@ -128,7 +128,7 @@ export function bundleRelations(
 ): Bundle[] {
   const bundles = new Map<string, Bundle>()
   for (const r of relations) {
-    if (r.status === 'suggested') continue
+    if (r.status !== 'accepted') continue
     const a = visibleOf(r.from_node)
     const b = visibleOf(r.to_node)
     if (!a || !b || a === b) continue

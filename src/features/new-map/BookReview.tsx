@@ -43,12 +43,15 @@ export function BookReview({
   file,
   photos,
   onBack,
+  subjectId = null,
 }: {
   extracted: Extracted
   title: string
   file: BookFile
   photos: File[]
   onBack: () => void
+  /** The subject the new book is filed under (null: none). */
+  subjectId?: string | null
 }) {
   const { t, i18n } = useTranslation()
   const navigate = useNavigate()
@@ -153,7 +156,7 @@ export function BookReview({
       const included = drafts.filter((d) => d.kind === 'chapter' || d.build)
       const { mapId, chapterIds } = await createBookMap({
         title: title.trim(),
-        subjectId: null,
+        subjectId,
         language: sourceLanguage,
         kind: extracted.kind,
         file: { name: file.name, size: file.size, hash: file.hash },

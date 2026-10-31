@@ -1,4 +1,11 @@
-import { SHAPE_RULES, languageName, numbered, type Paragraph } from './shared'
+import {
+  NOTES_OUTLINE_RULES,
+  SHAPE_RULES,
+  languageName,
+  numbered,
+  type Paragraph,
+  type SourceMode,
+} from './shared'
 
 export const OUTLINE_PROMPT_VERSION = 'outline.v1'
 
@@ -7,6 +14,7 @@ export function outlinePrompt(input: {
   chapterTitle: string
   sourceLanguage: string | null
   paragraphs: Paragraph[]
+  mode?: SourceMode
 }): string {
   return `You are a study-map architect. You turn textbook chapters into clear,
 well-structured outlines that students can learn from visually.
@@ -32,7 +40,7 @@ RULES
 - For each section, choose the best shape: tree, process, timeline,
   comparison, or cause_effect, using these rules: ${SHAPE_RULES}
 - Very short material may have fewer than 3 sections.
-
+${input.mode === 'notes' ? `\n${NOTES_OUTLINE_RULES}\n` : ''}
 OUTPUT FORMAT
 JSON: {"sections": [{"title", "summary", "shape", "paragraphs": {"from", "to"},
 "subsections": [{"title", "summary", "paragraphs": {"from", "to"}}]}]}.

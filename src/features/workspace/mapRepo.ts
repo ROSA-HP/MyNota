@@ -6,7 +6,7 @@ import { PALETTE, makeNode, newId } from '@/ai/pipeline/convert'
 export const NODE_COLUMNS =
   'id, map_id, parent_id, sort_order, level, title, summary, type, icon, color, importance, details, lang, dir, branch_view, position, size, collapsed, source, ai_added, ai_added_reason, origin, created_by, created_at, updated_at'
 export const RELATION_COLUMNS =
-  'id, map_id, from_node, to_node, type, label, direction, status, origin, created_by, created_at, updated_at'
+  'id, map_id, from_node, to_node, type, label, direction, status, confidence, origin, created_by, created_at, updated_at'
 export const SOURCE_COLUMNS =
   'id, map_id, chapter_node_id, kind, storage_path, pages, paragraphs, file_name, file_size, file_hash, created_by, created_at'
 
@@ -106,6 +106,7 @@ function relationPayload(r: RelationRow) {
     label: r.label,
     direction: r.direction,
     status: r.status,
+    confidence: r.confidence,
     origin: r.origin,
   }
 }
@@ -132,6 +133,33 @@ export async function deleteRelations(ids: string[]): Promise<void> {
   if (!ids.length) return
   const { error } = await supabase.from('relations').delete().in('id', ids)
   if (error) throw error
+}
+
+/** Saves new numbered paragraphs (merged notes) as another source of a chapter. */
+export async function addSource(
+  row: Pick<SourceRow, 'map_id' | 'chapter_node_id' | 'kind' | 'paragraphs'>,
+): Promise<SourceRow> {
+  // The id is made here so the saved row is known without reading it back.
+  const local: SourceRow = {
+    id: newId(),
+    storage_path: null,
+    pages: null,
+    file_name: null,
+    file_size: null,
+    file_hash: null,
+    created_by: null,
+    created_at: new Date().toISOString(),
+    ...row,
+  }
+  const { error } = await supabase.from('sources').insert({
+    id: local.id,
+    map_id: row.map_id,
+    chapter_node_id: row.chapter_node_id,
+    kind: row.kind,
+    paragraphs: row.paragraphs,
+  })
+  if (error) throw error
+  return local
 }
 
 export interface NewMapInput {

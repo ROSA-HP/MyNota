@@ -42,8 +42,11 @@ export function anchorBeside(nodeId: string): Anchor {
 }
 
 export function existingLink(a: string, b: string): RelationRow | undefined {
+  // A dismissed suggestion does not count: linking that pair by hand makes a real link.
   return Object.values(useWorkspace.getState().relations).find(
-    (r) => (r.from_node === a && r.to_node === b) || (r.from_node === b && r.to_node === a),
+    (r) =>
+      r.status !== 'dismissed' &&
+      ((r.from_node === a && r.to_node === b) || (r.from_node === b && r.to_node === a)),
   )
 }
 
@@ -123,6 +126,7 @@ export function createLinkedBlock(from: string, title: string, anchor: Anchor): 
 export function recentLabels(exclude: string, limit = 4): string[] {
   const counts = new Map<string, number>()
   for (const r of Object.values(useWorkspace.getState().relations)) {
+    if (r.status !== 'accepted') continue
     const l = r.label.trim()
     if (l && l !== exclude) counts.set(l, (counts.get(l) ?? 0) + 1)
   }

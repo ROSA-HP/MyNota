@@ -13,7 +13,7 @@ import {
   X,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { Link, useNavigate } from 'react-router'
+import { Link, useNavigate, useSearchParams } from 'react-router'
 import {
   detectLanguage,
   estimateRun,
@@ -23,11 +23,21 @@ import {
 } from '@/ai/pipeline/prepare'
 import { estimateCost } from '@/ai/pricing'
 import { PROVIDERS, testProvider } from '@/ai/providers'
-import { Alert, Badge, Button, Logo, Panel, TextField, buttonClasses } from '@/components/ui'
+import {
+  Alert,
+  Badge,
+  Button,
+  Logo,
+  Panel,
+  SelectField,
+  TextField,
+  buttonClasses,
+} from '@/components/ui'
 import { useAiKey } from '@/features/settings/aiKeyStore'
 import { createMap } from '@/features/workspace/mapRepo'
 import { cn } from '@/lib/cn'
-import type { AiProvider, MapRow } from '@/lib/database.types'
+import type { AiProvider, MapRow, SubjectRow } from '@/lib/database.types'
+import { SUBJECT_COLUMNS, supabase } from '@/lib/supabase'
 import type { BuildRequest } from './buildRequest'
 import type { Extracted, ExtractProgress } from '@/ai/pipeline/extract'
 import type { OcrLanguage } from '@/ai/pipeline/extract/ocr'
@@ -167,6 +177,29 @@ export function NewMapPage() {
   const [busy, setBusy] = useState(false)
   const [showAll, setShowAll] = useState(false)
   const [modelLimit, setModelLimit] = useState<number | undefined>(undefined)
+  // Subjects: "New map" from a subject in the library comes with ?subject=…
+  const [params] = useSearchParams()
+  const [subjects, setSubjects] = useState<SubjectRow[]>([])
+  const [subjectChoice, setSubjectChoice] = useState<string | null>(null)
+  const fromLink = params.get('subject')
+  // null: not chosen yet (use the link's subject); '': "No subject" picked.
+  const subjectId =
+    subjectChoice === null
+      ? subjects.some((s) => s.id === fromLink)
+        ? fromLink
+        : null
+      : subjectChoice || null
+  useEffect(() => {
+    let cancelled = false
+    void supabase
+      .from('subjects')
+      .select(SUBJECT_COLUMNS)
+      .order('sort_order')
+      .then(({ data }) => !cancelled && data && setSubjects(data))
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const words = useMemo(() => (text.trim() ? text.trim().split(/\s+/u).length : 0), [text])
   const paragraphs = useMemo(() => (step === 2 ? splitParagraphs(text) : []), [step, text])
@@ -268,7 +301,7 @@ export function NewMapPage() {
       const { mapId } = await createMap({
         title: title.trim(),
         type: 'blank',
-        subjectId: null,
+        subjectId,
         language: null,
         paragraphs: [],
       })
@@ -293,7 +326,7 @@ export function NewMapPage() {
       const { mapId, rootId } = await createMap({
         title: title.trim(),
         type: kind,
-        subjectId: null,
+        subjectId,
         language: sourceLanguage,
         paragraphs: numbered,
       })
@@ -305,6 +338,7 @@ export function NewMapPage() {
         explanationLanguage: explanations === 'same' ? sourceLanguage : explanations,
         detailLevel: detail,
         provider: key.provider,
+        mode: kind === 'notes' ? 'notes' : 'textbook',
       }
       navigate(`/maps/${mapId}`, { replace: true, state: { build: request } })
     } catch {
@@ -380,6 +414,18 @@ export function NewMapPage() {
               error={errors.title}
               dir="auto"
             />
+
+            {subjects.length > 0 && (
+              <SelectField
+                label={t('newMap.subject')}
+                value={subjectId ?? ''}
+                onChange={(e) => setSubjectChoice(e.target.value || '')}
+                options={[
+                  { value: '', label: t('library.noSubject') },
+                  ...subjects.map((s) => ({ value: s.id, label: s.name })),
+                ]}
+              />
+            )}
 
             {kind !== 'blank' && (
               <SourceTabs
@@ -516,6 +562,7 @@ export function NewMapPage() {
             file={bookFile}
             photos={photos}
             onBack={() => setStep(1)}
+            subjectId={subjectId}
           />
         )}
 

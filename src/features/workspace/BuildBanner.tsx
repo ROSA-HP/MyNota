@@ -8,7 +8,8 @@ import { useKeyFor } from '@/features/settings/aiKeyStore'
 import { useBuild, type SectionStatus } from './buildStore'
 import { useWorkspace } from './workspaceStore'
 
-function useNow(active: boolean) {
+/** Current time, ticking every second while `active` (for countdowns). */
+export function useNow(active: boolean) {
   const [now, setNow] = useState(() => Date.now())
   useEffect(() => {
     if (!active) return

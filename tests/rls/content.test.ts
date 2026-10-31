@@ -1,5 +1,14 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
-import { PERMISSION_DENIED, admin, asUser, createUser, errorCode, pool, resetData } from './helpers'
+import {
+  PERMISSION_DENIED,
+  admin,
+  asAnon,
+  asUser,
+  createUser,
+  errorCode,
+  pool,
+  resetData,
+} from './helpers'
 
 let owner: string, editor: string, viewer: string, stranger: string
 let mapId: string, otherMapId: string, rootId: string, sectionId: string, otherNodeId: string
@@ -227,6 +236,64 @@ describe('relations', () => {
         ),
       ),
     ).toBe('23514')
+  })
+})
+
+describe('link suggestions (Phase 3)', () => {
+  it('a suggestion keeps its confidence and can be accepted or dismissed by editors', async () => {
+    const insert = `insert into public.relations (map_id, from_node, to_node, type, status, origin, confidence)
+      values ($1, $2, $3, 'prerequisite', 'suggested', 'ai', 'high') returning id`
+    const added = await asUser(editor, (db) => db.query(insert, [mapId, sectionId, rootId]))
+    expect(added.rowCount).toBe(1)
+    const id = (await admin(insert, [mapId, sectionId, rootId])).rows[0].id
+    for (const u of [owner, editor]) {
+      const changed = await asUser(u, (db) =>
+        db.query(`update public.relations set status = 'dismissed' where id = $1`, [id]),
+      )
+      expect(changed.rowCount).toBe(1)
+    }
+    await admin(`update public.relations set status = 'dismissed' where id = $1`, [id])
+    const seen = await asUser(viewer, (db) =>
+      db.query(`select status, confidence from public.relations where id = $1`, [id]),
+    )
+    expect(seen.rows[0]).toEqual({ status: 'dismissed', confidence: 'high' })
+    const viewerChange = await asUser(viewer, (db) =>
+      db.query(`update public.relations set status = 'accepted' where id = $1`, [id]),
+    )
+    expect(viewerChange.rowCount).toBe(0)
+  })
+
+  it('rejects unknown statuses and confidences', async () => {
+    for (const [status, confidence] of [
+      ['maybe', null],
+      ['suggested', 'low'],
+    ])
+      expect(
+        await errorCode(
+          asUser(owner, (db) =>
+            db.query(
+              `insert into public.relations (map_id, from_node, to_node, status, confidence) values ($1, $2, $3, $4, $5)`,
+              [mapId, sectionId, rootId, status, confidence],
+            ),
+          ),
+        ),
+      ).toBe('23514')
+  })
+})
+
+describe('map_stats', () => {
+  it('counts blocks and chapters only on maps the caller can read', async () => {
+    await admin(
+      `insert into public.nodes (map_id, parent_id, level, title) values ($1, $2, 'block', 'Diffusion'), ($1, $2, 'block', 'Osmosis')`,
+      [mapId, sectionId],
+    )
+    const sql = `select * from public.map_stats($1::uuid[])`
+    const mine = await asUser(viewer, (db) => db.query(sql, [[mapId, otherMapId]]))
+    expect(mine.rows).toHaveLength(1)
+    expect(mine.rows[0]).toMatchObject({ map_id: mapId, blocks: 2, chapters: 0 })
+    const theirs = await asUser(stranger, (db) => db.query(sql, [[mapId]]))
+    expect(theirs.rows).toHaveLength(0)
+    expect(await errorCode(asAnon((db) => db.query(sql, [[mapId]])))).toBe(PERMISSION_DENIED)
   })
 })
 

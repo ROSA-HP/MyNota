@@ -21,6 +21,12 @@ interface CanvasUiState {
   /** The student moved the view (pan, zoom, toolbar): stop fitting the growing map. */
   viewLocked: boolean
   lockView: (locked?: boolean) => void
+  /** The suggested-links tray is open (right panel). */
+  linksTray: boolean
+  setLinksTray: (open: boolean) => void
+  /** Nodes highlighted on the canvas (e.g. "Show" in the links tray). */
+  spotlight: string[]
+  setSpotlight: (ids: string[]) => void
   startConnect: (from?: string | null) => void
   /** Returns the pair when the second node is picked. */
   pick: (nodeId: string) => { from: string; to: string } | null
@@ -46,6 +52,10 @@ export const useCanvasUi = create<CanvasUiState>((set, get) => ({
   confirmDelete: null,
   viewLocked: false,
   lockView: (locked = true) => set({ viewLocked: locked }),
+  linksTray: false,
+  setLinksTray: (open) => set({ linksTray: open, spotlight: open ? get().spotlight : [] }),
+  spotlight: [],
+  setSpotlight: (ids) => set({ spotlight: ids }),
   startConnect: (from = null) =>
     set({ connecting: true, connectFrom: from, menu: null, search: null, picker: null }),
   pick: (nodeId) => {

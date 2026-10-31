@@ -31,6 +31,28 @@ export function languageRules(source: string | null, explanations: string | null
   return rules.join(' ')
 }
 
+/** Textbook chapters, or a student's own lecture notes (docs/ai-pipeline.md › Modes). */
+export type SourceMode = 'textbook' | 'notes'
+
+/** Prompt version recorded in ai_jobs: notes mode adds rules to the same prompt. */
+export const versionFor = (base: string, mode: SourceMode | undefined): string =>
+  mode === 'notes' ? `${base}+notes` : base
+
+export const NOTES_OUTLINE_RULES = `NOTES MODE
+The material is a student's own lecture notes: possibly out of order, repetitive, with
+abbreviations, fragments and no headings.
+- Create clear section titles even when the notes have none.
+- Group by topic, not by the order things were written; ranges stay consecutive, so a
+  section may be broad when the notes jump around.`
+
+export const NOTES_DETAILS_RULES = `NOTES MODE
+The material is a student's own lecture notes: possibly out of order, repetitive, with
+abbreviations and gaps.
+- Fix the order: arrange blocks in a logical teaching order, not the order they were written.
+- Merge repeated points into one block that cites all of their paragraphs.
+- Expand abbreviations only when the meaning is certain.
+- Fill gaps only as clearly marked additions: added = true with a short added_reason.`
+
 export interface Paragraph {
   n: number
   text: string

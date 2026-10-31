@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { Plus, Trash, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { NODE_TYPES, RELATION_TYPES } from '@/ai/schemas/common'
@@ -13,7 +14,9 @@ import type {
 } from '@/lib/database.types'
 import { supabase } from '@/lib/supabase'
 import { useCanvasUi } from '../canvas/canvasUi'
+import { findRoot } from '../canvas/layout'
 import { TYPE_ICON } from '../canvas/visuals'
+import { PagePreview } from './PagePreview'
 import { useWorkspace } from '../workspaceStore'
 
 const IMPORTANCE: Importance[] = ['core', 'supporting', 'extra']
@@ -179,11 +182,35 @@ export function NodePanel({ node, onClose }: { node: NodeRow; onClose: () => voi
   const isRoot = node.parent_id === null
   const isBlock = node.level === 'block'
   const links = Object.values(relations).filter(
-    (r) => r.from_node === node.id || r.to_node === node.id,
+    (r) => r.status !== 'dismissed' && (r.from_node === node.id || r.to_node === node.id),
   )
-  const paragraphs = sources
-    .flatMap((s) => s.paragraphs)
+  const nodes = useWorkspace((s) => s.nodes)
+  // Paragraph numbers restart in every book chapter: read the sources of this node's chapter
+  // (or of the map, for notes maps). Merged notes are extra sources of the same chapter.
+  const chapterSources = useMemo(() => {
+    const root = findRoot(Object.values(nodes))
+    let cur: NodeRow | undefined = node
+    if (root?.level === 'book')
+      while (cur?.parent_id && cur.parent_id !== root.id) cur = nodes[cur.parent_id]
+    const chapterId = root?.level === 'book' ? cur?.id : root?.id
+    const mine = sources.filter((src) => src.chapter_node_id === chapterId)
+    return mine.length ? mine : sources.filter((src) => src.chapter_node_id === null)
+  }, [nodes, node, sources])
+  const paragraphs = chapterSources
+    .flatMap((src) => src.paragraphs ?? [])
     .filter((p) => node.source.paragraphs.includes(p.n))
+  /** Sources with an original file (PDF or photos) and the pages this node cites in each. */
+  const pageSources = chapterSources.flatMap((src) => {
+    if (!src.file_hash) return []
+    const pages = [
+      ...new Set(
+        (src.paragraphs ?? [])
+          .filter((p) => node.source.paragraphs.includes(p.n) && typeof p.page === 'number')
+          .map((p) => p.page as number),
+      ),
+    ].sort((a, b) => a - b)
+    return pages.length ? [{ src, pages }] : []
+  })
   const Icon = node.type ? TYPE_ICON[node.type] : null
 
   const setDetails = (details: DetailBlock[]) => update(node.id, { details })
@@ -361,6 +388,9 @@ export function NodePanel({ node, onClose }: { node: NodeRow; onClose: () => voi
           ) : (
             <p className="text-sm text-ink-muted">{t('ws.panel.noSource')}</p>
           )}
+          {pageSources.map(({ src, pages }) => (
+            <PagePreview key={src.id} source={src} pages={pages} />
+          ))}
         </div>
       </div>
 
@@ -450,7 +480,12 @@ export function RelationPanel({
             {t('ws.panel.accept')}
           </Button>
         )}
-        {canEdit && (
+        {canEdit && relation.status === 'suggested' && (
+          <Button variant="secondary" onClick={() => update(relation.id, { status: 'dismissed' })}>
+            {t('ws.panel.dismiss')}
+          </Button>
+        )}
+        {canEdit && relation.status !== 'suggested' && (
           <Button
             variant="secondary"
             className="bg-danger-soft"

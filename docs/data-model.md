@@ -55,7 +55,8 @@ Every table has RLS enabled in the migration that creates it.
 - id, map_id, from_node, to_node
 - type: `causes` | `leads_to` | `part_of` | `example_of` | `contrasts_with` | `prerequisite` | `analogy` | `derived_from` | `related`
 - label (1–3 words), direction: `forward` | `backward` | `both`
-- status: `suggested` | `accepted`
+- status: `suggested` | `accepted` | `dismissed` (a dismissed AI suggestion is kept so it is never suggested again; hidden everywhere in the app)
+- confidence: `high` | `medium` (AI suggestions only)
 - origin: `user` | `ai`, created_by
 
 **Detail block types** (from MindLex `shared/index.ts`): `text`, `bullet`, `example` (sentence + translation), `vocab` (rows per language, article, plural), `formula` (LaTeX + variables), `question` (front/back), `cloze`.
@@ -71,10 +72,13 @@ Outline subsections are orientation for the details pass only; they are not stor
 - kind: `pdf` | `images` | `text`
 - pages, file_name, file_size, file_hash (to find the local copy; the file itself stays in the device's IndexedDB, never in Storage)
 - paragraphs: numbered `P1..Pn`, each with text and page number
+- A chapter (or a notes map's root) can have several sources: notes added later ("Add notes") are saved as another source of the same chapter, numbered after the existing paragraphs, so a block's citations always point to one stored paragraph.
+
+**map_stats(map_ids)** (Postgres function, `SECURITY INVOKER`, so RLS applies): blocks, chapters, chapters built and chapter colors per map, for library cards.
 
 **ai_jobs**
 - id, map_id, chapter_node_id, node_id (the section a details job is for)
-- pass: `outline` | `details` | `links` | `tool`
+- pass: `outline` | `details` | `links` | `merge` | `tool`
 - provider, model, prompt_version
 - status: `queued` | `running` | `done` | `failed`
 - tokens_in, tokens_out, duration_ms, error (a check constraint rejects strings that look like API keys)

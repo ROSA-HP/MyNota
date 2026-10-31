@@ -23,11 +23,14 @@ Each chapter is processed in small focused passes, never one giant request. Ever
 2. **Outline** (once per chapter): sections, subsections, one-line summaries, paragraph ranges, branch shape.
 3. **Details** (once per section, can run in parallel): blocks, types, details, importance, in-section relations, flashcard candidates. Insert each section into the map as it finishes so the map visibly grows.
 4. **Cross-links** (per chapter, then per book): input is only a compact block list (id, title, summary, section). Output appears as dashed suggested relations the user accepts or dismisses.
+   - As built (Phase 3, `src/ai/pipeline/links.ts`, `prompts/links.v1.ts`): runs automatically after each chapter (or notes map) is fully built, and once more across chapters when a book build finishes; "Find links" in the tray runs it on demand. Blocks get short ids (`B1`…); a chapter sends ≤ 250 blocks, a book ≤ 400 (core first, then supporting, then extra). Asks for `clamp(blocks/6, 2, 10)` links per chapter and `clamp(2 × chapters, 3, 16)` per book. Unknown ids, self-links, links inside one section (chapter pass) or one chapter (book pass), pairs that already have any relation, and repeats are dropped in code rather than failing the pass. Saved as `status: suggested` with `confidence` (high / medium). Dismissed suggestions stay as `status: dismissed`, so they are never suggested again.
 5. **On-demand tools** (single block): expand, simplify, give an example, split into sub-blocks, explain simpler, translate, make flashcards.
 
 **Modes**
 - **Notes**: same passes with extra instructions — fix order, merge repeated points, fill gaps only as clearly marked additions.
+  - As built: `NOTES_OUTLINE_RULES` and `NOTES_DETAILS_RULES` in `prompts/shared.ts` are added to outline v1 and details v1 for maps of type notes; `ai_jobs.prompt_version` records `outline.v1+notes` / `details.v1+notes`.
 - **Merge**: given an existing map's outline and new notes, decide for each new piece: attach to an existing node, create a new branch, or skip as duplicate.
+  - As built ("Add notes", `pipeline/merge.ts`, `prompts/merge.v1.ts`, `schemas/merge.ts`): the map (or one book chapter) is sent as an indented outline with `S…`/`B…` ids and the notes as `N1..Nk` (≤ 120 paragraphs, ≤ 40,000 characters per request). Each item is `attach` (new blocks under a section or block, optionally after a sibling), `detail` (one line added to an existing block), `new_section`, or `skip` (`duplicate_of`). Unknown ids and missing parts go back in the repair retry; a note used twice keeps its first place; notes the model left out become a "More notes" section, so nothing is lost. The student reviews the plan (untick, "Change" the place, "Add them anyway" turns skipped notes into details) before anything changes. Applying saves the notes first as another source of that chapter, numbered after its existing paragraphs (`P(n+1)…`), then adds the nodes; a links pass follows. `ai_jobs.pass` is `merge`.
 
 ## Classification rules
 
@@ -178,7 +181,7 @@ BLOCKS
 {compact_block_list}
 ```
 
-Notes-mode and merge-mode prompts are written in Phase 3 following the same structure.
+Notes-mode rules and the merge prompt (merge v1) live in `src/ai/prompts/` and follow the same structure: role, the material as data, rules, output format with the JSON field names.
 
 ## Provider adapters (`src/ai/providers/`)
 

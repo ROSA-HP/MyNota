@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { ReactFlowProvider } from '@xyflow/react'
-import { ChevronRight, Eye, Layers, PanelLeft, Share2 } from 'lucide-react'
+import { ChevronRight, Eye, GitMerge, Layers, PanelLeft, Share2, Sparkles } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Link, useLocation, useNavigate, useParams } from 'react-router'
 import { Alert, Badge, IconButton, Logo, Spinner, buttonClasses } from '@/components/ui'
@@ -8,15 +8,41 @@ import { useAuth } from '@/features/auth/authStore'
 import type { BookBuildRequest, BuildRequest } from '@/features/new-map/buildRequest'
 import { useKeyFor } from '@/features/settings/aiKeyStore'
 import { cn } from '@/lib/cn'
+import type { SubjectRow } from '@/lib/database.types'
+import { supabase } from '@/lib/supabase'
 import { BuildBanner } from './BuildBanner'
 import { useBuild } from './buildStore'
 import { MapCanvas } from './canvas/MapCanvas'
+import { useCanvasUi } from './canvas/canvasUi'
+import { LinksNotice } from './LinksNotice'
+import { useLinks } from './linksStore'
 import { ConnectHint, DeleteConfirm, NodeMenu } from './Overlays'
+import { AddNotesDialog } from './merge/AddNotesDialog'
+import { LinksTray, useSuggestions } from './panels/LinksTray'
 import { LinkPicker, LinkSearch } from './LinkPopovers'
 import { NodePanel, RelationPanel } from './panels/NodePanel'
 import { OutlinePanel } from './panels/OutlinePanel'
 import { Toolbar } from './Toolbar'
 import { useWorkspace } from './workspaceStore'
+
+/** The map's subject for the breadcrumb (only the owner can read their subjects). */
+function useSubject(subjectId: string | null | undefined) {
+  const [subject, setSubject] = useState<Pick<SubjectRow, 'id' | 'name'> | null>(null)
+  useEffect(() => {
+    if (!subjectId) return
+    let cancelled = false
+    void supabase
+      .from('subjects')
+      .select('id, name')
+      .eq('id', subjectId)
+      .maybeSingle()
+      .then(({ data }) => !cancelled && setSubject(data))
+    return () => {
+      cancelled = true
+    }
+  }, [subjectId])
+  return subjectId && subject?.id === subjectId ? subject : null
+}
 
 function SaveIndicator() {
   const { t } = useTranslation()
@@ -38,6 +64,68 @@ function SaveIndicator() {
       {state === 'saving' && <Spinner size={12} />}
       {label}
     </span>
+  )
+}
+
+/** Top-bar button for the suggested-links tray, with the number waiting for review. */
+function SuggestionsButton() {
+  const { t } = useTranslation()
+  const count = useSuggestions().length
+  const open = useCanvasUi((s) => s.linksTray)
+  const setOpen = useCanvasUi((s) => s.setLinksTray)
+  const hasBlocks = useWorkspace((s) => Object.values(s.nodes).some((n) => n.level === 'block'))
+  if (!hasBlocks && !count) return null
+  return (
+    <button
+      type="button"
+      aria-pressed={open}
+      onClick={() => {
+        useLinks.getState().seen()
+        setOpen(!open)
+      }}
+      title={t('ws.suggest.title')}
+      className={buttonClasses({
+        variant: 'secondary',
+        size: 'sm',
+        className: cn(
+          count > 0 && 'bg-ch-yellow hover:bg-ch-yellow',
+          open && 'outline-2 outline-line',
+        ),
+      })}
+    >
+      <Sparkles size={16} aria-hidden />
+      <span className="hidden lg:inline">{t('ws.suggest.open')}</span>
+      {count > 0 && (
+        <span className="rounded-full bg-ink px-1.5 font-mono text-xs font-bold text-paper">
+          {count}
+        </span>
+      )}
+    </button>
+  )
+}
+
+/** Opens "Add notes" (merge new notes into this map). Not while the map is being built. */
+function AddNotesButton({ onOpen }: { onOpen: () => void }) {
+  const { t } = useTranslation()
+  const canEdit = useWorkspace((s) => s.role === 'owner' || s.role === 'editor')
+  const fromCache = useWorkspace((s) => s.fromCache)
+  const building = useBuild((s) => s.phase === 'outline' || s.phase === 'details')
+  if (!canEdit || fromCache) return null
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      disabled={building}
+      title={t('ws.merge.open')}
+      className={buttonClasses({
+        variant: 'secondary',
+        size: 'sm',
+        className: 'disabled:cursor-not-allowed disabled:opacity-55',
+      })}
+    >
+      <GitMerge size={16} aria-hidden />
+      <span className="hidden lg:inline">{t('ws.merge.open')}</span>
+    </button>
   )
 }
 
@@ -64,6 +152,10 @@ function Workspace() {
   const enqueue = useBuild((s) => s.enqueue)
   const buildMapId = useBuild((s) => s.mapId)
   const [outlineOpen, setOutlineOpen] = useState(false)
+  const linksTray = useCanvasUi((s) => s.linksTray)
+  const [addNotesOpen, setAddNotesOpen] = useState(false)
+  const subject = useSubject(map?.subject_id)
+  const setLinksTray = useCanvasUi((s) => s.setLinksTray)
   const started = useRef(false)
 
   useEffect(() => {
@@ -123,7 +215,14 @@ function Workspace() {
     location.pathname,
   ])
 
-  useEffect(() => () => useBuild.getState().clear(), [mapId])
+  useEffect(
+    () => () => {
+      useBuild.getState().clear()
+      useLinks.getState().reset()
+      useCanvasUi.getState().setLinksTray(false)
+    },
+    [mapId],
+  )
 
   if (status === 'loading' || status === 'idle') {
     return (
@@ -152,7 +251,7 @@ function Workspace() {
 
   const selectedNode = selectedId ? nodes[selectedId] : undefined
   const selectedRelation = selectedRelationId ? relations[selectedRelationId] : undefined
-  const panelOpen = Boolean(selectedNode || selectedRelation)
+  const panelOpen = Boolean(selectedNode || selectedRelation || linksTray)
   const closePanel = () => {
     select(null)
     selectRelation(null)
@@ -184,6 +283,22 @@ function Workspace() {
             aria-hidden
             className="hidden shrink-0 sm:block rtl:-scale-x-100"
           />
+          {subject && (
+            <>
+              <Link
+                to={`/library?subject=${subject.id}`}
+                dir="auto"
+                className="hidden max-w-40 truncate hover:text-ink md:inline"
+              >
+                {subject.name}
+              </Link>
+              <ChevronRight
+                size={14}
+                aria-hidden
+                className="hidden shrink-0 md:block rtl:-scale-x-100"
+              />
+            </>
+          )}
           <h1 dir="auto" className="truncate text-base font-bold text-ink">
             {map.title}
           </h1>
@@ -195,6 +310,8 @@ function Workspace() {
           </Badge>
         )}
         <div className="ms-auto flex items-center gap-2">
+          <AddNotesButton onOpen={() => setAddNotesOpen(true)} />
+          <SuggestionsButton />
           <span
             className={buttonClasses({
               variant: 'secondary',
@@ -252,6 +369,7 @@ function Workspace() {
                 </Link>
               </Alert>
             )}
+            <LinksNotice />
             <BuildBanner />
             <Toolbar />
           </div>
@@ -265,6 +383,8 @@ function Workspace() {
           >
             {selectedNode ? (
               <NodePanel key={selectedNode.id} node={selectedNode} onClose={closePanel} />
+            ) : linksTray ? (
+              <LinksTray onClose={() => setLinksTray(false)} />
             ) : selectedRelation ? (
               <RelationPanel relation={selectedRelation} onClose={closePanel} />
             ) : null}
@@ -276,6 +396,7 @@ function Workspace() {
       <LinkPicker />
       <LinkSearch />
       <DeleteConfirm />
+      <AddNotesDialog open={addNotesOpen} onClose={() => setAddNotesOpen(false)} />
     </div>
   )
 }

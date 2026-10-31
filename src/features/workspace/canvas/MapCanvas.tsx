@@ -149,6 +149,7 @@ export function MapCanvas() {
   const updateNode = useWorkspace((s) => s.updateNode)
   const failedSections = useBuild((s) => s.sections)
   const { connecting, connectFrom, multi, pick, cancelConnect, openMenu, askDelete } = useCanvasUi()
+  const spotlight = useCanvasUi((s) => s.spotlight)
   const { fitView } = useReactFlow()
   const [drag, setDrag] = useState<Record<string, { x: number; y: number }>>({})
   // While a link is being dragged: the block under the pointer, highlighted as the drop target.
@@ -239,7 +240,7 @@ export function MapCanvas() {
       if (level === 'sections' && !isRoot && !isChapter && !isSectionCard) continue
       const b = toScreen(box)
       const pos = drag[n.id] ?? { x: b.x, y: b.y }
-      const marked = connectFrom === n.id || multi.includes(n.id)
+      const marked = connectFrom === n.id || multi.includes(n.id) || spotlight.includes(n.id)
       const common = {
         id: n.id,
         position: pos,
@@ -313,6 +314,7 @@ export function MapCanvas() {
     isSection,
     chapterById,
     colorOf,
+    spotlight,
   ])
 
   const flowEdges = useMemo<Edge[]>(() => {
@@ -326,7 +328,7 @@ export function MapCanvas() {
       selectable: false,
       focusable: false,
     })
-    const relationsList = Object.values(relations)
+    const relationsList = Object.values(relations).filter((r) => r.status !== 'dismissed')
 
     if (level !== 'blocks') {
       // Zoomed out: the tree as title → sections (or chapter tab → sections), and links bundled
@@ -361,7 +363,7 @@ export function MapCanvas() {
             rtl,
           },
           focusable: false,
-          zIndex: 1,
+          zIndex: 0, // under the cards (they stay clickable), above the regions
         })
       }
       return out
@@ -434,7 +436,7 @@ export function MapCanvas() {
           r.direction === 'backward' || r.direction === 'both'
             ? { type: MarkerType.ArrowClosed, color, width: 16, height: 16 }
             : undefined,
-        zIndex: 1,
+        zIndex: 0, // links pass under blocks so a block stays clickable; labels stay on top
       })
     }
     return out
@@ -638,6 +640,7 @@ export function MapCanvas() {
         onPaneClick={() => {
           if (connecting) cancelConnect()
           useCanvasUi.getState().clearMulti()
+          useCanvasUi.getState().setSpotlight([])
           select(null)
         }}
         nodesConnectable={canEdit}

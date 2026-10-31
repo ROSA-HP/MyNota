@@ -130,7 +130,10 @@ export type RelationRow = {
   type: RelationType
   label: string
   direction: 'forward' | 'backward' | 'both'
-  status: 'suggested' | 'accepted'
+  /** dismissed: an AI suggestion the student turned down (kept so it is never suggested again). */
+  status: 'suggested' | 'accepted' | 'dismissed'
+  /** AI suggestions only. */
+  confidence: 'high' | 'medium' | null
   origin: 'user' | 'ai'
   created_by: string | null
   created_at: string
@@ -157,12 +160,21 @@ export type SourceRow = {
 
 export type AiProvider = 'gemini' | 'anthropic' | 'openai_compatible'
 
+/** Library card numbers (Postgres function map_stats, read under RLS). */
+export type MapStatsRow = {
+  map_id: string
+  blocks: number
+  chapters: number
+  chapters_built: number
+  chapter_colors: ChapterColor[]
+}
+
 export type AiJobRow = {
   id: string
   map_id: string
   chapter_node_id: string | null
   node_id: string | null
-  pass: 'outline' | 'details' | 'links' | 'tool'
+  pass: 'outline' | 'details' | 'links' | 'merge' | 'tool'
   provider: AiProvider
   model: string
   prompt_version: string
@@ -220,7 +232,10 @@ export type Database = {
             >
           >,
         Partial<
-          Pick<RelationRow, 'type' | 'label' | 'direction' | 'status' | 'from_node' | 'to_node'>
+          Pick<
+            RelationRow,
+            'type' | 'label' | 'direction' | 'status' | 'confidence' | 'from_node' | 'to_node'
+          >
         >
       >
       sources: Table<
@@ -259,6 +274,7 @@ export type Database = {
       map_role: { Args: { target_map: string }; Returns: 'owner' | 'editor' | 'viewer' | null }
       is_admin: { Args: never; Returns: boolean }
       is_active_user: { Args: never; Returns: boolean }
+      map_stats: { Args: { map_ids: string[] }; Returns: MapStatsRow[] }
     }
     Enums: { [_ in never]: never }
     CompositeTypes: { [_ in never]: never }
