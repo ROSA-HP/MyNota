@@ -1213,6 +1213,7 @@ export const en = {
       ai: 'AI jobs',
       audit: 'Audit log',
       system: 'System',
+      errors: 'Errors',
     },
     loadFailed: 'Could not load this page: {{error}}',
     empty: 'Nothing here yet.',
@@ -1327,6 +1328,15 @@ export const en = {
       takedownBody: 'The share link is turned off and its address stops working. Members keep access.',
       contentNote: 'Read only. Blocks and sections: {{nodes}} · links: {{links}}.',
     },
+    errors: {
+      title: 'App errors',
+      hint: 'Errors from students’ browsers, grouped by message. Keys, content and emails are removed before they are sent; kept 30 days.',
+      message: 'Error',
+      count: 'Times',
+      people: 'People',
+      last: 'Last seen',
+      where: 'Where',
+    },
     sharing: {
       title: 'Sharing',
       hint: 'Maps with a public link or with members.',
@@ -1355,6 +1365,11 @@ export const en = {
       ok: 'Signed in',
       failed: 'Failed',
     },
+  },
+  crash: {
+    title: 'Something broke on this page',
+    body: 'The problem was reported (without your content). Reloading usually fixes it.',
+    reload: 'Reload',
   },
   legal: {
     updated: 'Last updated: {{date}}',

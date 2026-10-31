@@ -497,6 +497,17 @@ export type Database = {
         Returns: string
       }
       two_factor_sync: { Args: never; Returns: boolean }
+      report_client_error: {
+        Args: {
+          p_kind: 'error' | 'rejection' | 'render'
+          p_message: string
+          p_stack: string
+          p_route: string
+          p_version: string
+          p_browser: string
+        }
+        Returns: undefined
+      }
       doc_load: {
         Args: { p_map: string; p_keys: string[] }
         Returns: Array<{ doc_key: string; state: string | null; updates: string[]; upto: number }>

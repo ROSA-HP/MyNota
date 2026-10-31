@@ -47,6 +47,7 @@ export function AdminLayout() {
     ['/admin/reports', 'reports'],
     ['/admin/logins', 'logins'],
     ['/admin/ai', 'ai'],
+    ['/admin/errors', 'errors'],
     ['/admin/audit', 'audit'],
     ['/admin/system', 'system'],
   ] as const

@@ -21,6 +21,7 @@ security and is meant to run **once**, in order.
 | 11 | `20261031190000_live_docs.sql` | 6 | `map_docs`, `map_doc_updates`, `doc_load()`, `doc_push()`, `doc_compact()`, who may join a map's live (Realtime) channels. **Also one dashboard setting, below** |
 | 12 | `20261101090000_admin.sql` | 7.1 | `audit_log`, `login_events`, `user_flags`, `app_settings` (limits and feature switches); the `admin_*` functions (admin + two-factor session checked in the database, every action audited); status `banned` |
 | 13 | `20261101100000_limits_and_logins.sql` | 7.4 | limits from `app_settings` (maps per day, blocks per map, uploads per day; error `MN429`), switches for sign-ups and new share links (`MN403`), `rate_limits` + `rate_hit()`, `log_signin()`, the password-attempt hook. **Also one Auth hook and one Edge Function, below** |
+| 14 | `20261101110000_client_errors.sql` | 7.6 | `client_errors` (scrubbed app errors, 30 days), `report_client_error()` (30 an hour per person, 300 an hour for visitors), `admin_client_errors()` |
 
 ## Which ones does my database already have?
 

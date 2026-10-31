@@ -118,6 +118,16 @@ export default defineConfig(({ mode }) => ({
     alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
   },
   envPrefix: ['VITE_'],
+  // The app version goes into error reports (Phase 7.6).
+  define: {
+    'import.meta.env.VITE_APP_VERSION': JSON.stringify(
+      (
+        JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')) as {
+          version: string
+        }
+      ).version,
+    ),
+  },
   build: {
     rolldownOptions: {
       output: {

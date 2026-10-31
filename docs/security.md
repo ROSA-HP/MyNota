@@ -23,7 +23,13 @@ Permissions are enforced in the database, not the UI, and the user's API key nev
 - Stored only on the device (IndexedDB), never in Supabase, logs, analytics, or error reports.
 - "Don't remember my key" option: keep it in memory only, cleared when the tab closes.
 - Strict Content Security Policy; no third-party scripts on app pages. `connect-src` allows any `https:` origin plus `http://localhost` / `127.0.0.1`, because students can point MyNota at their own OpenAI-compatible endpoint; `script-src` stays `'self'`.
-- Error tracking must scrub keys and map content.
+- Error tracking must scrub keys and map content. As built in Phase 7.6: MyNota's own
+  `client_errors` table (no third-party service). `src/lib/errors/scrub.ts` runs in the browser
+  before anything is sent: AI keys, bearer tokens, JWTs, `key=`/`token=` values and long opaque
+  strings become `[secret]`, any quoted text (model output, block titles) becomes `[text]`,
+  emails, URL queries, ids and share tokens are removed, stacks keep only function, file and
+  line. At most 10 reports per page load; the database keeps 30 days and limits 30 an hour per
+  person. Read in Admin › Errors. Pages that crash show a reload screen instead of going blank.
 
 ## Untrusted content
 

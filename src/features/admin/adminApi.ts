@@ -152,6 +152,19 @@ export interface AuditEntry {
   details: Record<string, unknown>
 }
 
+export interface ClientErrorGroup {
+  message: string
+  kind: string
+  count: number
+  people: number
+  first_at: string
+  last_at: string
+  route: string
+  stack: string
+  browser: string
+  app_version: string
+}
+
 export interface Setting {
   key: string
   value: number | boolean
@@ -257,6 +270,12 @@ export const adminApi = {
   audit: async (before: number | null = null) =>
     numbers<AuditEntry>(await call<unknown[]>('admin_audit', { p_limit: 100, p_before: before }), [
       'id',
+    ]),
+
+  errors: async (days: number) =>
+    numbers<ClientErrorGroup>(await call<unknown[]>('admin_client_errors', { p_days: days }), [
+      'count',
+      'people',
     ]),
 
   settings: async (): Promise<Setting[]> => {

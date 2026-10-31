@@ -137,6 +137,71 @@ export function AiJobsPage() {
   )
 }
 
+/** Admin › Errors (Phase 7.6): scrubbed reports from students' browsers, grouped by message. */
+export function ErrorsPage() {
+  const { t } = useTranslation()
+  const date = useDate()
+  const [days, setDays] = useState(7)
+  const { data, error } = useLoad(() => adminApi.errors(days), [days])
+  return (
+    <Section
+      title={t('admin.errors.title')}
+      actions={
+        <SelectField
+          label={t('admin.ai.period')}
+          value={String(days)}
+          onChange={(e) => setDays(Number(e.target.value))}
+          options={[1, 7, 30].map((d) => ({
+            value: String(d),
+            label: t('admin.ai.days', { count: d }),
+          }))}
+        />
+      }
+    >
+      <p className="text-sm text-ink-muted">{t('admin.errors.hint')}</p>
+      {!data ? (
+        <Loading error={error} />
+      ) : (
+        <Table
+          empty={!data.length}
+          head={[
+            t('admin.errors.message'),
+            t('admin.errors.count'),
+            t('admin.errors.people'),
+            t('admin.errors.last'),
+            t('admin.errors.where'),
+          ]}
+        >
+          {data.map((g) => (
+            <tr key={g.message}>
+              <Cell>
+                <span className="font-mono text-xs font-semibold break-all">{g.message}</span>
+                {g.stack && (
+                  <details className="mt-1">
+                    <summary className="cursor-pointer text-xs text-ink-muted">{g.kind}</summary>
+                    <pre className="mt-1 overflow-x-auto font-mono text-[11px] whitespace-pre-wrap text-ink-muted">
+                      {g.stack}
+                    </pre>
+                  </details>
+                )}
+              </Cell>
+              <Cell>{g.count}</Cell>
+              <Cell>{g.people}</Cell>
+              <Cell className="whitespace-nowrap">{date(g.last_at)}</Cell>
+              <Cell className="text-xs">
+                <span className="font-mono">{g.route}</span>
+                <div className="text-ink-muted">
+                  {g.browser} · {g.app_version}
+                </div>
+              </Cell>
+            </tr>
+          ))}
+        </Table>
+      )}
+    </Section>
+  )
+}
+
 function details(a: AuditEntry): string {
   const d = a.details
   return Object.keys(d).length ? JSON.stringify(d) : ''

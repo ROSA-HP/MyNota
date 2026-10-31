@@ -1246,6 +1246,7 @@ export const de: Messages = {
       ai: 'KI-Aufträge',
       audit: 'Protokoll',
       system: 'System',
+      errors: 'Fehler',
     },
     loadFailed: 'Diese Seite konnte nicht geladen werden: {{error}}',
     empty: 'Noch nichts hier.',
@@ -1364,6 +1365,15 @@ export const de: Messages = {
         'Der Freigabelink wird ausgeschaltet und die alte Adresse funktioniert nicht mehr. Mitglieder behalten den Zugriff.',
       contentNote: 'Nur lesen. Blöcke und Abschnitte: {{nodes}} · Verbindungen: {{links}}.',
     },
+    errors: {
+      title: 'App-Fehler',
+      hint: 'Fehler aus den Browsern der Lernenden, nach Meldung gruppiert. Schlüssel, Inhalte und E-Mails werden vor dem Senden entfernt; 30 Tage gespeichert.',
+      message: 'Fehler',
+      count: 'Anzahl',
+      people: 'Personen',
+      last: 'Zuletzt',
+      where: 'Wo',
+    },
     sharing: {
       title: 'Teilen',
       hint: 'Maps mit öffentlichem Link oder mit Mitgliedern.',
@@ -1392,6 +1402,11 @@ export const de: Messages = {
       ok: 'Angemeldet',
       failed: 'Fehlgeschlagen',
     },
+  },
+  crash: {
+    title: 'Auf dieser Seite ist etwas kaputtgegangen',
+    body: 'Das Problem wurde gemeldet (ohne deine Inhalte). Neu laden hilft meistens.',
+    reload: 'Neu laden',
   },
   legal: {
     updated: 'Zuletzt geändert: {{date}}',
