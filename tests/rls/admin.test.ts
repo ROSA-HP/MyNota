@@ -43,6 +43,13 @@ const rows = async (db: Db, sql: string, params: unknown[] = []) =>
 
 beforeAll(async () => {
   await resetData()
+  // `truncate auth.users cascade` also empties app_settings (it references profiles), so put
+  // back the rows the migration seeds.
+  await admin(
+    `insert into public.app_settings (key, value) values
+       ('limits.maps_per_day', '30'), ('features.signups', 'true')
+     on conflict (key) do update set value = excluded.value`,
+  )
   boss = await createUser('ad-boss@test.dev', { username: 'ad_boss' })
   student = await createUser('ad-student@test.dev', { username: 'ad_student' })
   owner = await createUser('ad-owner@test.dev', { username: 'ad_owner' })

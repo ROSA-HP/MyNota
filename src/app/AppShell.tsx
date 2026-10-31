@@ -1,5 +1,15 @@
 import { useEffect, useState } from 'react'
-import { BookOpen, House, Layers, LogOut, Menu, Settings, WifiOff, X } from 'lucide-react'
+import {
+  BookOpen,
+  House,
+  Layers,
+  LogOut,
+  Menu,
+  Settings,
+  ShieldCheck,
+  WifiOff,
+  X,
+} from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Link, NavLink, Outlet, useLocation } from 'react-router'
 import { Badge, IconButton, Logo } from '@/components/ui'
@@ -63,6 +73,12 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           <Settings size={20} aria-hidden />
           {t('nav.settings')}
         </NavLink>
+        {profile?.role === 'admin' && (
+          <NavLink to="/admin" className={navLinkClass} onClick={onNavigate}>
+            <ShieldCheck size={20} aria-hidden />
+            {t('admin.title')}
+          </NavLink>
+        )}
       </nav>
 
       <div className="mt-auto flex flex-col gap-3 border-t-2 border-line-soft pt-3">

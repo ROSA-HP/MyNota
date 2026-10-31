@@ -1,4 +1,8 @@
 import { createBrowserRouter } from 'react-router'
+import { AdminLayout } from '@/features/admin/AdminLayout'
+import { LoginsPage, MapsPage, ReportsPage, SharingPage } from '@/features/admin/ModerationPages'
+import { AiJobsPage, AuditPage, OverviewPage, SystemPage } from '@/features/admin/SimplePages'
+import { UserDetailPage, UsersPage } from '@/features/admin/UsersPages'
 import { AuthCallbackPage } from '@/features/auth/AuthCallbackPage'
 import { CheckEmailPage } from '@/features/auth/CheckEmailPage'
 import { ForgotPasswordPage } from '@/features/auth/ForgotPasswordPage'
@@ -62,6 +66,22 @@ export const router = createBrowserRouter([
       { path: '/flashcards', element: <FlashcardsPage /> },
       { path: '/maps/:mapId/deck', element: <DeckPage /> },
       { path: '/settings', element: <SettingsPage /> },
+      {
+        path: '/admin',
+        element: <AdminLayout />,
+        children: [
+          { index: true, element: <OverviewPage /> },
+          { path: 'users', element: <UsersPage /> },
+          { path: 'users/:userId', element: <UserDetailPage /> },
+          { path: 'maps', element: <MapsPage /> },
+          { path: 'sharing', element: <SharingPage /> },
+          { path: 'reports', element: <ReportsPage /> },
+          { path: 'logins', element: <LoginsPage /> },
+          { path: 'ai', element: <AiJobsPage /> },
+          { path: 'audit', element: <AuditPage /> },
+          { path: 'system', element: <SystemPage /> },
+        ],
+      },
     ],
   },
   {
