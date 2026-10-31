@@ -216,6 +216,19 @@ export type ReviewLogRow = {
   reviewed_at: string
 }
 
+/** One search_all() result (Phase 4.5). source: title is the paragraph number, node_id its chapter. */
+export type SearchResultRow = {
+  kind: 'map' | 'node' | 'card' | 'source'
+  map_id: string
+  map_title: string
+  map_type: MapRow['type']
+  node_id: string | null
+  card_id: string | null
+  title: string
+  snippet: string
+  rank: number
+}
+
 export type DeckStatsRow = {
   map_id: string
   total: number
@@ -377,6 +390,7 @@ export type Database = {
         Args: { days?: number; tz?: string }
         Returns: Array<{ day: string; reviews: number }>
       }
+      search_all: { Args: { q: string; max_results?: number }; Returns: SearchResultRow[] }
     }
     Enums: { [_ in never]: never }
     CompositeTypes: { [_ in never]: never }

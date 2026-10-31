@@ -30,3 +30,15 @@ export function matchesQuery(text: string, query: string): boolean {
     .filter(Boolean)
     .every((w) => hay.includes(w))
 }
+
+/** Everything a block says (title, summary, details) as one text to match against. */
+export function nodeSearchText(n: {
+  title: string
+  summary: string
+  details: ReadonlyArray<Record<string, unknown>>
+}): string {
+  const parts = [n.title, n.summary]
+  for (const d of n.details)
+    for (const [k, v] of Object.entries(d)) if (k !== 'kind' && typeof v === 'string') parts.push(v)
+  return parts.join(' ')
+}

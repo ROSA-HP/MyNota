@@ -20,6 +20,7 @@ import {
 import { useTranslation } from 'react-i18next'
 import { PALETTE, makeNode } from '@/ai/pipeline/convert'
 import type { NodeRow } from '@/lib/database.types'
+import { matchesQuery, nodeSearchText } from '@/lib/searchText'
 import { useBuild } from '../buildStore'
 import { useWorkspace } from '../workspaceStore'
 import { useCanvasUi } from './canvasUi'
@@ -207,6 +208,26 @@ export function MapCanvas() {
   const groupOf = useCallback((id: string) => focusGroupOf(nodes, id), [nodes])
   const cover = useCanvasUi((s) => s.cover)
   const revealed = useCanvasUi((s) => s.revealed)
+  // Live filter (outline search box): matches and the path above them stay bright.
+  const filter = useCanvasUi((s) => s.filter.trim())
+  const filterHits = useMemo(() => {
+    if (!filter) return null
+    const hit = new Set<string>()
+    for (const n of list) {
+      if (!matchesQuery(nodeSearchText(n), filter)) continue
+      let cur: NodeRow | undefined = n
+      while (cur && !hit.has(cur.id)) {
+        hit.add(cur.id)
+        cur = cur.parent_id ? nodes[cur.parent_id] : undefined
+      }
+    }
+    return hit
+  }, [filter, list, nodes])
+  const outside = useCallback(
+    (id: string) =>
+      (focusId !== null && groupOf(id) !== focusId) || (filterHits !== null && !filterHits.has(id)),
+    [focusId, groupOf, filterHits],
+  )
 
   const flowNodes = useMemo<Node[]>(() => {
     const out: Node[] = []
@@ -223,7 +244,7 @@ export function MapCanvas() {
         zIndex: -1,
       }
       const chapter = chapterById.get(region.sectionId)
-      const regionDim = focusId !== null && groupOf(region.sectionId) !== focusId
+      const regionDim = outside(region.sectionId)
       if (region.kind === 'chapter' && chapter) {
         out.push({
           ...base,
@@ -264,7 +285,7 @@ export function MapCanvas() {
         className: cn(
           marked && 'is-marked',
           linkTarget === n.id && 'is-link-target',
-          focusId !== null && !isRoot && groupOf(n.id) !== focusId && 'is-dimmed',
+          !isRoot && outside(n.id) && 'is-dimmed',
         ),
         selected: n.id === selectedId,
         draggable: canEdit && level === 'blocks' && !isChapter,
@@ -337,8 +358,7 @@ export function MapCanvas() {
     chapterById,
     colorOf,
     spotlight,
-    focusId,
-    groupOf,
+    outside,
     cover,
     revealed,
     t,
@@ -530,6 +550,7 @@ export function MapCanvas() {
     useCanvasUi.getState().lockView(false)
     useCanvasUi.getState().setFocus(null)
     useCanvasUi.getState().setCover(false)
+    useCanvasUi.getState().setFilter('')
     fitted.current = 0
   }, [mapId])
   useEffect(() => {

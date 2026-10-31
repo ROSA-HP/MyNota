@@ -51,6 +51,7 @@ One deck per map, scheduled with FSRS (`ts-fsrs`). Every card links back to its 
   - unify ة / ه and ى / ي
   - remove tatweel (ـ)
 - UI: search bar + keyboard shortcut (command palette, based on MindLex). Results grouped by map. Click opens the map, flies to the node, highlights it. Inside a map, typing filters the canvas live.
+- Built in Phase 4.5: `search_all()` (see `docs/data-model.md`); the palette opens with Ctrl/Cmd+K or the search button in the top bar, has tabs All / Blocks / Cards / Source text, highlights matches with the same normalization, and Enter opens `/maps/:id?node=…` (cards open in the deck's card browser). The outline filter in a map dims everything on the canvas that does not match (matches and the path above them stay bright).
 - Later: search by meaning with embeddings created using the user's own key.
 
 ## Admin dashboard

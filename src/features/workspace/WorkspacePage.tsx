@@ -7,6 +7,7 @@ import { Alert, Badge, IconButton, Logo, Spinner, buttonClasses } from '@/compon
 import { useAuth } from '@/features/auth/authStore'
 import { useDeck } from '@/features/study/deckStore'
 import { deckCounts } from '@/features/study/mastery'
+import { SearchButton, SearchPalette } from '@/features/search/SearchPalette'
 import { useDeckSync } from '@/features/study/useDeckSync'
 import type { BookBuildRequest, BuildRequest } from '@/features/new-map/buildRequest'
 import { useKeyFor } from '@/features/settings/aiKeyStore'
@@ -338,6 +339,7 @@ function Workspace() {
           </Badge>
         )}
         <div className="ms-auto flex items-center gap-2">
+          <SearchButton compact />
           <AddNotesButton onOpen={() => setAddNotesOpen(true)} />
           <SuggestionsButton />
           <StudyButton mapId={mapId} />
@@ -418,6 +420,7 @@ function Workspace() {
       <LinkPicker />
       <LinkSearch />
       <DeleteConfirm />
+      <SearchPalette />
       <AddNotesDialog open={addNotesOpen} onClose={() => setAddNotesOpen(false)} />
     </div>
   )

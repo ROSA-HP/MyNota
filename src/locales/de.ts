@@ -988,6 +988,38 @@ export const de: Messages = {
       added_other: '{{count}} Karten hinzugefügt',
     },
   },
+  search: {
+    title: 'Suche',
+    placeholder: 'Alle Maps durchsuchen',
+    filter: 'Ergebnisse filtern',
+    results: 'Ergebnisse',
+    tabs: {
+      all_one: 'Alle · {{count}}',
+      all_other: 'Alle · {{count}}',
+      blocks_one: 'Blöcke · {{count}}',
+      blocks_other: 'Blöcke · {{count}}',
+      cards_one: 'Karten · {{count}}',
+      cards_other: 'Karten · {{count}}',
+      sources_one: 'Quelltext · {{count}}',
+      sources_other: 'Quelltext · {{count}}',
+    },
+    kinds: {
+      map: 'Map',
+      node: 'Block',
+      card: 'Karte',
+      source: 'Quelle',
+    },
+    paragraph: 'Absatz {{n}}',
+    hint: 'Mindestens 2 Buchstaben. Akzente, arabische Vokalzeichen und Schreibvarianten werden ignoriert.',
+    none: 'Nichts gefunden für {{q}}.',
+    failed:
+      'Die Suche ist nicht verfügbar. Prüfe deine Verbindung oder spiele das Datenbank-Update für Phase 4 ein.',
+    keys: {
+      move: 'bewegen',
+      open: 'öffnen',
+    },
+    scope: 'Durchsucht alle Maps, die dir gehören oder die du öffnen kannst',
+  },
   notFound: {
     title: 'Seite nicht gefunden',
     body: 'Diese Seite existiert nicht oder wurde verschoben.',

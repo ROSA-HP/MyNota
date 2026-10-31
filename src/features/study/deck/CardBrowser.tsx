@@ -1,6 +1,7 @@
 import { Plus, Search, Sparkles } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useSearchParams } from 'react-router'
 import { Button, Panel, SelectField } from '@/components/ui'
 import { controlClasses } from '@/components/ui/Field'
 import { cn } from '@/lib/cn'
@@ -40,7 +41,9 @@ export function CardBrowser({ mapId, data }: { mapId: string; data: StudyData })
   const [group, setGroup] = useState('all')
   const [type, setType] = useState<'all' | CardType>('all')
   const [filter, setFilter] = useState<Filter>('all')
-  const [selected, setSelected] = useState<string | 'new' | null>(null)
+  const [params] = useSearchParams()
+  // ?card=<id> (from search) opens that card in the editor.
+  const [selected, setSelected] = useState<string | 'new' | null>(() => params.get('card'))
   const [making, setMaking] = useState(false)
   const [now] = useState(() => new Date())
 

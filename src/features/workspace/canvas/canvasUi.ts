@@ -52,6 +52,9 @@ interface CanvasUiState {
   /** Focus mode: one section (notes map) or chapter (book) stays bright, the rest is dimmed. */
   focusId: string | null
   setFocus: (id: string | null) => void
+  /** The outline filter; while set, the canvas dims what does not match (live filter). */
+  filter: string
+  setFilter: (q: string) => void
 }
 
 const MASTERY_KEY = 'mynota.mastery'
@@ -123,4 +126,6 @@ export const useCanvasUi = create<CanvasUiState>((set, get) => ({
   revealAll: () => set({ cover: false, revealed: [] }),
   focusId: null,
   setFocus: (id) => set({ focusId: id }),
+  filter: '',
+  setFilter: (q) => set({ filter: q }),
 }))

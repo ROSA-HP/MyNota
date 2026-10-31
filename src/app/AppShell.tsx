@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { Link, NavLink, Outlet, useLocation } from 'react-router'
 import { Badge, IconButton, Logo } from '@/components/ui'
 import { useAuth } from '@/features/auth/authStore'
+import { SearchPalette, SearchButton } from '@/features/search/SearchPalette'
 import { useOverview } from '@/features/study/overviewStore'
 import { LanguageSelect } from '@/features/settings/LanguageSelect'
 import { ThemeToggle } from '@/features/settings/ThemeToggle'
@@ -126,10 +127,16 @@ export function AppShell() {
         >
           <Menu size={20} />
         </IconButton>
-        <Link to="/library" className="rounded-neo">
+        <Link to="/home" className="rounded-neo">
           <Logo />
         </Link>
+        <div className="ms-4 hidden flex-1 md:block">
+          <SearchButton />
+        </div>
         <div className="ms-auto flex items-center gap-2">
+          <span className="md:hidden">
+            <SearchButton compact />
+          </span>
           <ThemeToggle className="hidden sm:inline-flex" />
           <LanguageSelect />
         </div>
@@ -182,6 +189,7 @@ export function AppShell() {
         <main id="main" className="min-w-0 flex-1">
           <Outlet />
         </main>
+        <SearchPalette />
       </div>
     </div>
   )

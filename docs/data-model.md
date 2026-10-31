@@ -109,6 +109,8 @@ Outline subsections are orientation for the details pass only; they are not stor
 
 **Functions** (`SECURITY INVOKER`, RLS applies): `deck_stats(map_ids)` (total, new, due, learning, mastered per map for the caller), `study_activity(days, tz)` (reviews per day).
 
+**Search** (`20261031150000_search.sql`, Phase 4.5): generated columns `search_text` (normalized with `search_normalize()`, same rules as `src/lib/searchText.ts`: lower case, Latin accents and Arabic diacritics stripped, أ إ آ ٱ → ا, ى → ي, ة → ه, ؤ → و, ئ → ي, tatweel removed, ß → ss) on `maps` (title), `nodes` (title, summary, detail text), `cards` (front, back) and `sources` (all paragraph text), each with a pg_trgm GIN index; `search_fts` (English + German stemmed tsvector) on `nodes` and `cards` with GIN indexes. `search_all(q, max_results)` (`SECURITY INVOKER`) returns map / node / card / source rows ranked best first: every word must appear as a substring, or the stemmed words match. Sources return the first matching paragraph and their chapter node. Needs `q` of 2+ characters; LIKE wildcards are literal.
+
 ## Security and admin
 
 **login_events**: user_id, at, success, device, country, ip_hash

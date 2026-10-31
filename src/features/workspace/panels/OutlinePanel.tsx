@@ -1,11 +1,11 @@
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { motionMs } from '@/lib/motion'
 import { useReactFlow } from '@xyflow/react'
 import { ChevronDown, ChevronRight, Search, Sparkles } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/cn'
 import type { NodeRow } from '@/lib/database.types'
-import { matchesQuery } from '@/lib/searchText'
+import { matchesQuery, nodeSearchText } from '@/lib/searchText'
 import { Spinner } from '@/components/ui'
 import { useChapterBuilder } from '../bookBuild'
 import { useBuild } from '../buildStore'
@@ -25,7 +25,8 @@ export function OutlinePanel({ onNavigate }: { onNavigate?: () => void }) {
   const canEdit = useWorkspace((s) => s.role === 'owner' || s.role === 'editor')
   const update = useWorkspace((s) => s.updateNode)
   const { setCenter, getInternalNode } = useReactFlow()
-  const [filter, setFilter] = useState('')
+  const filter = useCanvasUi((s) => s.filter)
+  const setFilter = useCanvasUi((s) => s.setFilter)
   const list = useMemo(() => Object.values(nodes), [nodes])
   const kids = useMemo(() => childrenIndex(list), [list])
   const root = useMemo(() => findRoot(list), [list])
@@ -49,7 +50,7 @@ export function OutlinePanel({ onNavigate }: { onNavigate?: () => void }) {
   const matches = (n: NodeRow): boolean =>
     !q ||
     (!hiddenTitle(n) && matchesQuery(n.title, q)) ||
-    (!hiddenTitle(n) && matchesQuery(n.summary, q)) ||
+    (!hiddenTitle(n) && matchesQuery(nodeSearchText(n), q)) ||
     (kids.get(n.id) ?? []).some(matches)
 
   const go = (n: NodeRow) => {
