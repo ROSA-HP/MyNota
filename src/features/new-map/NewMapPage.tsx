@@ -13,6 +13,7 @@ import {
   X,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { createErrorKey } from './createError'
 import { Link, useNavigate, useSearchParams } from 'react-router'
 import {
   detectLanguage,
@@ -306,8 +307,8 @@ export function NewMapPage() {
         paragraphs: [],
       })
       navigate(`/maps/${mapId}`, { replace: true })
-    } catch {
-      setErrors({ form: t('newMap.errCreate') })
+    } catch (e) {
+      setErrors({ form: t(createErrorKey(e)) })
       setBusy(false)
     }
   }
@@ -341,8 +342,8 @@ export function NewMapPage() {
         mode: kind === 'notes' ? 'notes' : 'textbook',
       }
       navigate(`/maps/${mapId}`, { replace: true, state: { build: request } })
-    } catch {
-      setErrors({ form: t('newMap.errCreate') })
+    } catch (e) {
+      setErrors({ form: t(createErrorKey(e)) })
       setBusy(false)
     }
   }

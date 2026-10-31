@@ -3,6 +3,7 @@ import type { ParseKeys } from 'i18next'
 /** Error codes raised by the sharing functions (supabase/migrations/…_sharing.sql). */
 const CODES: Record<string, ParseKeys> = {
   MN400: 'share.errors.invalid',
+  MN403: 'share.errors.switchedOff',
   MN404: 'share.errors.notFound',
   MN409: 'share.errors.already',
   MN410: 'share.errors.linkOff',

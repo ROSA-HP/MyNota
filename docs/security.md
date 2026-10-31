@@ -52,6 +52,14 @@ Sharing limits are counted from `share_events` inside the sharing functions (Pha
 | Map and node creation | Abuse |
 | AI calls (client-side queue + backoff) | Protect the user's key from provider bans |
 
+As built in Phase 7.4 (`20261101100000_limits_and_logins.sql`): new maps per person per day,
+nodes per map (only new rows count, saving re-sends existing ones) and uploads per person per day
+(one file hash = one upload) are enforced by triggers with values from `app_settings`, error
+`MN429`; admins switch off sign-ups or new share links (`MN403`). Sign-ins: failed password
+attempts come from the Auth hook `hook_password_attempt`, successful ones from the `log-signin`
+Edge Function through `log_signin()` (the caller's own account only, once a minute; device name,
+country when the platform sends it, salted IP hash; 30 per IP hash an hour via `rate_hit()`).
+
 ## Abuse and moderation
 
 - Report button on shared maps.

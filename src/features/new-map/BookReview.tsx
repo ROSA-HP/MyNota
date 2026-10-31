@@ -9,6 +9,7 @@ import {
   TriangleAlert,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { createErrorKey } from './createError'
 import { useNavigate } from 'react-router'
 import { PALETTE } from '@/ai/pipeline/convert'
 import { renderPage, type Extracted } from '@/ai/pipeline/extract'
@@ -193,8 +194,8 @@ export function BookReview({
       }
       void extracted.doc?.loadingTask.destroy()
       navigate(`/maps/${mapId}`, { replace: true, state: { build: request } })
-    } catch {
-      setError(t('newMap.errCreate'))
+    } catch (e) {
+      setError(t(createErrorKey(e)))
       setBusy(false)
     }
   }

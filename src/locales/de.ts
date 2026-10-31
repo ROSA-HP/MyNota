@@ -473,6 +473,7 @@ export const de: Messages = {
       'Dieser Text ist für eine Anfrage mit {{model}} zu lang. Teile ihn auf kleinere Karten auf.',
     errCreate:
       'Die Karte konnte nicht angelegt werden. Prüfe deine Verbindung und versuche es erneut.',
+    errLimit: 'Du hast das heutige Limit für neue Maps oder Uploads erreicht. Versuche es morgen wieder.',
   },
   ws: {
     studyView: {
@@ -1177,6 +1178,7 @@ export const de: Messages = {
       already: 'Das ist schon erledigt.',
       linkOff: 'Dieser Link ist ausgeschaltet oder abgelaufen.',
       tooMany: 'Zu viele in kurzer Zeit. Versuche es später.',
+      switchedOff: 'Neue Freigabelinks sind gerade ausgeschaltet.',
       notAllowed: 'Das darfst du nicht.',
     },
   },

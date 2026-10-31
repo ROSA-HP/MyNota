@@ -455,6 +455,7 @@ export const en = {
     errTooLongModel:
       'This text is too long for one request with {{model}}. Split it into smaller maps.',
     errCreate: 'Could not create the map. Check your connection and try again.',
+    errLimit: 'You reached today’s limit for new maps or uploads. Try again tomorrow.',
   },
   ws: {
     studyView: {
@@ -1145,6 +1146,7 @@ export const en = {
       already: 'That was already done.',
       linkOff: 'This link is turned off or has expired.',
       tooMany: 'Too many in a short time. Try again later.',
+      switchedOff: 'New share links are switched off for now.',
       notAllowed: 'You are not allowed to do this.',
     },
   },

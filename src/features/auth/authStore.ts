@@ -30,6 +30,16 @@ interface AuthState {
 
 let initialized = false
 
+/**
+ * Records a new sign-in (Phase 7.4) through the log-signin Edge Function, which adds the device
+ * and country. Best effort: a missing function or a network error never affects signing in.
+ */
+function logSignIn(session: Session) {
+  const provider = session.user.app_metadata.provider
+  const method = provider === 'google' ? 'google' : 'password'
+  void supabase.functions.invoke('log-signin', { body: { method } }).catch(() => undefined)
+}
+
 export const useAuth = create<AuthState>((set, get) => {
   async function loadProfile(session: Session): Promise<void> {
     const { data, error } = await supabase
@@ -91,6 +101,7 @@ export const useAuth = create<AuthState>((set, get) => {
             set({ status: 'signedOut', session: null, profile: null, recovering: false })
             return
           }
+          if (event === 'SIGNED_IN' && get().profile?.id !== session.user.id) logSignIn(session)
           if (event === 'SIGNED_IN' || event === 'USER_UPDATED' || event === 'INITIAL_SESSION') {
             if (get().profile?.id === session.user.id) set({ session })
             else void loadProfile(session)

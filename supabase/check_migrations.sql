@@ -18,6 +18,7 @@ from (values
   (9,  '20261031150000_search.sql',                to_regprocedure('public.search_all(text, integer)') is not null),
   (10, '20261031170000_sharing.sql',               to_regclass('public.map_invites') is not null),
   (11, '20261031190000_live_docs.sql',             to_regclass('public.map_docs') is not null),
-  (12, '20261101090000_admin.sql',                 to_regclass('public.audit_log') is not null)
+  (12, '20261101090000_admin.sql',                 to_regclass('public.audit_log') is not null),
+  (13, '20261101100000_limits_and_logins.sql',     to_regclass('public.rate_limits') is not null)
 ) as m (step, file, applied)
 order by step;

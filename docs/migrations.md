@@ -20,6 +20,7 @@ security and is meant to run **once**, in order.
 | 10 | `20261031170000_sharing.sql` | 5 | `map_invites`, `share_events`, `reports`, all sharing functions; members change only through them |
 | 11 | `20261031190000_live_docs.sql` | 6 | `map_docs`, `map_doc_updates`, `doc_load()`, `doc_push()`, `doc_compact()`, who may join a map's live (Realtime) channels. **Also one dashboard setting, below** |
 | 12 | `20261101090000_admin.sql` | 7.1 | `audit_log`, `login_events`, `user_flags`, `app_settings` (limits and feature switches); the `admin_*` functions (admin + two-factor session checked in the database, every action audited); status `banned` |
+| 13 | `20261101100000_limits_and_logins.sql` | 7.4 | limits from `app_settings` (maps per day, blocks per map, uploads per day; error `MN429`), switches for sign-ups and new share links (`MN403`), `rate_limits` + `rate_hit()`, `log_signin()`, the password-attempt hook. **Also one Auth hook and one Edge Function, below** |
 
 ## Which ones does my database already have?
 
@@ -51,6 +52,26 @@ turning it off makes sure nothing can join a channel without those checks.
 Optional, recommended: in the project settings, find the access token (JWT) expiry setting and
 set it to 15 minutes (900 seconds). Someone removed from a map stops receiving live changes
 when their token renews (the default is 1 hour); they can never save changes after removal.
+
+### After migration 13: the password hook and the log-signin function
+
+1. Supabase › **Authentication** › **Hooks** › **Password verification attempt** › enable ›
+   type **Postgres** › schema `public`, function `hook_password_attempt` › Save. Failed password
+   sign-ins then appear in Admin › Login activity. It never blocks a sign-in.
+2. Deploy the Edge Function that records successful sign-ins (device and approximate country;
+   the IP address is only stored as a salted hash). One time, in a terminal in the project
+   folder:
+
+   ```bash
+   npx supabase login
+   npx supabase link --project-ref <your project ref>
+   npx supabase secrets set IP_HASH_SALT=<a long random string> APP_ORIGIN=<your app's address>
+   npx supabase functions deploy log-signin
+   ```
+
+   Linking only connects the CLI to the project; it does not run any migration. Until the
+   function is deployed, signing in works as before and only the successful sign-ins are
+   missing from Login activity.
 
 ### Option B: Supabase CLI
 
