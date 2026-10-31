@@ -31,19 +31,10 @@ import { useAuth } from '@/features/auth/authStore'
 import { chapterColor } from '@/features/workspace/canvas/visuals'
 import { cn } from '@/lib/cn'
 import type { ChapterColor, MapRow, MapStatsRow, SubjectRow } from '@/lib/database.types'
+import { COVER, SubjectDot, useUpdated } from './mapBits'
 import { MapPreviewArt } from './MapPreviewArt'
 import { useLibrary } from './useLibrary'
 
-const COVER: Record<MapRow['cover_color'], string> = {
-  yellow: 'bg-ch-yellow',
-  coral: 'bg-ch-coral',
-  sky: 'bg-ch-sky',
-  mint: 'bg-ch-mint',
-  lavender: 'bg-ch-lavender',
-  pink: 'bg-ch-pink',
-  orange: 'bg-ch-orange',
-  lime: 'bg-ch-lime',
-}
 const TYPE_ICON = { book: BookOpen, notes: FileText, blank: Square }
 const MAP_DRAG = 'application/x-mynota-map'
 
@@ -102,32 +93,6 @@ function useDismiss(open: boolean, ref: React.RefObject<HTMLElement | null>, clo
     }
   }, [open, ref, close])
 }
-
-/** "updated today", "updated yesterday", else "updated Oct 26". */
-function useUpdated() {
-  const { t, i18n } = useTranslation()
-  return (iso: string) => {
-    const d = new Date(iso)
-    const day = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime()
-    const diff = Math.round((day(new Date()) - day(d)) / 86_400_000)
-    const when =
-      diff >= 0 && diff <= 1
-        ? new Intl.RelativeTimeFormat(i18n.language, { numeric: 'auto' }).format(-diff, 'day')
-        : new Intl.DateTimeFormat(i18n.language, { month: 'short', day: 'numeric' }).format(d)
-    return t('library.updatedWhen', { when })
-  }
-}
-
-const SubjectDot = ({ color, className }: { color: ChapterColor; className?: string }) => (
-  <span
-    aria-hidden
-    className={cn(
-      'inline-block size-3 shrink-0 rounded-full border-[1.5px] border-line',
-      className,
-    )}
-    style={{ background: chapterColor(color).strong }}
-  />
-)
 
 function MapCard({
   map,

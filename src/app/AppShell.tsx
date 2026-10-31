@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
-import { BookOpen, Layers, LogOut, Menu, Settings, WifiOff, X } from 'lucide-react'
+import { BookOpen, House, Layers, LogOut, Menu, Settings, WifiOff, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { Link, NavLink, Outlet } from 'react-router'
+import { Link, NavLink, Outlet, useLocation } from 'react-router'
 import { Badge, IconButton, Logo } from '@/components/ui'
 import { useAuth } from '@/features/auth/authStore'
+import { useOverview } from '@/features/study/overviewStore'
 import { LanguageSelect } from '@/features/settings/LanguageSelect'
 import { ThemeToggle } from '@/features/settings/ThemeToggle'
 import { cn } from '@/lib/cn'
@@ -22,22 +23,30 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const { t } = useTranslation()
   const profile = useAuth((s) => s.profile)
   const signOut = useAuth((s) => s.signOut)
+  const due = useOverview((s) =>
+    s.data ? Object.values(s.data.decks).reduce((n, d) => n + d.due, 0) : 0,
+  )
 
   return (
     <div className="flex h-full flex-col gap-4 p-3">
       <nav aria-label={t('nav.main')} className="flex flex-col gap-1.5">
+        <NavLink to="/home" className={navLinkClass} onClick={onNavigate}>
+          <House size={20} aria-hidden />
+          {t('nav.home')}
+        </NavLink>
         <NavLink to="/library" className={navLinkClass} onClick={onNavigate}>
           <BookOpen size={20} aria-hidden />
           {t('nav.library')}
         </NavLink>
-        <span
-          className="flex min-h-11 items-center gap-3 px-3 text-[15px] font-semibold text-ink-faint"
-          aria-disabled
-        >
+        <NavLink to="/flashcards" className={navLinkClass} onClick={onNavigate}>
           <Layers size={20} aria-hidden />
           {t('nav.flashcards')}
-          <Badge className="ms-auto">{t('common.soon')}</Badge>
-        </span>
+          {due > 0 && (
+            <Badge tone="brand" className="ms-auto" aria-label={t('nav.due', { count: due })}>
+              {due}
+            </Badge>
+          )}
+        </NavLink>
         <NavLink to="/settings" className={navLinkClass} onClick={onNavigate}>
           <Settings size={20} aria-hidden />
           {t('nav.settings')}
@@ -83,6 +92,13 @@ export function AppShell() {
   const { t } = useTranslation()
   const online = useOnline()
   const [drawerOpen, setDrawerOpen] = useState(false)
+  const userId = useAuth((s) => s.session?.user.id)
+  const { pathname } = useLocation()
+
+  // Keeps the Flashcards badge current as the student moves around (at most every 30 s).
+  useEffect(() => {
+    if (userId) void useOverview.getState().load(userId, 30_000)
+  }, [userId, pathname])
 
   useEffect(() => {
     if (!drawerOpen) return

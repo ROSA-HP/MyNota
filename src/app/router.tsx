@@ -5,10 +5,13 @@ import { ForgotPasswordPage } from '@/features/auth/ForgotPasswordPage'
 import { ResetPasswordPage } from '@/features/auth/ResetPasswordPage'
 import { SignInPage } from '@/features/auth/SignInPage'
 import { SignUpPage } from '@/features/auth/SignUpPage'
+import { FlashcardsPage } from '@/features/flashcards/FlashcardsPage'
+import { HomePage } from '@/features/home/HomePage'
 import { LandingPage } from '@/features/landing/LandingPage'
 import { LibraryPage } from '@/features/library/LibraryPage'
 import { NewMapPage } from '@/features/new-map/NewMapPage'
 import { SettingsPage } from '@/features/settings/SettingsPage'
+import { DeckPage } from '@/features/study/deck/DeckPage'
 import { StudyPage } from '@/features/study/StudyPage'
 import { WorkspacePage } from '@/features/workspace/WorkspacePage'
 import { AppShell } from './AppShell'
@@ -51,7 +54,10 @@ export const router = createBrowserRouter([
       </RequireAuth>
     ),
     children: [
+      { path: '/home', element: <HomePage /> },
       { path: '/library', element: <LibraryPage /> },
+      { path: '/flashcards', element: <FlashcardsPage /> },
+      { path: '/maps/:mapId/deck', element: <DeckPage /> },
       { path: '/settings', element: <SettingsPage /> },
     ],
   },

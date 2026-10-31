@@ -26,6 +26,6 @@ export function RequireAuth({ children }: { children: ReactNode }) {
 export function RedirectIfAuthed({ children }: { children: ReactNode }) {
   const status = useAuth((s) => s.status)
   if (status === 'loading') return <FullPageSpinner />
-  if (status === 'signedIn') return <Navigate to="/library" replace />
+  if (status === 'signedIn') return <Navigate to="/home" replace />
   return children
 }

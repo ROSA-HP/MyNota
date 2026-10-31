@@ -21,7 +21,7 @@ export function AuthCallbackPage() {
   }, [])
 
   useEffect(() => {
-    if (!urlError && status === 'signedIn') navigate('/library', { replace: true })
+    if (!urlError && status === 'signedIn') navigate('/home', { replace: true })
   }, [status, urlError, navigate])
 
   const failed = Boolean(urlError) || status === 'signedOut'

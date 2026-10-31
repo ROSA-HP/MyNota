@@ -82,7 +82,7 @@ export function SignUpPage() {
     }
     // With email confirmation on there is no session yet. (For an email that already exists,
     // Supabase also returns no session and sends nothing, so we do not reveal it either way.)
-    if (data.session) navigate('/library', { replace: true })
+    if (data.session) navigate('/home', { replace: true })
     else navigate('/check-email', { replace: true, state: { email: parsed.data.email } })
   }
 

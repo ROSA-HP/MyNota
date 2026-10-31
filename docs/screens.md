@@ -12,13 +12,13 @@
 | 1 | Landing | Messy textbook page → colorful map visual, get started, sign in, short BYOK explanation |
 | 2 | Sign in / up | Google, email, 2FA step |
 | 3 | Onboarding | UI language + study field → get free AI Studio key (illustrated guide, paste, live test with green check) → sample chapter becomes a map → home |
-| 4 | Home | Continue studying, due today + "Study now", streak and weekly activity, subjects, recent maps, shared with me |
+| 4 | Home (`/home`, first screen after sign-in) | Greeting, due today (reviews + new within today's limits, minutes, "Study now", maps with due cards), this week (streak, 7-day reviews, mastered), continue (3 recent maps with mastery counts), subjects (due per subject). Shared with me arrives in Phase 5 |
 | 5 | Subject | Maps in the subject, combined card stats, "New map in this subject". As built (Phase 3): the library has subject chips (All · N, one per subject with its color, + New subject), maps grouped by subject, then No subject, then Shared with you. Drag a map card onto a chip or group to file it, or use the card's ⋯ menu (touch and keyboard). Subject menu: edit (name, color), delete (maps stay, without a subject). Book cards show chapter colors and "4 of 6 chapters built" with a bar; others "13 blocks · updated yesterday". New map from a subject preselects it; the workspace breadcrumb shows the subject. |
 | 6 | New map flow | Type (book / notes / blank) → PDF, photos of pages (reorderable) or paste; OCR language for scanned pages; progress for reading and OCR → books: chapter review (rename, merge, split at a page, tap pages to skip, tick chapters to build now, others wait on the map) / notes: paragraph review → options (language, explanations, detail level, provider + model) → estimate (tokens, requests, cost) → build, jump to workspace. The file stays on the device. |
 | 7 | Workspace | See below |
-| 8 | Deck overview | Due, new, mastered per chapter; study all / chapter / due only |
+| 8 | Deck overview (`/maps/:id/deck`) | Tiles: due now, new (per-day limit), learning, mastered; study due + new / only due / practice all; table by chapter (book) or section (notes) with mastery bar, due, new, Study; unbuilt chapters say so. Flashcards (`/flashcards`) lists every deck |
 | 9 | Study session | Big card, tap/space to flip, Again / Hard / Good / Easy, swipe on tablet, "Show on map", end summary |
-| 10 | Card browser | List, filters, edit, delete |
+| 10 | Card browser (`/maps/:id/deck?tab=cards`) | Search (Arabic-normalized), chapter, type, Due and Struggling filters; mastery dot, front, back, type, next; editor beside the list (sheet below 1280 px): type, front/back (cloze sentence), block, stats, delete (two-step), reset own progress, save; new card; "Make cards with AI". Viewers read only |
 | 11 | Share dialog | Invite with role, member list, link access (off / view / edit), copy, reset, expiry |
 | 12 | Shared link page | Read-only map, "Sign in to edit", "Copy to my library", report |
 | 13 | Settings | Profile · AI providers (keys, test, remember toggle, recommended models) · Appearance (theme, UI language) · Study (daily limits) · Security (2FA, devices) · Data (export, delete account) |

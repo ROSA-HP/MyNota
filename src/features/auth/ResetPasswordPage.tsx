@@ -36,7 +36,7 @@ export function ResetPasswordPage() {
     }
     useAuth.setState({ recovering: false })
     toast(t('auth.reset.done'), 'success')
-    navigate('/library', { replace: true })
+    navigate('/home', { replace: true })
   }
 
   return (

@@ -183,6 +183,18 @@ BLOCKS
 
 Notes-mode rules and the merge prompt (merge v1) live in `src/ai/prompts/` and follow the same structure: role, the material as data, rules, output format with the JSON field names.
 
+### Make cards (v1, `src/ai/prompts/cards.v1.ts`)
+
+On-demand tool in the card browser. Input: the blocks of one chapter/section (or the whole map,
+max 80) as `B1 | title | summary` with up to 8 detail lines and the fronts of cards each block
+already has. Asks for up to N (5/10/20) cards, type `basic` (question → answer ≤ 25 words) or
+`cloze` (one sentence with 1–3 words in `{{…}}`), only facts from the blocks, no repeats, in the
+blocks' language. Reply `{"cards": [{"block", "type", "front", "back"}]}` (Zod
+`CardsResponseSchema`, one repair retry). `toCardDrafts` drops unknown blocks, cloze without a
+gap, basic without a back, and fronts already in the deck (Arabic-normalized); cards are saved
+with origin `ai` and `source_key` `g:<hash>`. Logged in `ai_jobs` as pass `tool`, prompt version
+`cards.v1`.
+
 ## Provider adapters (`src/ai/providers/`)
 
 | Provider | How structured output is enforced |

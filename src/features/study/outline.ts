@@ -40,3 +40,41 @@ export function describeNodes(nodes: StudyNode[]) {
   for (const r of roots) walk(r, null, null)
   return { order, places }
 }
+
+/** A chapter (book maps) or top-level section (notes maps) and the blocks under it. */
+export interface DeckGroup {
+  id: string
+  n: number
+  title: string
+  blocks: Set<string>
+  /** False for a book chapter that has not been built yet (nothing under it). */
+  built: boolean
+}
+
+/** The deck's rows "by chapter": chapters of a book, or the sections of a notes map. */
+export function deckGroups(nodes: StudyNode[]): DeckGroup[] {
+  const kids = new Map<string, StudyNode[]>()
+  for (const n of nodes) {
+    if (!n.parent_id) continue
+    const list = kids.get(n.parent_id) ?? []
+    list.push(n)
+    kids.set(n.parent_id, list)
+  }
+  for (const list of kids.values()) list.sort((a, b) => a.sort_order - b.sort_order)
+  const ids = new Set(nodes.map((n) => n.id))
+  const root = nodes.find((n) => !n.parent_id || !ids.has(n.parent_id))
+  if (!root) return []
+  const top = kids.get(root.id) ?? []
+  const chapters = top.filter((n) => n.level === 'chapter')
+  const heads = chapters.length ? chapters : top.filter((n) => n.level === 'section')
+  return heads.map((h, i) => {
+    const blocks = new Set<string>()
+    const stack = [...(kids.get(h.id) ?? [])]
+    while (stack.length) {
+      const n = stack.pop() as StudyNode
+      if (n.level === 'block') blocks.add(n.id)
+      stack.push(...(kids.get(n.id) ?? []))
+    }
+    return { id: h.id, n: i + 1, title: h.title, blocks, built: (kids.get(h.id) ?? []).length > 0 }
+  })
+}

@@ -83,6 +83,7 @@ function Study({ mapId, data }: { mapId: string; data: StudyData }) {
   const userId = useAuth((s) => s.session?.user.id) ?? ''
   const chapterId = params.get('chapter')
   const dueOnly = params.get('due') === '1'
+  const practiceAll = params.get('practice') === '1'
   const chapter = chapterId ? data.nodes.find((n) => n.id === chapterId) : undefined
   const [scope] = useState(() => (chapter ? blocksUnder(data, chapter.id) : null))
   const started = useSession((s) => s.mapId === mapId)
@@ -101,10 +102,11 @@ function Study({ mapId, data }: { mapId: string; data: StudyData }) {
       )
 
   // Today's queue is built once, when the page opens.
-  const [plan] = useState<{ ids: string[] } | Empty>(() => {
+  const [plan] = useState<{ ids: string[]; practice?: boolean } | Empty>(() => {
     const cards = ordered()
     const now = Date.now()
     if (!cards.length) return { kind: 'noCards', at: now }
+    if (practiceAll) return { ids: cards.map((c) => c.id), practice: true }
     const progress = useDeck.getState().progress
     const q = buildQueue({
       cards,
@@ -129,7 +131,7 @@ function Study({ mapId, data }: { mapId: string; data: StudyData }) {
 
   useEffect(() => {
     if ('ids' in plan && useSession.getState().mapId !== mapId)
-      useSession.getState().start({ mapId, userId, ids: plan.ids })
+      useSession.getState().start({ mapId, userId, ids: plan.ids, practice: plan.practice })
   }, [plan, mapId, userId])
 
   const startPractice = (ids: string[]) => {

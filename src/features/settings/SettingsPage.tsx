@@ -18,11 +18,22 @@ import { PROFILE_COLUMNS, supabase } from '@/lib/supabase'
 import { z } from 'zod'
 import { usePreferences } from './preferencesStore'
 import { AiProvidersSection } from './AiProvidersSection'
+import { StudySection } from './StudySection'
 import { ThemeToggle } from './ThemeToggle'
 
-function Section({ title, hint, children }: { title: string; hint?: string; children: ReactNode }) {
+function Section({
+  id,
+  title,
+  hint,
+  children,
+}: {
+  id?: string
+  title: string
+  hint?: string
+  children: ReactNode
+}) {
   return (
-    <Panel className="p-5 sm:p-6">
+    <Panel id={id} className="scroll-mt-6 p-5 sm:p-6">
       <h2 className="text-lg font-bold">{title}</h2>
       {hint && <p className="mt-1 text-sm text-ink-muted">{hint}</p>}
       <div className="mt-5">{children}</div>
@@ -133,6 +144,10 @@ export function SettingsPage() {
 
       <Section title={t('settings.aiTitle')} hint={t('settings.aiHint')}>
         <AiProvidersSection />
+      </Section>
+
+      <Section id="study" title={t('settings.study.title')} hint={t('settings.study.hint')}>
+        <StudySection />
       </Section>
 
       <Section title={t('settings.appearance')} hint={t('settings.appearanceHint')}>

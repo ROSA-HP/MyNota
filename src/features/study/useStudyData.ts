@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '@/features/auth/authStore'
-import type { StudyLimits } from '@/lib/database.types'
+import type { MapRow, StudyLimits } from '@/lib/database.types'
 import { supabase } from '@/lib/supabase'
 import { useDeck } from './deckStore'
 import { DEFAULT_LIMITS, loadLimits, loadToday } from './limits'
@@ -11,6 +11,9 @@ export type { BlockPlace, StudyNode }
 
 export interface StudyData {
   title: string
+  type: MapRow['type']
+  /** The student's role on this map (owners and editors may change cards). */
+  role: 'owner' | 'editor' | 'viewer' | null
   nodes: StudyNode[]
   /** Block id → its place in the map. */
   places: Map<string, BlockPlace>
@@ -31,14 +34,15 @@ export function useStudyData(mapId: string): State {
     if (!userId) return
     let alive = true
     void (async () => {
-      const [map, nodes, limits, today] = await Promise.all([
-        supabase.from('maps').select('title').eq('id', mapId).maybeSingle(),
+      const [map, nodes, limits, today, role] = await Promise.all([
+        supabase.from('maps').select('title, type').eq('id', mapId).maybeSingle(),
         supabase
           .from('nodes')
           .select('id, parent_id, level, title, sort_order')
           .eq('map_id', mapId),
         loadLimits(userId).catch(() => DEFAULT_LIMITS),
         loadToday(userId).catch(() => ({ newDone: 0, reviewsDone: 0 })),
+        supabase.rpc('map_role', { target_map: mapId }),
         useDeck.getState().load(mapId),
       ])
       if (!alive) return
@@ -47,7 +51,16 @@ export function useStudyData(mapId: string): State {
       const { order, places } = describeNodes(nodes.data)
       setState({
         status: 'ready',
-        data: { title: map.data.title, nodes: nodes.data, places, order, limits, today },
+        data: {
+          title: map.data.title,
+          type: map.data.type,
+          role: role.data ?? null,
+          nodes: nodes.data,
+          places,
+          order,
+          limits,
+          today,
+        },
       })
     })()
     return () => {

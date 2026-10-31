@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { newId } from '@/ai/pipeline/convert'
 import type { CardProgressRow, CardRow, NodeRow } from '@/lib/database.types'
 import { supabase } from '@/lib/supabase'
-import { missingCards } from './autoCards'
+import { missingCards, type CardDraft } from './autoCards'
 
 export const CARD_COLUMNS =
   'id, map_id, node_id, type, front, back, languages, origin, source_key, suspended, created_by, created_at, updated_at'
@@ -21,11 +21,15 @@ interface DeckState {
   load: (mapId: string) => Promise<void>
   /** Makes the cards that the map's blocks call for and that do not exist yet. Editors only. */
   syncMade: (nodes: NodeRow[]) => Promise<number>
+  /** Adds made cards (from the AI's "make cards"); returns how many were saved. */
+  addDrafts: (drafts: CardDraft[]) => Promise<number>
   addCard: (card: Pick<CardRow, 'type' | 'front' | 'back'> & Partial<CardRow>) => Promise<CardRow>
   updateCard: (
     id: string,
     patch: Partial<Pick<CardRow, 'type' | 'front' | 'back'>>,
   ) => Promise<void>
+  /** Forgets the student's own progress on one card (it becomes new again for them). */
+  resetProgress: (id: string) => Promise<void>
   /** Manual cards are deleted; made cards are hidden so a sync never makes them again. */
   removeCard: (id: string) => Promise<void>
   setProgress: (rows: CardProgressRow[]) => void
@@ -35,6 +39,48 @@ interface DeckState {
 }
 
 let syncing: Promise<number> | null = null
+
+type Get = () => DeckState
+type Set = (patch: Partial<DeckState>) => void
+
+/** Inserts drafts in chunks of 100; a chunk someone else already made (23505) is skipped. */
+async function insertDrafts(mapId: string, drafts: CardDraft[], get: Get, set: Set) {
+  const now = new Date().toISOString()
+  const rows: CardRow[] = drafts.map((d) => ({
+    ...d,
+    id: newId(),
+    map_id: mapId,
+    suspended: false,
+    created_by: null,
+    created_at: now,
+    updated_at: now,
+  }))
+  let added = 0
+  for (let i = 0; i < rows.length; i += 100) {
+    const chunk = rows.slice(i, i + 100)
+    const { error } = await supabase.from('cards').insert(
+      chunk.map((r) => ({
+        id: r.id,
+        map_id: r.map_id,
+        node_id: r.node_id,
+        type: r.type,
+        front: r.front,
+        back: r.back,
+        languages: r.languages,
+        origin: r.origin,
+        source_key: r.source_key,
+      })),
+    )
+    // 23505: made by someone else meanwhile (or another tab); reload picks theirs up.
+    if (error && error.code !== '23505') throw error
+    if (!error) {
+      added += chunk.length
+      if (get().mapId === mapId)
+        set({ cards: { ...get().cards, ...Object.fromEntries(chunk.map((c) => [c.id, c])) } })
+    }
+  }
+  return added
+}
 
 export const useDeck = create<DeckState>((set, get) => ({
   mapId: null,
@@ -67,48 +113,18 @@ export const useDeck = create<DeckState>((set, get) => ({
       Object.values(get().cards),
     )
     if (!drafts.length) return 0
-    const now = new Date().toISOString()
-    const rows: CardRow[] = drafts.map((d) => ({
-      ...d,
-      id: newId(),
-      map_id: mapId,
-      suspended: false,
-      created_by: null,
-      created_at: now,
-      updated_at: now,
-    }))
-    syncing = (async () => {
-      let added = 0
-      for (let i = 0; i < rows.length; i += 100) {
-        const chunk = rows.slice(i, i + 100)
-        const { error } = await supabase.from('cards').insert(
-          chunk.map((r) => ({
-            id: r.id,
-            map_id: r.map_id,
-            node_id: r.node_id,
-            type: r.type,
-            front: r.front,
-            back: r.back,
-            languages: r.languages,
-            origin: r.origin,
-            source_key: r.source_key,
-          })),
-        )
-        // 23505: made by someone else meanwhile (or another tab); reload picks theirs up.
-        if (error && error.code !== '23505') throw error
-        if (!error) {
-          added += chunk.length
-          if (get().mapId === mapId)
-            set({ cards: { ...get().cards, ...Object.fromEntries(chunk.map((c) => [c.id, c])) } })
-        }
-      }
-      return added
-    })()
+    syncing = insertDrafts(mapId, drafts, get, set)
     try {
       return await syncing
     } finally {
       syncing = null
     }
+  },
+
+  addDrafts: async (drafts) => {
+    const { mapId } = get()
+    if (!mapId || !drafts.length) return 0
+    return insertDrafts(mapId, drafts, get, set)
   },
 
   addCard: async (card) => {
@@ -168,6 +184,21 @@ export const useDeck = create<DeckState>((set, get) => ({
       : await supabase.from('cards').delete().eq('id', id)
     if (error) {
       set({ cards: { ...get().cards, [id]: cur } })
+      throw error
+    }
+  },
+
+  resetProgress: async (id) => {
+    const prev = get().progress[id]
+    if (!prev) return
+    get().restoreProgress(id, undefined)
+    const { error } = await supabase
+      .from('card_progress')
+      .delete()
+      .eq('card_id', id)
+      .eq('user_id', prev.user_id)
+    if (error) {
+      get().restoreProgress(id, prev)
       throw error
     }
   },

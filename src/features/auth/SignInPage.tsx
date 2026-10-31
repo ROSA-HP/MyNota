@@ -23,7 +23,7 @@ export function SignInPage() {
   const [unconfirmed, setUnconfirmed] = useState(false)
   const [loading, setLoading] = useState(false)
 
-  const from = (location.state as { from?: string } | null)?.from ?? '/library'
+  const from = (location.state as { from?: string } | null)?.from ?? '/home'
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault()

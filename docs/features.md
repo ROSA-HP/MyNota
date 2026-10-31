@@ -11,6 +11,7 @@ One deck per map, scheduled with FSRS (`ts-fsrs`). Every card links back to its 
 - **Shared maps**: cards are shared with the map; progress is per user.
 - **Study session** (Phase 4.2): `ts-fsrs` 5.x (FSRS-5, 90 % retention, learning steps 1 min / 10 min, fuzz on). Today's queue is learning cards that are due, then reviews (oldest first) with new cards spread among them. Daily limits count per user across all maps for the local day: new cards first seen today, and reviews of cards in review state. Space/Enter or a tap flips, 1–4 or swipe left/right rates, Z undoes the last answer (progress restored, review log deleted). Learning cards come back in the same session (up to 20 minutes early when nothing else is left). The summary shows the answer mix, cards answered Again with "Show on map", the streak, cards due tomorrow, and "Practice the hard ones".
 - **Practice** never changes the schedule and writes nothing: from the summary, or "Practice anyway" when nothing is due.
+- **Decks** (Phase 4.3): Home shows what is due today across maps; Flashcards lists every deck; each map has a deck page with an overview by chapter and a card browser. Owners and editors edit, add, delete (made cards are hidden so a sync never brings them back) and ask their AI for new cards; anyone on the map can reset their own progress on a card. Daily limits are set in Settings › Study.
 - **Show on map** opens `/maps/:id?node=<block>`, which selects the block and centers the canvas on it.
 
 ## Sharing
