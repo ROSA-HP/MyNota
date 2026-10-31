@@ -65,3 +65,17 @@ All colors are CSS variables with light and dark values.
 - Good contrast in both themes.
 - Keyboard shortcuts for all main canvas actions on desktop.
 - Focus states visible on every interactive element.
+
+## Design review rules (decided 2026-10-31)
+
+The owner installed two design skills (`.claude/skills/ui-ux-pro-max`, `.claude/skills/taste-skill`)
+and chose to **refine the neo-brutalist style, not replace it**:
+- Borders, hard shadows and the chapter colors stay MyNota's identity, used with intent: a hard
+  shadow marks something you can press or the one primary surface of a screen, not every box.
+- Color goes on content (chapters, sections, mastery, links) more than on chrome (frames, menus).
+- Navigation recedes: the active item is clear but quiet.
+- Type carries hierarchy: one clear heading per screen, numbers as type rather than tiles.
+- Honest data states: zero shows as 0, missing as a dash, empty sections keep their frame and say
+  what to do.
+- ui-ux-pro-max's accessibility and interaction rules are required: contrast 4.5:1, visible focus,
+  44 px touch targets, labels on icon-only buttons, `prefers-reduced-motion`, no emoji icons.

@@ -2,3 +2,4 @@ dist
 pnpm-lock.yaml
 CLAUDE.md
 docs
+.claude
