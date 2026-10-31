@@ -1,15 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { ReactFlowProvider } from '@xyflow/react'
-import {
-  ChevronRight,
-  Download,
-  Eye,
-  GitMerge,
-  Layers,
-  PanelLeft,
-  Share2,
-  Sparkles,
-} from 'lucide-react'
+import { ChevronRight, Download, Eye, GitMerge, Layers, PanelLeft, Sparkles } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Link, useLocation, useNavigate, useParams } from 'react-router'
 import { Alert, Badge, IconButton, Logo, Spinner, buttonClasses } from '@/components/ui'
@@ -18,6 +9,7 @@ import { useDeck } from '@/features/study/deckStore'
 import { deckCounts } from '@/features/study/mastery'
 import { ExportDialog } from '@/features/export/ExportDialog'
 import { SearchButton, SearchPalette } from '@/features/search/SearchPalette'
+import { ShareControls } from '@/features/sharing/ShareControls'
 import { useDeckSync } from '@/features/study/useDeckSync'
 import type { BookBuildRequest, BuildRequest } from '@/features/new-map/buildRequest'
 import { useKeyFor } from '@/features/settings/aiKeyStore'
@@ -109,7 +101,7 @@ function SuggestionsButton() {
       })}
     >
       <Sparkles size={16} aria-hidden />
-      <span className="hidden lg:inline">{t('ws.suggest.open')}</span>
+      <span className="hidden xl:inline">{t('ws.suggest.open')}</span>
       {count > 0 && (
         <span className="rounded-full bg-ink px-1.5 font-mono text-xs font-bold text-paper">
           {count}
@@ -138,7 +130,7 @@ function StudyButton({ mapId }: { mapId: string }) {
       className={buttonClasses({ variant: 'secondary', size: 'sm' })}
     >
       <Layers size={16} aria-hidden />
-      <span className="hidden md:inline">{t('ws.study')}</span>
+      <span className="hidden xl:inline">{t('ws.study')}</span>
       {due > 0 && <Badge tone="brand">{due}</Badge>}
     </Link>
   )
@@ -162,7 +154,7 @@ function AddNotesButton({ onOpen }: { onOpen: () => void }) {
       })}
     >
       <GitMerge size={16} aria-hidden />
-      <span className="hidden lg:inline">{t('ws.merge.open')}</span>
+      <span className="hidden xl:inline">{t('ws.merge.open')}</span>
     </button>
   )
 }
@@ -357,17 +349,7 @@ function Workspace() {
           <AddNotesButton onOpen={() => setAddNotesOpen(true)} />
           <SuggestionsButton />
           <StudyButton mapId={mapId} />
-          <span
-            className={buttonClasses({
-              size: 'sm',
-              className: 'pointer-events-none bg-paper-sunken! text-ink-muted! shadow-none!',
-            })}
-            aria-disabled
-            title={t('ws.comingIn', { n: 5 })}
-          >
-            <Share2 size={16} aria-hidden />{' '}
-            <span className="hidden sm:inline">{t('ws.share')}</span>
-          </span>
+          <ShareControls mapId={mapId} />
         </div>
       </header>
 
