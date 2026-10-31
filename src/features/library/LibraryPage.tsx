@@ -494,7 +494,7 @@ export function LibraryPage() {
             onClick={() => setFilter(null)}
             className={cn(
               'h-10 cursor-pointer rounded-full border-2 border-line px-3.5 text-sm font-semibold',
-              !activeSubject ? 'bg-ink text-paper' : 'bg-surface hover:bg-surface-muted',
+              !activeSubject ? 'bg-selected text-selected-ink' : 'bg-surface hover:bg-surface-muted',
             )}
           >
             {t('library.all')} · {ready.maps.length}
@@ -509,7 +509,7 @@ export function LibraryPage() {
               className={cn(
                 'inline-flex h-10 cursor-pointer items-center gap-2 rounded-full border-2 border-line px-3.5 text-sm font-semibold',
                 activeSubject?.id === s.id
-                  ? 'bg-ink text-paper'
+                  ? 'bg-selected text-selected-ink'
                   : 'bg-surface hover:bg-surface-muted',
                 dropTarget === `chip:${s.id}` && 'outline-3 outline-offset-2 outline-brand',
               )}

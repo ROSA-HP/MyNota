@@ -82,7 +82,7 @@ export function CardBrowser({ mapId, data }: { mapId: string; data: StudyData })
       onClick={() => setFilter(filter === k ? 'all' : k)}
       className={cn(
         'min-h-11 cursor-pointer rounded-full border-2 border-line px-4 text-sm font-semibold',
-        filter === k ? 'bg-ink text-paper' : 'bg-surface hover:bg-surface-muted',
+        filter === k ? 'bg-selected text-selected-ink' : 'bg-surface hover:bg-surface-muted',
       )}
     >
       {label}

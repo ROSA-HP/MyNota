@@ -98,3 +98,21 @@ and chose to **refine the neo-brutalist style, not replace it**:
 - **Landing.** Two-line headline, no eyebrow, feature cards are colored block fields without icons.
 - Two patterns are kept on purpose and marked `taste-skill-ignore`: the paper dot grid and the hatch
   on chapters waiting to be built.
+
+### Dark theme redesign (2026-11-01)
+
+The owner found the dark theme poor; it was an inverted light theme. Now (tokens in
+`src/styles/index.css`, `[data-theme='dark']`):
+- **Paper**: neutral graphite (`#121417`, surfaces `#1a1d21` / `#21252a`) instead of green-black,
+  so the teal brand stands out; warm off-white ink `#ecebe6`.
+- **Outlines** mid grey `#6d7681` (≥ 3.3:1 on every background) instead of near-white; **hard
+  shadows** a dark grey ledge `#30363d`, depth without the white glow behind every button.
+- **Chapter tints** in oklch at one lightness and chroma (`oklch(0.35 0.085 <hue>)`): eight clear
+  jewel tones of equal weight instead of brown and olive; ink on them ≥ 8.9:1, muted ≥ 5.4:1.
+  Strong shades (borders, link colors, cursors) stay the bright highlighter colors.
+- **Soft tones** (brand, danger, success, warning) are the color mixed into the surface.
+- New tokens used in both themes: `--selected` / `--selected-ink` for the chosen option in tabs,
+  segmented controls and toolbars (light: ink on paper as before; dark: teal, not a white pill),
+  and `--danger-ink` for text on danger buttons (dark: dark text on the light red, 7.4:1; it was
+  white on light red, about 2.3:1).
+- Light theme values are unchanged. Exports and PDFs stay light on purpose.

@@ -256,7 +256,7 @@ function LinkPickerInner({
                   className={cn(
                     'flex h-9 w-11 cursor-pointer items-center justify-center',
                     i > 0 && 'border-s-2 border-line',
-                    on ? 'bg-ink text-paper' : 'bg-surface hover:bg-paper-sunken',
+                    on ? 'bg-selected text-selected-ink' : 'bg-surface hover:bg-paper-sunken',
                   )}
                 >
                   <Icon size={16} strokeWidth={2.4} aria-hidden className="rtl:-scale-x-100" />
@@ -414,7 +414,7 @@ function LinkSearchInner({ fromIds, anchor }: { fromIds: string[]; anchor: Ancho
                 }}
                 className={cn(
                   'h-8 cursor-pointer rounded-full border-2 border-line px-3 text-xs font-semibold',
-                  scope === s ? 'bg-ink text-paper' : 'bg-surface hover:bg-paper-sunken',
+                  scope === s ? 'bg-selected text-selected-ink' : 'bg-surface hover:bg-paper-sunken',
                 )}
               >
                 {s === 'all' ? t('ws.link.scopeAll') : t('ws.link.scopeSection')}

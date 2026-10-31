@@ -394,7 +394,7 @@ function LinkToolbar({
       </button>
       <button
         type="button"
-        className={cn(btn, relation.direction === 'both' && 'bg-ink text-paper hover:bg-ink')}
+        className={cn(btn, relation.direction === 'both' && 'bg-selected text-selected-ink hover:bg-selected')}
         aria-label={t('ws.link.bothWays')}
         aria-pressed={relation.direction === 'both'}
         title={t('ws.link.bothWays')}

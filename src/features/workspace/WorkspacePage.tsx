@@ -104,7 +104,7 @@ function SuggestionsButton() {
       <Sparkles size={16} aria-hidden />
       <span className="hidden xl:inline">{t('ws.suggest.open')}</span>
       {count > 0 && (
-        <span className="rounded-full bg-ink px-1.5 font-mono text-xs font-bold text-paper">
+        <span className="rounded-full bg-selected px-1.5 font-mono text-xs font-bold text-selected-ink">
           {count}
         </span>
       )}

@@ -309,7 +309,7 @@ export function NodePanel({ node, onClose }: { node: NodeRow; onClose: () => voi
                     onClick={() => update(node.id, { importance: imp })}
                     className={cn(
                       'flex-1 cursor-pointer rounded-[7px] px-1 text-xs font-semibold disabled:cursor-default',
-                      node.importance === imp ? 'bg-ink text-paper' : 'hover:bg-paper-sunken',
+                      node.importance === imp ? 'bg-selected text-selected-ink' : 'hover:bg-paper-sunken',
                     )}
                   >
                     {imp === 'supporting' ? t('ws.panel.supporting') : t(`ws.${imp}`)}

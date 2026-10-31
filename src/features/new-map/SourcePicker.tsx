@@ -44,7 +44,7 @@ export function SourceTabs({
           onClick={() => onChange(k)}
           className={cn(
             'flex h-11 cursor-pointer items-center gap-2 rounded-neo border-2 border-line px-4 text-sm font-semibold',
-            value === k ? 'bg-ink text-paper' : 'bg-surface hover:bg-paper-sunken',
+            value === k ? 'bg-selected text-selected-ink' : 'bg-surface hover:bg-paper-sunken',
           )}
         >
           {icon}

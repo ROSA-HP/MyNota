@@ -285,7 +285,7 @@ export function BlockNode({ data, selected }: NodeProps<BlockNodeT>) {
     >
       {step !== null ? (
         <span
-          className="flex size-7 shrink-0 items-center justify-center rounded-full bg-ink font-mono text-xs font-bold text-paper"
+          className="flex size-7 shrink-0 items-center justify-center rounded-full bg-selected font-mono text-xs font-bold text-selected-ink"
           title={t('ws.step', { n: step })}
         >
           {step}

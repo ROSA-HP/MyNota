@@ -379,12 +379,12 @@ function LinkSection({ mapId }: { mapId: string }) {
                 className={cn(
                   'flex min-h-11 cursor-pointer flex-col items-start rounded-neo border-2 px-3 py-2 text-start',
                   access === a
-                    ? 'border-line bg-ink text-paper'
+                    ? 'border-line bg-selected text-selected-ink'
                     : 'border-line-soft hover:bg-surface-muted',
                 )}
               >
                 <span className="text-sm font-bold">{t(`share.link.${a}`)}</span>
-                <span className={cn('text-xs', access === a ? 'text-paper/80' : 'text-ink-muted')}>
+                <span className={cn('text-xs', access === a ? 'text-selected-ink/80' : 'text-ink-muted')}>
                   {t(`share.link.${a}Hint`)}
                 </span>
               </button>

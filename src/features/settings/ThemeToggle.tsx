@@ -46,7 +46,7 @@ export function ThemeToggle({
             onClick={() => setTheme(value)}
             className={cn(
               'inline-flex min-h-9 min-w-9 cursor-pointer items-center justify-center gap-1.5 rounded-[7px] px-2 text-sm font-semibold transition-colors',
-              selected ? 'bg-ink text-paper' : 'text-ink hover:bg-paper-sunken',
+              selected ? 'bg-selected text-selected-ink' : 'text-ink hover:bg-paper-sunken',
               showLabels && 'px-3',
             )}
           >

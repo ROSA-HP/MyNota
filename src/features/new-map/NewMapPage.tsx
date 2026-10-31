@@ -89,7 +89,7 @@ function Steps({ step }: { step: 1 | 2 }) {
                 done
                   ? 'border-line bg-brand text-brand-ink'
                   : current
-                    ? 'border-line bg-ink text-paper'
+                    ? 'border-line bg-selected text-selected-ink'
                     : 'border-ink-faint text-ink-muted',
               )}
             >

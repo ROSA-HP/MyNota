@@ -54,7 +54,7 @@ function ToolButton({
       disabled={disabled}
       className={cn(
         'flex h-11 min-w-11 cursor-pointer items-center justify-center gap-1.5 rounded-lg px-2.5 text-sm font-semibold whitespace-nowrap disabled:cursor-default disabled:opacity-35 disabled:hover:bg-transparent',
-        active ? 'bg-ink text-paper' : 'text-ink hover:bg-paper-sunken',
+        active ? 'bg-selected text-selected-ink' : 'text-ink hover:bg-paper-sunken',
       )}
     >
       {children}

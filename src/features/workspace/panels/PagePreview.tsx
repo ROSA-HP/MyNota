@@ -107,7 +107,7 @@ export function PagePreview({ source, pages }: { source: SourceRow; pages: numbe
             onClick={() => toggle(p)}
             className={cn(
               'min-h-8 cursor-pointer rounded-full border-2 border-line px-2.5 font-mono text-xs font-bold',
-              page === p ? 'bg-ink text-paper' : 'bg-surface hover:bg-paper-sunken',
+              page === p ? 'bg-selected text-selected-ink' : 'bg-surface hover:bg-paper-sunken',
             )}
           >
             {t('ws.panel.pageShort', { n: p })}

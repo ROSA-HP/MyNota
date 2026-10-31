@@ -39,7 +39,7 @@ export function DetailPicker({
             onClick={() => onChange(d)}
             className={cn(
               'min-h-10 flex-1 cursor-pointer rounded-[7px] text-sm font-semibold',
-              value === d ? 'bg-ink text-paper' : 'hover:bg-paper-sunken',
+              value === d ? 'bg-selected text-selected-ink' : 'hover:bg-paper-sunken',
             )}
           >
             {t(DETAIL_LABEL[d])}

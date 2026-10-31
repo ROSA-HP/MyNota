@@ -80,7 +80,7 @@ export function DeckPage() {
                     onClick={() => setTab(k)}
                     className={cn(
                       'min-h-10 cursor-pointer rounded-[7px] px-4 text-sm font-semibold',
-                      tab === k ? 'bg-ink text-paper' : 'hover:bg-paper-sunken',
+                      tab === k ? 'bg-selected text-selected-ink' : 'hover:bg-paper-sunken',
                     )}
                   >
                     {k === 'overview' ? t('deck.overview') : t('deck.cards', { count: total })}

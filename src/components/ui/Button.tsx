@@ -22,7 +22,7 @@ const variants: Record<Variant, string> = {
     'bg-surface text-ink border-line neo-shadow hover:bg-surface-muted disabled:bg-paper-sunken disabled:text-ink-muted',
   ghost: 'bg-transparent text-ink border-transparent hover:bg-paper-sunken disabled:text-ink-faint',
   danger:
-    'bg-danger text-white border-line neo-shadow hover:brightness-95 disabled:bg-paper-sunken disabled:text-ink-muted',
+    'bg-danger text-danger-ink border-line neo-shadow hover:brightness-95 disabled:bg-paper-sunken disabled:text-ink-muted',
 }
 
 // md/lg meet the 44px touch-target minimum for tablets.
