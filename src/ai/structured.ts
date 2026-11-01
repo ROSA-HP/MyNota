@@ -21,11 +21,38 @@ export interface StructuredResult<T> {
   tokensOut: number
 }
 
+/**
+ * Repairs backslashes that models write for LaTeX without escaping them for JSON. "\lambda" or
+ * "\sqrt" are invalid escapes (the whole reply fails to parse); "\theta", "\frac", "\beta",
+ * "\rho" are valid ones that would silently become a tab, form feed, backspace or carriage
+ * return. A backslash that starts such a command (a letter follows the escape letter) is
+ * doubled; real escapes (\", \\, \n, \uXXXX, ...) are kept. A newline before a letter stays
+ * (it may be real text); formulas repair that afterwards (pipeline/formulas.ts).
+ */
+export function fixLatexEscapes(json: string): string {
+  let out = ''
+  for (let i = 0; i < json.length; i++) {
+    const c = json[i]
+    if (c !== '\\') {
+      out += c
+      continue
+    }
+    const next = json[i + 1] ?? ''
+    const after = json[i + 2] ?? ''
+    const unicode = next === 'u' && /^[0-9a-fA-F]{4}$/.test(json.slice(i + 2, i + 6))
+    const valid = '"\\/bfnrt'.includes(next) || unicode
+    const command = 'bfrt'.includes(next) && /[a-zA-Z]/.test(after)
+    out += (valid && !command) || next === '' ? `\\${next}` : `\\\\${next}`
+    i++
+  }
+  return out
+}
+
 /** Pulls a JSON value out of a reply, tolerating ```json fences or text around it. */
 export function extractJson(text: string): unknown {
   const trimmed = text.trim()
   const fenced = /^```(?:json)?\s*([\s\S]*?)\s*```$/i.exec(trimmed)
-  const candidate = fenced?.[1] ?? trimmed
+  const candidate = fixLatexEscapes(fenced?.[1] ?? trimmed)
   try {
     return JSON.parse(candidate)
   } catch {

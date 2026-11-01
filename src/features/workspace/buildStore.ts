@@ -3,12 +3,13 @@ import { AiError, isAbortError, type AiErrorKind } from '@/ai/errors'
 import { finishJob, startJob } from '@/ai/jobs'
 import { toProviderSchema } from '@/ai/jsonSchema'
 import { blockNodes, outlineText, sectionNodes } from '@/ai/pipeline/convert'
-import { DETAILS_PROMPT_VERSION, detailsPrompt } from '@/ai/prompts/details.v2'
+import { DETAILS_PROMPT_VERSION, detailsPrompt } from '@/ai/prompts/details.v3'
 import { OUTLINE_PROMPT_VERSION, outlinePrompt } from '@/ai/prompts/outline.v2'
 import { SYSTEM_PROMPT, versionFor, type Paragraph, type SourceMode } from '@/ai/prompts/shared'
 import { createAdapter } from '@/ai/providers'
 import { AiQueue } from '@/ai/queue'
 import { DetailsResponseSchema, detailsSchemaFor } from '@/ai/schemas/details'
+import { ensureFormulas } from '@/ai/pipeline/formulas'
 import { checkDetailsRules, checkOutlineRules } from '@/ai/schemas/rules'
 import {
   OutlineResponseSchema,
@@ -275,13 +276,15 @@ export const useBuild = create<BuildState>((set, get) => {
         tokensOut: result.tokensOut,
         durationMs: performance.now() - startedAt,
       })
-      const warnings = checkDetailsRules(result.data)
+      // Every equation in the section's source ends up as a formula (models often drop them).
+      const data = ensureFormulas(result.data, paragraphs)
+      const warnings = checkDetailsRules(data)
       if (warnings.length)
         console.warn(
           'details style warnings',
           warnings.map((w) => w.rule),
         )
-      const { nodes, relations } = blockNodes(result.data, {
+      const { nodes, relations } = blockNodes(data, {
         mapId: opts.mapId,
         section,
         lang: opts.sourceLanguage,

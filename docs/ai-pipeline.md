@@ -182,6 +182,30 @@ v1 stays for the record (every `ai_jobs` row names its prompt version).
   counts flat sections and links, so v1 and v2 can be compared with
   `npm run eval:prompts`.
 
+### Prompt: details v3 and the formula safety net (2026-11-01)
+
+The owner found that maps "always forget the formulas". Causes found: models skip equations,
+write them only inside a bullet, or write LaTeX with single backslashes in the JSON (`\lambda`,
+`\sqrt` make the reply invalid and burn the one repair attempt; `\theta`, `\frac`, `\beta`,
+`\rho` silently became a tab, form feed, backspace or carriage return). Fixed in four places:
+- **Details v3** (`src/ai/prompts/details.v3.ts`, now used by builds and the eval): FORMULAS
+  says every equation in the paragraphs becomes a formula detail (plain text, Unicode or LaTeX),
+  never only inside a bullet, summary or title, and the model re-reads the paragraphs for
+  missed ones; the output format shows each LaTeX backslash written twice in JSON. v2 stays for
+  the record.
+- **Parsing** (`fixLatexEscapes` in `src/ai/structured.ts`): before the reply is read, a
+  backslash that starts a LaTeX command is doubled, so such replies parse correctly the first time.
+- **Safety net** (`ensureFormulas` in `src/ai/pipeline/formulas.ts`, run on every details reply):
+  formula LaTeX is repaired; an equation written only in a bullet becomes a formula detail of
+  that block; any equation in the section's source that no formula covers is added to the block
+  citing its paragraph (a formula block first), converted from Unicode to LaTeX. Formulas come
+  first in each block. Plain values (`m = ±1`) are not formulas. Matching compares both sides
+  of the equation, so similar-looking formulas are not merged.
+- **Add notes**: new blocks and added detail lines keep the equations of their notes as formula
+  details too (`applyPlan` in `src/ai/pipeline/merge.ts`).
+Tests: `tests/unit/formulas.test.ts` (the owner's physical-optics notes, end to end from a
+badly escaped, forgetful reply to map blocks), `merge.test.ts`, `prompts-v2.test.ts`.
+
 ### Cross-links (v1)
 
 ```text

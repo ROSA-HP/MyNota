@@ -210,6 +210,46 @@ describe('merge plan', () => {
     )
   })
 
+  it('keeps the equations in added notes as formulas', () => {
+    const m = notesMap()
+    const physics = [
+      { n: 1, text: 'Ohm: V = I R for a resistor.' },
+      { n: 2, text: 'Power is P = V I.' },
+    ]
+    const items: PlanItem[] = [
+      {
+        action: 'attach',
+        notes: [1],
+        include: true,
+        parentId: m.transport.id,
+        afterId: null,
+        blocks: [block('Ohm’s law', [1])],
+      } as PlanItem,
+      {
+        action: 'detail',
+        notes: [2],
+        include: true,
+        targetId: m.pump.id,
+        detail: 'Power is P = V I.',
+      } as PlanItem,
+    ]
+    const { add, patches } = applyPlan(items, {
+      mapId: 'm',
+      rootId: m.root.id,
+      nodes: m.nodes,
+      notes: physics,
+      offset: 0,
+      lang: 'en',
+    })
+    expect(add.find((n) => n.title === 'Ohm’s law')?.details).toEqual([
+      { kind: 'formula', latex: 'V = I R' },
+    ])
+    expect(patches.find((p) => p.id === m.pump.id)?.patch.details?.[0]).toEqual({
+      kind: 'formula',
+      latex: 'P = V I',
+    })
+  })
+
   it('continues paragraph numbers after the chapter’s existing sources', () => {
     expect(
       nextParagraphOffset(

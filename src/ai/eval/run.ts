@@ -1,10 +1,11 @@
 import { toProviderSchema } from '@/ai/jsonSchema'
 import { outlineText } from '@/ai/pipeline/convert'
 import { splitParagraphs } from '@/ai/pipeline/prepare'
-import { DETAILS_PROMPT_VERSION, detailsPrompt } from '@/ai/prompts/details.v2'
+import { DETAILS_PROMPT_VERSION, detailsPrompt } from '@/ai/prompts/details.v3'
 import { OUTLINE_PROMPT_VERSION, outlinePrompt } from '@/ai/prompts/outline.v2'
 import { SYSTEM_PROMPT, versionFor, type SourceMode } from '@/ai/prompts/shared'
 import { DetailsResponseSchema, detailsSchemaFor } from '@/ai/schemas/details'
+import { ensureFormulas } from '@/ai/pipeline/formulas'
 import { OutlineResponseSchema, normalizeOutline, outlineSchemaFor } from '@/ai/schemas/outline'
 import { generateStructured } from '@/ai/structured'
 import type { ProviderAdapter } from '@/ai/types'
@@ -105,7 +106,11 @@ export async function runSample(adapter: ProviderAdapter, sample: Sample): Promi
       })
       tokensIn += r.tokensIn ?? 0
       tokensOut += r.tokensOut ?? 0
-      sections.push({ title: s.title, paragraphs: s.paragraphs, details: r.data })
+      sections.push({
+        title: s.title,
+        paragraphs: s.paragraphs,
+        details: ensureFormulas(r.data, own),
+      })
     } catch (e) {
       sections.push({
         title: s.title,

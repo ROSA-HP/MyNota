@@ -2,6 +2,7 @@ import type { BranchView, DetailBlock, NodeRow } from '@/lib/database.types'
 import type { Paragraph } from '../prompts/shared'
 import type { MergeBlock, MergeItem, MergeResponse } from '../schemas/merge'
 import { PALETTE, makeNode } from './convert'
+import { findEquations, sameFormula, toLatex } from './formulas'
 
 /**
  * Merge mode ("Add notes", docs/ai-pipeline.md › Modes): the model sees the existing map as a
@@ -204,8 +205,14 @@ export function applyPlan(
     }
     return list
   }
+  /** The equations in some notes as formula details (models drop them; never lose one). */
+  const formulasIn = (text: string, have: DetailBlock[] = []): DetailBlock[] =>
+    findEquations(text)
+      .filter((eq) => !have.some((d) => d.kind === 'formula' && sameFormula(d.latex, eq)))
+      .map((eq) => ({ kind: 'formula', latex: toLatex(eq) }))
   const blockNode = (b: MergeBlock, parentId: string) =>
     makeNode({
+      details: formulasIn(noteText(b.notes)),
       map_id: ctx.mapId,
       parent_id: parentId,
       level: 'block',
@@ -230,8 +237,14 @@ export function applyPlan(
     const target = ctx.nodes[id]
     if (!target) return
     const cur = edits.get(id) ?? {}
+    const before = cur.details ?? target.details
+    const added = formulasIn(text, before)
+    // New formulas go after the block's existing ones (the card shows its first formula).
+    const at = before.filter((d) => d.kind === 'formula').length
     const details: DetailBlock[] = [
-      ...(cur.details ?? target.details),
+      ...before.slice(0, at),
+      ...added,
+      ...before.slice(at),
       { kind: 'text', text: clip(text, 600) },
     ]
     const paragraphs = [
