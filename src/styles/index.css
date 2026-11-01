@@ -59,6 +59,8 @@
   --ch-pink: #fbb0d8;
   --ch-orange: #fdbe7f;
   --ch-lime: #d4f59a;
+  /* How much of the chapter color a region shows (the wash behind its sections). */
+  --region-mix: 42%;
 
   /* Stronger shades of the chapter palette: node borders and region outlines. */
   --ch-yellow-strong: #d9a521;
@@ -78,65 +80,68 @@
 }
 
 /*
- * Dark theme: a notebook at night, not an inverted page (redesigned 2026-11-01).
- * - Neutral graphite paper (no green cast fighting the teal brand); surfaces step up in light.
- * - Outlines are a mid grey (about 3.5:1, enough to read every edge) instead of near-white,
- *   and hard shadows are black: depth, not a white glow behind every button.
- * - Chapter tints are set in oklch at one lightness (0.35) and a clear chroma (0.085), so the eight
- *   hues read as distinct jewel tones of equal weight instead of brown, olive or grey.
- * Contrast (checked): ink 14-16:1, ink-muted 8-9:1, ink-faint ≥ 5:1, line ≥ 3.3:1 on every
- * background; ink on every chapter tint ≥ 8.9:1, ink-muted ≥ 5.4:1.
+ * Dark theme: a notebook at night, not an inverted page (redesigned 2026-11-01, brightened the
+ * same day because the first version read too dark and dull).
+ * - Neutral slate paper (no green cast fighting the teal brand); surfaces step up in light.
+ * - Outlines are a light grey (≥ 4:1, every edge reads) instead of near-white, and hard shadows
+ *   are a near-black ledge: depth, not a white glow behind every button.
+ * - Chapter tints are set in oklch at one lightness (0.42) and a vivid chroma (0.10), so the eight
+ *   hues read as bright jewel tones of equal weight instead of brown, olive or grey.
+ * Contrast (checked): ink 12-14:1, ink-muted ≥ 7.7:1, ink-faint ≥ 5.2:1, line ≥ 4:1 on every
+ * background; ink on every chapter tint ≥ 7.1:1, ink-muted ≥ 4.8:1; brand-ink on brand 9.7:1.
  */
 [data-theme='dark'] {
-  --paper: #121417;
-  --paper-sunken: #0d0f11;
-  --surface: #1a1d21;
-  --surface-muted: #21252a;
-  --ink: #ecebe6;
-  --ink-muted: #b4b9c0;
-  --ink-faint: #8f969f;
-  --line: #6d7681;
-  --line-soft: #6d768159;
-  --shadow: #30363d;
-  --dot: #ecebe61a;
+  --paper: #1c2026;
+  --paper-sunken: #16191e;
+  --surface: #262a31;
+  --surface-muted: #2e333b;
+  --ink: #f4f3ee;
+  --ink-muted: #c6cbd2;
+  --ink-faint: #a0a7b0;
+  --line: #8a939e;
+  --line-soft: #8a939e59;
+  --shadow: #0c0e11;
+  --dot: #f4f3ee1f;
 
-  --brand: #3dd6c2;
-  --brand-hover: #6ee3d3;
-  --brand-ink: #06231f;
-  --brand-soft: color-mix(in oklab, var(--brand) 18%, var(--surface));
+  --brand: #4fe3cf;
+  --brand-hover: #7debdc;
+  --brand-ink: #062a25;
+  --brand-soft: color-mix(in oklab, var(--brand) 20%, var(--surface));
   /* Selected options are teal, not a white pill that glares on dark paper. */
   --selected: var(--brand);
   --selected-ink: var(--brand-ink);
 
-  --danger: #ff7f73;
+  --danger: #ff8a7f;
   --danger-ink: #2b0a06;
-  --danger-soft: color-mix(in oklab, var(--danger) 16%, var(--surface));
-  --success: #5fd38a;
-  --success-soft: color-mix(in oklab, var(--success) 16%, var(--surface));
-  --warning: #f6bb5a;
-  --warning-soft: color-mix(in oklab, var(--warning) 16%, var(--surface));
+  --danger-soft: color-mix(in oklab, var(--danger) 18%, var(--surface));
+  --success: #6ee09a;
+  --success-soft: color-mix(in oklab, var(--success) 18%, var(--surface));
+  --warning: #ffc866;
+  --warning-soft: color-mix(in oklab, var(--warning) 18%, var(--surface));
 
-  --ch-yellow-strong: #ecc55a;
-  --ch-coral-strong: #f49a84;
-  --ch-sky-strong: #6fb9f2;
-  --ch-mint-strong: #4fcd93;
-  --ch-lavender-strong: #b4a1f8;
-  --ch-pink-strong: #f08fc5;
-  --ch-orange-strong: #f5ad68;
-  --ch-lime-strong: #b5dc5e;
+  --ch-yellow-strong: #f7d267;
+  --ch-coral-strong: #ffa792;
+  --ch-sky-strong: #7fc6ff;
+  --ch-mint-strong: #5edca1;
+  --ch-lavender-strong: #c1b0ff;
+  --ch-pink-strong: #fb9dd1;
+  --ch-orange-strong: #ffba76;
+  --ch-lime-strong: #c2e96b;
 
-  --ch-yellow: oklch(0.35 0.085 92);
-  --ch-coral: oklch(0.35 0.085 35);
-  --ch-sky: oklch(0.35 0.085 245);
-  --ch-mint: oklch(0.35 0.085 165);
-  --ch-lavender: oklch(0.35 0.085 292);
-  --ch-pink: oklch(0.35 0.085 350);
-  --ch-orange: oklch(0.35 0.085 62);
-  --ch-lime: oklch(0.35 0.085 128);
+  --ch-yellow: oklch(0.42 0.1 92);
+  --ch-coral: oklch(0.42 0.1 35);
+  --ch-sky: oklch(0.42 0.1 245);
+  --ch-mint: oklch(0.42 0.1 165);
+  --ch-lavender: oklch(0.42 0.1 292);
+  --ch-pink: oklch(0.42 0.1 350);
+  --ch-orange: oklch(0.42 0.1 62);
+  --ch-lime: oklch(0.42 0.1 128);
+  /* A stronger wash: text on it still passes (it only gets darker than the tint). */
+  --region-mix: 62%;
 
-  --mastery-low: #ff6b6b;
-  --mastery-mid: #f6bb5a;
-  --mastery-high: #5fd38a;
+  --mastery-low: #ff7a7a;
+  --mastery-mid: #ffc866;
+  --mastery-high: #6ee09a;
 
   color-scheme: dark;
 }

@@ -35,7 +35,7 @@ export const chapterColor = (c: ChapterColor | null | undefined) => {
   return {
     fill: `var(--ch-${name})`,
     strong: `var(--ch-${name}-strong)`,
-    tint: `color-mix(in srgb, var(--ch-${name}) 42%, transparent)`,
+    tint: `color-mix(in srgb, var(--ch-${name}) var(--region-mix), transparent)`,
   }
 }
 

@@ -101,7 +101,7 @@ and chose to **refine the neo-brutalist style, not replace it**:
 
 ### Dark theme redesign (2026-11-01)
 
-The owner found the dark theme poor; it was an inverted light theme. Now (tokens in
+(Values in this list are the first pass; the brightened values follow it.) The owner found the dark theme poor; it was an inverted light theme. Now (tokens in
 `src/styles/index.css`, `[data-theme='dark']`):
 - **Paper**: neutral graphite (`#121417`, surfaces `#1a1d21` / `#21252a`) instead of green-black,
   so the teal brand stands out; warm off-white ink `#ecebe6`.
@@ -116,6 +116,14 @@ The owner found the dark theme poor; it was an inverted light theme. Now (tokens
   and `--danger-ink` for text on danger buttons (dark: dark text on the light red, 7.4:1; it was
   white on light red, about 2.3:1).
 - Light theme values are unchanged. Exports and PDFs stay light on purpose.
+
+**Brightened (same day).** The owner wanted dark mode brighter and the logo unchanged:
+- Paper `#1c2026`, surfaces `#262a31` / `#2e333b`, ink `#f4f3ee`, outlines `#8a939e` (≥ 4:1),
+  shadows a near-black ledge `#0c0e11`; brand `#4fe3cf` with `#062a25` text (9.7:1).
+- Chapter tints `oklch(0.42 0.1 <hue>)` (ink ≥ 7.1:1, muted ≥ 4.8:1), brighter strong shades,
+  and a stronger region wash (`--region-mix`: 42% light, 62% dark).
+- **The logo mark keeps its light-theme colors in both themes** (`Logo.tsx`, fixed colors, not
+  theme tokens); only the wordmark follows the ink color so it stays readable.
 
 ### Canvas redesign (2026-11-01, steps 1-6)
 
