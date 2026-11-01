@@ -78,6 +78,11 @@ interface WorkspaceState {
   selectRelation: (id: string | null) => void
   /** Book maps: loads the live documents of these chapters (they came on screen). */
   showChapters: (chapterIds: string[]) => void
+  /**
+   * Resolves once the live document of this chapter (a book chapter, or a notes map's root) is
+   * open, so nodes written into it show up at once. False when it cannot be opened (offline).
+   */
+  openChapter: (chapterId: string) => Promise<boolean>
   /** `ai`: written by the AI (not undoable; see live/mapDoc.ts › AI). */
   addNodes: (nodes: NodeRow[], opts?: { saveNow?: boolean; ai?: boolean }) => void
   updateNode: (id: string, patch: Partial<NodeRow>) => void
@@ -194,7 +199,8 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
       }
       if (relations) {
         patch.relations = relations
-        if (s.selectedRelationId && !relations[s.selectedRelationId]) patch.selectedRelationId = null
+        if (s.selectedRelationId && !relations[s.selectedRelationId])
+          patch.selectedRelationId = null
       }
       set(patch)
     }
@@ -623,6 +629,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
     selectRelation: (id) => set({ selectedRelationId: id, selectedId: null }),
 
     showChapters: (ids) => void ensureDocs(ids),
+    openChapter: (id) => ensureDocs([id]),
 
     addNodes: (rows, opts) => {
       if (!rows.length || !live || !get().canEdit()) return
@@ -735,9 +742,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
           const { nodes, relations, map, sources, userId, role } = get()
           const upNodes = nodeIds.map((i) => nodes[i]).filter((n): n is NodeRow => Boolean(n))
           const goneNodes = nodeIds.filter((i) => !nodes[i])
-          const upRels = relIds
-            .map((i) => relations[i])
-            .filter((r): r is RelationRow => Boolean(r))
+          const upRels = relIds.map((i) => relations[i]).filter((r): r is RelationRow => Boolean(r))
           const goneRels = relIds.filter((i) => !relations[i])
           await deleteRelations(goneRels)
           await deleteNodes(goneNodes)

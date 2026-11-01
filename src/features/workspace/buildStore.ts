@@ -120,6 +120,17 @@ export const useBuild = create<BuildState>((set, get) => {
     const { opts } = ctx
     const adapter = adapterFor(key)
     set({ phase: 'outline', outlineStatus: { state: 'queued' } })
+    // A book chapter's live document may not be open yet (books load chapters as they are
+    // needed). Open it before asking the AI, so the sections land on the map at once and their
+    // blocks can be built right after; without it they were skipped and the build never ended.
+    if (!(await useWorkspace.getState().openChapter(opts.rootId))) {
+      set({
+        outlineStatus: { state: 'failed', kind: 'network' },
+        phase: 'failed',
+        failure: 'network',
+      })
+      return false
+    }
     const startedAt = performance.now()
     const jobId = await startJob({
       map_id: opts.mapId,
@@ -215,8 +226,11 @@ export const useBuild = create<BuildState>((set, get) => {
     if (!ctx?.outline) return
     const { opts, outline } = ctx
     const range = ctx.sectionRanges[sectionId]
+    if (!range) return
+    await useWorkspace.getState().openChapter(opts.rootId)
     const section = useWorkspace.getState().nodes[sectionId]
-    if (!range || !section) return
+    // Never skip silently: a section that stays "queued" keeps the whole build running.
+    if (!section) return setSection(sectionId, { state: 'failed', kind: 'network' })
     const paragraphs = opts.paragraphs.filter((p) => p.n >= range.from && p.n <= range.to)
     const adapter = adapterFor(key)
     setSection(sectionId, { state: 'queued' })
