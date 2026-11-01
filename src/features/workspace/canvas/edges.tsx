@@ -31,7 +31,18 @@ import { useWorkspace } from '../workspaceStore'
 import { useCanvasUi } from './canvasUi'
 import { bezierAt, labelSize, pickLabelPoint } from './labelPlacement'
 import { existingLink, nodeIdAt } from './linking'
-import { centrePath, downThenAcross, taperedPath, verticalS, type Cubic } from './organic'
+import {
+  arrowHead,
+  centrePath,
+  downThenAcross,
+  nearestSides,
+  sideCurve,
+  split,
+  taperedPath,
+  verticalS,
+  type Cubic,
+  type Side,
+} from './organic'
 
 /**
  * Edges are drawn from the live node boxes (not from handles), so they follow nodes while
@@ -68,91 +79,175 @@ export type RelationEdgeT = Edge<
 >
 
 /**
- * An organic tree line: a tapered, filled body (thick at the parent, thin at the child) with the
- * thin centre line on top carrying the arrowhead. Both morph smoothly when cards move.
+ * An organic tree line: a tapered, filled body (thick at the parent, thin at the child), a thin
+ * centre line, and a crisp arrowhead whose tip sits on the child's edge. Every line has two
+ * curves, so it morphs smoothly when cards move.
  */
 function OrganicBranch({
   id,
   segs,
   color,
-  markerEnd,
   from,
   to = 1.8,
 }: {
   id: string
   segs: Cubic[]
   color: string | undefined
-  markerEnd: string | undefined
   from: number
   to?: number
 }) {
   const stroke = color ?? 'var(--line)'
+  const two = segs.length === 1 && segs[0] ? split(segs[0]) : segs
   return (
     <>
-      <path className="mynota-branch" d={taperedPath(segs, from, to)} fill={stroke} />
+      <path className="mynota-branch" d={taperedPath(two, from, to)} fill={stroke} />
       <BaseEdge
         id={id}
-        path={centrePath(segs)}
-        markerEnd={markerEnd}
+        path={centrePath(two)}
         style={{ stroke, strokeWidth: to, strokeLinecap: 'round', fill: 'none' }}
+      />
+      <path
+        className="mynota-branch"
+        d={arrowHead(two)}
+        fill={stroke}
+        stroke={stroke}
+        strokeWidth={1}
+        strokeLinejoin="round"
       />
     </>
   )
 }
 
-/** Map title → section: a flowing S-curve from the bottom centre to the top centre. */
-export function BranchEdge({ id, source, target, data, markerEnd }: EdgeProps<BranchEdgeT>) {
-  const s = rectOf(useInternalNode(source))
-  const t = rectOf(useInternalNode(target))
-  if (!s || !t) return null
-  const segs = [verticalS({ x: s.x + s.w / 2, y: s.y + s.h }, { x: t.x + t.w / 2, y: t.y - 2 })]
-  return <OrganicBranch id={id} segs={segs} color={data?.color} markerEnd={markerEnd} from={5} />
+const holds = (outer: Rect, r: Rect) =>
+  r.x + r.w / 2 > outer.x &&
+  r.x + r.w / 2 < outer.x + outer.w &&
+  r.y + r.h / 2 > outer.y &&
+  r.y + r.h / 2 < outer.y + outer.h
+
+/** Cached per node list and card positions, so panning and zooming never recompute it. */
+const sidesCache = new WeakMap<object, Map<string, string>>()
+
+/**
+ * The nearest pair of sides (top, right, bottom or left) joining two cards without running
+ * through another card, or null when every pair would (the line then routes around).
+ */
+function useNearestSides(source: string, target: string): [Side, Side] | null {
+  const key = useStore(
+    useCallback(
+      (st: ReactFlowState) => {
+        const a = rectOf(st.nodeLookup.get(source))
+        const b = rectOf(st.nodeLookup.get(target))
+        if (!a || !b) return ''
+        let cache = sidesCache.get(st.nodes)
+        if (!cache) sidesCache.set(st.nodes, (cache = new Map()))
+        const k = `${source}>${target}:${a.x},${a.y},${a.w},${a.h};${b.x},${b.y},${b.w},${b.h}`
+        const hit = cache.get(k)
+        if (hit !== undefined) return hit
+        const pad = 160
+        const minX = Math.min(a.x, b.x) - pad
+        const maxX = Math.max(a.x + a.w, b.x + b.w) + pad
+        const minY = Math.min(a.y, b.y) - pad
+        const maxY = Math.max(a.y + a.h, b.y + b.h) + pad
+        const obstacles: Rect[] = []
+        for (const n of st.nodeLookup.values()) {
+          if (n.id === source || n.id === target || n.hidden) continue
+          const r = rectOf(n)
+          if (!r || r.x > maxX || r.x + r.w < minX || r.y > maxY || r.y + r.h < minY) continue
+          // Another section's or chapter's colored area is in the way too (a line through it
+          // looks like it belongs there); the area holding either card is not.
+          if ((n.type === 'region' || n.type === 'chapterRegion') && (holds(r, a) || holds(r, b)))
+            continue
+          obstacles.push(r)
+        }
+        const sides = nearestSides(a, b, obstacles)
+        const out = sides ? sides.join(':') : ''
+        cache.set(k, out)
+        return out
+      },
+      [source, target],
+    ),
+  )
+  return key ? (key.split(':') as [Side, Side]) : null
 }
 
-/** Parent → child in a stacked column: from the parent's trunk, a branch sweeps into the child. */
-export function TreeEdge({ id, source, target, data, markerEnd }: EdgeProps<TreeEdgeT>) {
+/** Map title → section: joined at the nearest sides (usually bottom to top). */
+export function BranchEdge({ id, source, target, data }: EdgeProps<BranchEdgeT>) {
   const s = rectOf(useInternalNode(source))
   const t = rectOf(useInternalNode(target))
+  const sides = useNearestSides(source, target)
+  if (!s || !t) return null
+  const segs = sides
+    ? [sideCurve(s, sides[0], t, sides[1])]
+    : [verticalS({ x: s.x + s.w / 2, y: s.y + s.h }, { x: t.x + t.w / 2, y: t.y })]
+  return <OrganicBranch id={id} segs={segs} color={data?.color} from={5} />
+}
+
+/**
+ * Parent → child in a stacked column: joined at the nearest sides; when the way is blocked by
+ * the cards in between, from the parent's trunk down beside them and into the child.
+ */
+export function TreeEdge({ id, source, target, data }: EdgeProps<TreeEdgeT>) {
+  const s = rectOf(useInternalNode(source))
+  const t = rectOf(useInternalNode(target))
+  const sides = useNearestSides(source, target)
   if (!s || !t) return null
   const rtl = data?.rtl ?? false
-  const trunk = { x: rtl ? s.x + s.w - 16 : s.x + 16, y: s.y + s.h }
-  const end = { x: rtl ? t.x + t.w : t.x, y: t.y + t.h / 2 }
-  const segs = [downThenAcross(trunk, end)]
-  return <OrganicBranch id={id} segs={segs} color={data?.color} markerEnd={markerEnd} from={4} />
+  const segs = sides
+    ? [sideCurve(s, sides[0], t, sides[1])]
+    : [
+        downThenAcross(
+          { x: rtl ? s.x + s.w - 16 : s.x + 16, y: s.y + s.h },
+          { x: rtl ? t.x + t.w : t.x, y: t.y + t.h / 2 },
+        ),
+      ]
+  return <OrganicBranch id={id} segs={segs} color={data?.color} from={4} />
 }
 
 export type RailEdgeT = Edge<{ rtl: boolean } & Tinted, 'rail'>
 
 /**
- * Section → a top-level block in grouped columns: the branch flows from the section card over
- * the gap above the blocks to its column, then down beside the column and into the block. Blocks
- * of one column share the same path at the top, so they fan out from one limb.
+ * Section → a top-level block in grouped columns: joined at the nearest sides; when the way is
+ * blocked, the branch flows over the gap above the blocks to its column, down beside it and
+ * into the block.
  */
-export function RailEdge({ id, source, target, data, markerEnd }: EdgeProps<RailEdgeT>) {
+export function RailEdge({ id, source, target, data }: EdgeProps<RailEdgeT>) {
   const s = rectOf(useInternalNode(source))
   const t = rectOf(useInternalNode(target))
+  const sides = useNearestSides(source, target)
   if (!s || !t) return null
+  if (sides)
+    return (
+      <OrganicBranch
+        id={id}
+        segs={[sideCurve(s, sides[0], t, sides[1])]}
+        color={data?.color}
+        from={4.5}
+      />
+    )
   const rtl = data?.rtl ?? false
   const start = { x: s.x + s.w / 2, y: s.y + s.h }
   const trunkX = rtl ? t.x + t.w + 12 : t.x - 12
   const end = { x: rtl ? t.x + t.w : t.x, y: t.y + Math.min(t.h / 2, 24) }
   // The sideways sweep stays in the gap above the blocks (SIZES.blocksGap is 30); then the limb
-  // runs down the gap beside the column and curls into the block.
+  // runs down the gap beside the column and into the block.
   const limb = { x: trunkX, y: Math.min(start.y + 22, end.y) }
   const segs: Cubic[] = [
     [start, { x: start.x, y: start.y + 16 }, { x: trunkX, y: start.y + 6 }, limb],
     downThenAcross(limb, end),
   ]
-  return <OrganicBranch id={id} segs={segs} color={data?.color} markerEnd={markerEnd} from={4.5} />
+  return <OrganicBranch id={id} segs={segs} color={data?.color} from={4.5} />
 }
 
-/** Process sections: a gentle S-curve from one step down to the next. */
-export function StepEdge({ id, source, target, data, markerEnd }: EdgeProps<StepEdgeT>) {
+/** Process sections: from one step to the next, at the nearest sides. */
+export function StepEdge({ id, source, target, data }: EdgeProps<StepEdgeT>) {
   const s = rectOf(useInternalNode(source))
   const t = rectOf(useInternalNode(target))
+  const sides = useNearestSides(source, target)
   if (!s || !t) return null
-  const segs = [verticalS({ x: s.x + s.w / 2, y: s.y + s.h }, { x: t.x + t.w / 2, y: t.y - 2 })]
-  return <OrganicBranch id={id} segs={segs} color={data?.color} markerEnd={markerEnd} from={3.5} />
+  const segs = sides
+    ? [sideCurve(s, sides[0], t, sides[1])]
+    : [verticalS({ x: s.x + s.w / 2, y: s.y + s.h }, { x: t.x + t.w / 2, y: t.y })]
+  return <OrganicBranch id={id} segs={segs} color={data?.color} from={3.5} />
 }
 
 /** Picks the facing sides of two boxes and returns a smooth curve between them. */

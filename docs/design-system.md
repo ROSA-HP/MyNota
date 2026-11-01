@@ -187,6 +187,14 @@ Asked for by the owner: a charcoal background instead of near-black, brighter co
   arrowhead. Every branch of one kind has the same number of points, so lines morph with the
   cards when the layout changes. Section → block branches sweep in the 30px gap above the
   blocks, then run down the gap beside the column and curl into each block.
+- **Nearest sides and arrowheads** (same day, asked for by the owner): every tree line the AI
+  builds joins its two cards at the nearest pair of side midpoints (top, right, bottom, left),
+  skipping sides that face away and any curve that would run through another card or another
+  section's colored area; it leaves and enters squarely, so arrowheads never kink at the card.
+  Only when every pair is blocked does the line route around the column as before. Arrowheads
+  are drawn by the line itself (a filled, slightly notched triangle, tip on the card's edge),
+  not React Flow markers. The side choice is cached per node list and card positions, so
+  panning never recomputes it.
 - **Smoother motion**: one ease-out curve (`--ease-soft`, quint) and a softer spring; cards glide
   480 ms and their lines morph in step (not while dragging); map camera moves use
   `camera(ms)` from `lib/motion.ts` (eased out, a little longer); no double-tap delay on

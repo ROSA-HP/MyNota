@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
+  arrowHead,
   centrePath,
+  nearestSides,
+  sideCurve,
   downThenAcross,
   taperedPath,
   verticalS,
@@ -51,6 +54,53 @@ describe('organic branches', () => {
 
   it('keep a centre line through the same curve for the arrowhead', () => {
     const seg = downThenAcross({ x: 10, y: 0 }, { x: 110, y: 80 })
-    expect(centrePath([seg])).toBe('M10,0 C10,60 55,80 110,80')
+    expect(centrePath([seg])).toBe('M10,0 C10,48 55,80 110,80')
+  })
+})
+
+describe('joining cards at the nearest of their four sides', () => {
+  const section = { x: 100, y: 0, w: 190, h: 58 }
+  const first = { x: 122, y: 88, w: 240, h: 100 }
+  const second = { x: 122, y: 202, w: 240, h: 100 }
+
+  it('joins a card just below from bottom to top, inside the gap', () => {
+    expect(nearestSides(section, first, [second])).toEqual(['bottom', 'top'])
+    const [p1, c1, c2, p2] = sideCurve(section, 'bottom', first, 'top')
+    expect(p1).toEqual({ x: 195, y: 58 })
+    expect(p2).toEqual({ x: 242, y: 88 })
+    // The handles stay between the cards, so the curve never dips into either.
+    expect(c1.y).toBeLessThanOrEqual(88)
+    expect(c2.y).toBeGreaterThanOrEqual(58)
+  })
+
+  it('goes around a card in the way, joining the sides instead', () => {
+    expect(nearestSides(section, second, [first])).toEqual(['left', 'left'])
+  })
+
+  it('joins a card to the side at the facing sides', () => {
+    const beside = { x: 400, y: 10, w: 200, h: 60 }
+    expect(nearestSides(section, beside, [])).toEqual(['right', 'left'])
+  })
+
+  it('gives up (and lets the line route around) when every way is blocked', () => {
+    const wall = { x: -500, y: 60, w: 2000, h: 20 }
+    const around = { x: 60, y: -40, w: 20, h: 400 }
+    const right = { x: 300, y: -40, w: 20, h: 400 }
+    expect(nearestSides(section, first, [wall, around, right])).toBeNull()
+  })
+})
+
+describe('arrowheads', () => {
+  it('put the tip on the card edge, pointing along the last stretch', () => {
+    const d = arrowHead([
+      sideCurve({ x: 0, y: 0, w: 100, h: 40 }, 'bottom', { x: 0, y: 100, w: 100, h: 40 }, 'top'),
+    ])
+    const [tip, left, notch, right] = points(d)
+    expect(tip).toEqual({ x: 50, y: 100 })
+    // Pointing down: the base sits above the tip, symmetric around it.
+    expect(left?.y).toBeCloseTo(89, 0)
+    expect(right?.y).toBeCloseTo(89, 0)
+    expect((left?.x ?? 0) + (right?.x ?? 0)).toBeCloseTo(100, 0)
+    expect(notch?.x).toBeCloseTo(50, 0)
   })
 })

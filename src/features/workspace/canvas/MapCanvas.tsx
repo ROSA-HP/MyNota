@@ -428,19 +428,12 @@ export function MapCanvas() {
       if (!n) return 'var(--line)'
       return chapterColor(colorOf(n, isSection(n) ? n : sectionOf(nodes, isSection, id))).strong
     }
-    const arrow = (color: string) => ({
-      type: MarkerType.ArrowClosed,
-      color,
-      width: 14,
-      height: 14,
-    })
     const branch = (source: string, target: string): Edge => ({
       id: `h:${target}`,
       source,
       target,
       type: 'branch',
       data: { color: tint(target) },
-      markerEnd: arrow(tint(target)),
       selectable: false,
       focusable: false,
     })
@@ -505,7 +498,6 @@ export function MapCanvas() {
             target: n.id,
             type: 'tree',
             data: { rtl, color: tint(n.id) },
-            markerEnd: arrow(tint(n.id)),
             selectable: false,
             focusable: false,
           })
@@ -516,7 +508,6 @@ export function MapCanvas() {
             target: n.id,
             type: 'step',
             data: { color: tint(n.id) },
-            markerEnd: arrow(tint(n.id)),
             selectable: false,
             focusable: false,
           })
@@ -528,7 +519,6 @@ export function MapCanvas() {
           // Grouped columns: top-level blocks hang from their section's rail.
           type: layout.railed.has(n.id) ? 'rail' : 'tree',
           data: { rtl, color: tint(n.id) },
-          markerEnd: arrow(tint(n.id)),
           selectable: false,
           focusable: false,
         })
