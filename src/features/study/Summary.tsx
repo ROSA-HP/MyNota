@@ -2,9 +2,10 @@ import { Check, Network } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
-import { Alert, Button, Panel, buttonClasses } from '@/components/ui'
+import { Alert, Button, CountUp, Panel, buttonClasses } from '@/components/ui'
 import { supabase } from '@/lib/supabase'
 import { cardFaces } from './cardFace'
+import { Confetti } from './Confetti'
 import { useDeck } from './deckStore'
 import { GRADES, type Rating } from './fsrs'
 import { streak } from './limits'
@@ -80,9 +81,14 @@ export function Summary({
       id="main"
       className="mx-auto flex w-full max-w-xl flex-1 flex-col justify-center px-4 py-10"
     >
-      <Panel shadow="lg" className="flex flex-col gap-6 p-6 sm:p-8" aria-labelledby="summary-title">
+      <Panel
+        shadow="lg"
+        className="relative flex animate-pop flex-col gap-6 overflow-hidden p-6 sm:p-8"
+        aria-labelledby="summary-title"
+      >
+        {history.length > 0 && <Confetti />}
         <div className="flex items-center gap-4">
-          <span className="flex size-12 shrink-0 items-center justify-center rounded-full border-2 border-line bg-success-soft">
+          <span className="flex size-12 shrink-0 animate-pop items-center justify-center rounded-full border-2 border-line bg-success-soft [animation-delay:200ms]">
             <Check size={24} strokeWidth={2.6} aria-hidden />
           </span>
           <div className="min-w-0">
@@ -108,7 +114,7 @@ export function Summary({
                 good: counts[3],
                 easy: counts[4],
               })}
-              className="flex h-4 overflow-hidden rounded-full border-2 border-line"
+              className="mynota-grow-x flex h-4 overflow-hidden rounded-full border-2 border-line"
             >
               {GRADES.filter((g) => counts[g] > 0).map((g) => (
                 <span
@@ -125,7 +131,9 @@ export function Summary({
                     <span className={`size-2.5 rounded-full ${BAR[g]}`} aria-hidden />
                     {t(`study.ratings.${g}`)}
                   </dt>
-                  <dd className="text-2xl font-bold tabular-nums">{counts[g]}</dd>
+                  <dd className="text-2xl font-bold tabular-nums">
+                    <CountUp value={counts[g]} />
+                  </dd>
                 </div>
               ))}
             </dl>
@@ -135,7 +143,7 @@ export function Summary({
         {missed.length > 0 && (
           <section className="flex flex-col gap-2">
             <h2 className="text-sm font-bold">{t('study.summary.lookAgain')}</h2>
-            <ul className="flex flex-col gap-1.5">
+            <ul className="mynota-stagger flex flex-col gap-1.5">
               {missed.slice(0, 5).map((id) => {
                 const c = cards[id]
                 if (!c) return null

@@ -20,7 +20,7 @@ export function MasteryBar({
       role="img"
       aria-label={label}
       className={cn(
-        'flex h-3 w-full min-w-24 overflow-hidden rounded-full border-2 border-line bg-paper-sunken',
+        'mynota-grow-x flex h-3 w-full min-w-24 overflow-hidden rounded-full border-2 border-line bg-paper-sunken',
         className,
       )}
     >

@@ -12,6 +12,7 @@ import {
 } from '@/features/auth/schemas'
 import { UsernameStatus } from '@/features/auth/UsernameStatus'
 import { useUsernameAvailability } from '@/features/auth/useUsernameAvailability'
+import { cn } from '@/lib/cn'
 import { LANGUAGE_NAMES } from '@/lib/i18n'
 import { LANGUAGES, LanguageSchema } from '@/lib/preferences'
 import { PROFILE_COLUMNS, supabase } from '@/lib/supabase'
@@ -27,16 +28,22 @@ function Section({
   id,
   title,
   hint,
+  tone = 'bg-ch-sky',
   children,
 }: {
   id?: string
   title: string
   hint?: string
+  /** The color of the tab beside the title (each section has its own, like notebook tabs). */
+  tone?: string
   children: ReactNode
 }) {
   return (
-    <Panel id={id} className="scroll-mt-6 p-5 sm:p-6">
-      <h2 className="text-lg font-bold">{title}</h2>
+    <Panel id={id} className="mynota-scroll-in scroll-mt-6 p-5 sm:p-6">
+      <h2 className="flex items-center gap-2.5 text-lg font-bold">
+        <span aria-hidden className={cn('h-5 w-2 rounded-full border-2 border-line', tone)} />
+        {title}
+      </h2>
       {hint && <p className="mt-1 text-sm text-ink-muted">{hint}</p>}
       <div className="mt-5">{children}</div>
     </Panel>
@@ -140,19 +147,28 @@ export function SettingsPage() {
     <div className="mx-auto flex max-w-3xl flex-col gap-6 px-4 py-8 sm:px-8">
       <h1 className="text-3xl font-bold tracking-tight">{t('settings.title')}</h1>
 
-      <Section title={t('settings.profile')} hint={t('settings.profileHint')}>
+      <Section title={t('settings.profile')} hint={t('settings.profileHint')} tone="bg-ch-yellow">
         <ProfileForm />
       </Section>
 
-      <Section title={t('settings.aiTitle')} hint={t('settings.aiHint')}>
+      <Section title={t('settings.aiTitle')} hint={t('settings.aiHint')} tone="bg-ch-mint">
         <AiProvidersSection />
       </Section>
 
-      <Section id="study" title={t('settings.study.title')} hint={t('settings.study.hint')}>
+      <Section
+        id="study"
+        title={t('settings.study.title')}
+        hint={t('settings.study.hint')}
+        tone="bg-ch-pink"
+      >
         <StudySection />
       </Section>
 
-      <Section title={t('settings.appearance')} hint={t('settings.appearanceHint')}>
+      <Section
+        title={t('settings.appearance')}
+        hint={t('settings.appearanceHint')}
+        tone="bg-ch-lavender"
+      >
         <div className="grid gap-5 md:grid-cols-2">
           <SelectField
             label={t('common.language')}
@@ -178,11 +194,16 @@ export function SettingsPage() {
         <SecuritySection />
       </Section>
 
-      <Section id="data" title={t('settings.data.title')} hint={t('settings.data.hint')}>
+      <Section
+        id="data"
+        title={t('settings.data.title')}
+        hint={t('settings.data.hint')}
+        tone="bg-ch-orange"
+      >
         <DataSection />
       </Section>
 
-      <Section title={t('settings.account')}>
+      <Section title={t('settings.account')} tone="bg-ch-coral">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <p className="text-ink-muted">
             {t('settings.signedInAs', { email: '⁨' + (session?.user.email ?? '') + '⁩' })}

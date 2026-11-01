@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
-import { Alert, Panel, Spinner, buttonClasses } from '@/components/ui'
+import { Alert, Panel, Skeleton, buttonClasses } from '@/components/ui'
 import { useAuth } from '@/features/auth/authStore'
 import { COVER } from '@/features/library/mapBits'
 import { MasteryBar } from '@/features/study/MasteryBar'
@@ -36,8 +36,11 @@ export function FlashcardsPage() {
       </div>
       {status === 'error' && !data && <Alert tone="danger">{t('home.loadFailed')}</Alert>}
       {!data && status !== 'error' && (
-        <div className="flex items-center gap-3 text-ink-muted">
-          <Spinner /> {t('common.loading')}
+        <div className="flex flex-col gap-3" role="status">
+          <span className="sr-only">{t('common.loading')}</span>
+          {Array.from({ length: 3 }, (_, i) => (
+            <Skeleton key={i} className="h-20 rounded-neo-lg" />
+          ))}
         </div>
       )}
       {data && !data.studyReady && <Alert tone="warning">{t('home.due.notReady')}</Alert>}
@@ -51,15 +54,15 @@ export function FlashcardsPage() {
         </Panel>
       )}
       {decks.length > 0 && (
-        <ul className="flex flex-col gap-3">
+        <ul className="mynota-stagger flex flex-col gap-3">
           {decks.map(({ map, deck }) =>
             deck ? (
               <li key={map.id}>
-                <Panel className="flex flex-wrap items-center gap-x-5 gap-y-3 p-4">
+                <Panel className="group flex flex-wrap items-center gap-x-5 gap-y-3 p-4 transition-transform duration-300 ease-spring hover:-translate-y-0.5">
                   <span
                     aria-hidden
                     className={cn(
-                      'size-4 shrink-0 rounded-full border-2 border-line',
+                      'size-4 shrink-0 rounded-full border-2 border-line transition-transform duration-300 ease-spring group-hover:scale-125',
                       COVER[map.cover_color],
                     )}
                   />

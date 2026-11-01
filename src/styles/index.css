@@ -891,3 +891,54 @@ dialog:not([open])::backdrop {
     animation: none !important;
   }
 }
+
+/* Study: a new card is dealt from the side, flipping turns it over, and the end of a session
+   throws a little paper confetti. */
+.mynota-deal {
+  animation: mynota-deal 380ms var(--ease-soft) backwards;
+}
+@keyframes mynota-deal {
+  from {
+    opacity: 0;
+    transform: translateX(var(--deal-from, 48px)) rotate(var(--deal-turn, 3deg));
+  }
+}
+[dir='rtl'] .mynota-deal {
+  --deal-from: -48px;
+  --deal-turn: -3deg;
+}
+.mynota-flip {
+  animation: mynota-flip 460ms var(--ease-spring) backwards;
+}
+@keyframes mynota-flip {
+  from {
+    transform: perspective(1200px) rotateX(-38deg) scale(0.97);
+    opacity: 0.4;
+  }
+}
+.mynota-confetti > span {
+  position: absolute;
+  top: -8px;
+  border: 1.5px solid var(--line);
+  border-radius: 2px;
+  opacity: 0;
+  animation: mynota-confetti 1.6s cubic-bezier(0.25, 0.6, 0.4, 1) forwards;
+}
+@keyframes mynota-confetti {
+  0% {
+    opacity: 1;
+    transform: translate(0, 0) rotate(0);
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--drift), 320px) rotate(var(--turn));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mynota-confetti {
+    display: none;
+  }
+}

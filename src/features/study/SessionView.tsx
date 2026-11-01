@@ -63,7 +63,7 @@ export function SessionHeader({
             className="mx-auto hidden h-3 max-w-md flex-1 overflow-hidden rounded-full border-2 border-line bg-paper-sunken sm:block"
           >
             <span
-              className="block h-full bg-brand transition-[width]"
+              className="block h-full bg-brand transition-[width] duration-500 ease-spring"
               style={{ width: `${total ? (done / total) * 100 : 0}%` }}
             />
           </div>
@@ -183,13 +183,15 @@ export function SessionView({ mapId, places }: { mapId: string; places: Map<stri
       </div>
 
       <article
+        // A new card is dealt in; showing the answer turns it over.
+        key={current}
         aria-label={flipped ? t('study.cardAnswer') : t('study.cardQuestion')}
         aria-live="polite"
         onPointerDown={onPointerDown}
         onPointerUp={onPointerUp}
         className={cn(
           'flex min-h-64 touch-pan-y flex-col rounded-neo-lg border-2 border-line bg-surface neo-shadow-lg select-none',
-          !flipped && 'cursor-pointer',
+          flipped ? 'mynota-flip' : 'mynota-deal cursor-pointer',
         )}
       >
         <div className="flex flex-1 flex-col gap-3 p-6 sm:p-8">
@@ -199,7 +201,7 @@ export function SessionView({ mapId, places }: { mapId: string; places: Map<stri
           </p>
         </div>
         {flipped && (
-          <div className="flex flex-col gap-3 border-t-2 border-line bg-surface-muted p-6 sm:p-8">
+          <div className="flex animate-rise flex-col gap-3 border-t-2 border-line bg-surface-muted p-6 sm:p-8 [animation-delay:120ms]">
             <span className="text-xs font-semibold text-ink-muted">{t('study.answer')}</span>
             {faces.filled && (
               <p dir="auto" className="text-xl leading-snug font-semibold">
@@ -251,7 +253,7 @@ export function SessionView({ mapId, places }: { mapId: string; places: Map<stri
           <div
             role="group"
             aria-label={t('study.rateGroup')}
-            className="grid grid-cols-2 gap-3 sm:grid-cols-4"
+            className="mynota-stagger grid grid-cols-2 gap-3 sm:grid-cols-4"
           >
             {GRADES.map((g) => {
               const when = due ? interval(shownAt, due[g]) : null
