@@ -1,9 +1,10 @@
-import { useRef, type PointerEvent } from 'react'
+import { useLayoutEffect, useRef, type PointerEvent } from 'react'
 import { Handle, Position, type Node, type NodeProps } from '@xyflow/react'
 import { CircleAlert, Clock, RotateCcw, Sparkles } from 'lucide-react'
 import { Link } from 'react-router'
 import { useTranslation } from 'react-i18next'
 import { Spinner } from '@/components/ui'
+import { MathFormula } from '@/components/ui/MathFormula'
 import { useKeyFor } from '@/features/settings/aiKeyStore'
 import { useDeck } from '@/features/study/deckStore'
 import { masteryMapFor, type Mastery } from '@/features/study/mastery'
@@ -14,6 +15,7 @@ import { EditingTag } from '../live/LivePresence'
 import { useBuild } from '../buildStore'
 import { useWorkspace } from '../workspaceStore'
 import { useCanvasUi } from './canvasUi'
+import { blockCard } from './layout'
 import { chapterColor, TYPE_ICON } from './visuals'
 import type { ChapterSummary, ZoomLevel } from './zoom'
 
@@ -263,6 +265,32 @@ function MasteryDot({ nodeId }: { nodeId: string }) {
   )
 }
 
+const CLAMP = ['', 'line-clamp-1', 'line-clamp-2', 'line-clamp-3'] as const
+
+/** A formula on a card: typeset, centered, and scaled down when wider than the card. */
+function CardFormula({ latex }: { latex: string }) {
+  const box = useRef<HTMLDivElement>(null)
+  const inner = useRef<HTMLDivElement>(null)
+  useLayoutEffect(() => {
+    const b = box.current
+    const i = inner.current
+    if (!b || !i) return
+    i.style.transform = ''
+    const scale = Math.min(1, (b.clientWidth - 12) / Math.max(1, i.scrollWidth))
+    i.style.transform = scale < 1 ? `scale(${scale.toFixed(3)})` : ''
+  }, [latex])
+  return (
+    <div
+      ref={box}
+      className="flex h-10 shrink-0 items-center justify-center overflow-hidden rounded-md bg-paper-sunken px-1.5"
+    >
+      <div ref={inner} className="origin-center text-[15px] whitespace-nowrap">
+        <MathFormula latex={latex} />
+      </div>
+    </div>
+  )
+}
+
 export function BlockNode({ data, selected }: NodeProps<BlockNodeT>) {
   const { t } = useTranslation()
   const { node, color, step } = data
@@ -270,11 +298,12 @@ export function BlockNode({ data, selected }: NodeProps<BlockNodeT>) {
   const Icon = node.type ? TYPE_ICON[node.type] : null
   const typeLabel = node.type ? t(`ws.types.${node.type}`) : null
   const covered = useCanvasUi((s) => s.cover && !selected && !s.revealed.includes(node.id))
+  const card = blockCard(node)
   return (
     <div
       {...useLongPress(node.id)}
       className={cn(
-        'relative flex h-[66px] w-[210px] items-center gap-2 rounded-neo border-2 bg-surface px-2 py-1.5 text-ink',
+        'relative flex size-full flex-col gap-1.5 rounded-neo border-2 bg-surface px-2.5 py-2.5 text-ink',
         covered && 'border-dashed bg-surface-muted',
         selected ? 'border-[2.5px] neo-shadow outline-3 outline-offset-2' : '',
       )}
@@ -283,35 +312,36 @@ export function BlockNode({ data, selected }: NodeProps<BlockNodeT>) {
         ...(selected ? { outlineColor: c.strong } : {}),
       }}
     >
-      {step !== null ? (
-        <span
-          className="flex size-7 shrink-0 items-center justify-center rounded-full bg-selected font-mono text-xs font-bold text-selected-ink"
-          title={t('ws.step', { n: step })}
-        >
-          {step}
-        </span>
-      ) : Icon ? (
-        <span
-          className="flex size-7 shrink-0 items-center justify-center rounded-[7px] border-[1.5px] border-line bg-paper-sunken"
-          title={typeLabel ?? undefined}
-        >
-          <Icon size={15} role="img" aria-label={typeLabel ?? undefined} />
-        </span>
-      ) : null}
-      {covered ? (
-        <span
-          className="flex min-w-0 flex-1 flex-col gap-1.5"
-          aria-label={t('ws.studyView.covered')}
-        >
-          <span aria-hidden className="h-2.5 w-4/5 rounded-full bg-line-soft" />
-          <span aria-hidden className="h-2.5 w-1/2 rounded-full bg-line-soft" />
-        </span>
-      ) : (
-        <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+      <div className="flex min-w-0 items-start gap-2">
+        {step !== null ? (
+          <span
+            className="flex size-7 shrink-0 items-center justify-center rounded-full bg-selected font-mono text-xs font-bold text-selected-ink"
+            title={t('ws.step', { n: step })}
+          >
+            {step}
+          </span>
+        ) : Icon ? (
+          <span
+            className="flex size-7 shrink-0 items-center justify-center rounded-[7px] border-[1.5px] border-line bg-paper-sunken"
+            title={typeLabel ?? undefined}
+          >
+            <Icon size={15} role="img" aria-label={typeLabel ?? undefined} />
+          </span>
+        ) : null}
+        {covered ? (
+          <span
+            className="flex min-w-0 flex-1 flex-col gap-1.5 pt-1"
+            aria-label={t('ws.studyView.covered')}
+          >
+            <span aria-hidden className="h-2.5 w-4/5 rounded-full bg-line-soft" />
+            <span aria-hidden className="h-2.5 w-1/2 rounded-full bg-line-soft" />
+          </span>
+        ) : (
           <span
             dir="auto"
             className={cn(
-              'line-clamp-2 text-sm leading-tight',
+              'min-w-0 flex-1 pt-0.5 text-sm leading-[18px]',
+              CLAMP[card.titleLines],
               node.importance === 'core'
                 ? 'font-bold'
                 : node.importance === 'extra'
@@ -321,24 +351,35 @@ export function BlockNode({ data, selected }: NodeProps<BlockNodeT>) {
           >
             {node.title}
           </span>
-          <span className="flex items-center gap-1.5">
-            {node.importance === 'core' && (
-              <span className="rounded-[5px] border-[1.5px] border-line bg-brand-soft px-1 text-[11px] leading-tight font-semibold">
-                {t('ws.core')}
-              </span>
-            )}
-            {node.importance === 'extra' && (
-              <span className="text-[11px] text-ink-faint">{t('ws.extra')}</span>
-            )}
-            {node.ai_added && (
-              <Sparkles
-                size={12}
-                className="text-ink-muted"
-                role="img"
-                aria-label={t('ws.aiAddedBadge')}
-              />
-            )}
-          </span>
+        )}
+      </div>
+      {!covered && card.summaryLines > 0 && (
+        <p
+          dir="auto"
+          className={cn('text-[12.5px] leading-4 text-ink-muted', CLAMP[card.summaryLines])}
+        >
+          {node.summary}
+        </p>
+      )}
+      {!covered && card.formula && <CardFormula latex={card.formula} />}
+      {card.badges && (
+        <span className="mt-auto flex h-[18px] items-center gap-1.5">
+          {node.importance === 'core' && (
+            <span className="rounded-[5px] border-[1.5px] border-line bg-brand-soft px-1 text-[11px] leading-tight font-semibold">
+              {t('ws.core')}
+            </span>
+          )}
+          {node.importance === 'extra' && (
+            <span className="text-[11px] text-ink-faint">{t('ws.extra')}</span>
+          )}
+          {node.ai_added && (
+            <Sparkles
+              size={12}
+              className="text-ink-muted"
+              role="img"
+              aria-label={t('ws.aiAddedBadge')}
+            />
+          )}
         </span>
       )}
       <MasteryDot nodeId={node.id} />

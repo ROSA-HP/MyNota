@@ -11,7 +11,7 @@ export const SIZES = {
   rootH: 64,
   sectionW: 190,
   sectionH: 58,
-  blockW: 210,
+  blockW: 240,
   blockH: 66,
   indent: 32,
   rowGap: 14,
@@ -28,6 +28,44 @@ export const SIZES = {
   waitingW: 520,
   waitingH: 300,
 } as const
+
+/** Lines a text needs at about `perLine` characters a line (words wrap, so a little slack). */
+function linesFor(text: string, perLine: number, max: number): number {
+  const n = text.trim().length
+  return n ? Math.min(max, Math.ceil(n / (perLine * 0.88))) : 0
+}
+
+/** What a block card shows (title, summary, first formula, badges) and its height. */
+export interface BlockCardShape {
+  titleLines: number
+  summaryLines: number
+  formula: string | null
+  badges: boolean
+  h: number
+}
+
+/**
+ * The card a block gets on the canvas. The height follows the content, so the summary is
+ * always visible and a formula shows itself instead of only its name. Estimated from text
+ * length (deterministic, no measuring): the card clamps its text to these line counts.
+ */
+export function blockCard(
+  n: Pick<NodeRow, 'title' | 'summary' | 'details' | 'importance' | 'ai_added'>,
+): BlockCardShape {
+  const titleLines = Math.max(1, linesFor(n.title, 22, 2))
+  const summaryLines = linesFor(n.summary, 36, 3)
+  const f = n.details.find((d) => d.kind === 'formula')
+  const formula = f && f.kind === 'formula' && f.latex.trim() ? f.latex : null
+  const badges = n.importance !== 'supporting' || n.ai_added
+  const h =
+    10 + // padding
+    Math.max(28, titleLines * 18) +
+    (summaryLines ? 6 + summaryLines * 16 : 0) +
+    (formula ? 8 + 40 : 0) +
+    (badges ? 8 + 18 : 0) +
+    10
+  return { titleLines, summaryLines, formula, badges, h: Math.max(SIZES.blockH, h) }
+}
 
 export interface Box {
   x: number
@@ -132,8 +170,9 @@ export function computeLayout(
       let y = top + S.sectionH + S.blocksGap
       const place = (pid: string, level: number) => {
         for (const child of kids.get(pid) ?? []) {
-          boxes[child.id] = { x: sx + S.indent * level, y, w: S.blockW, h: S.blockH }
-          y += S.blockH + S.rowGap
+          const h = blockCard(child).h
+          boxes[child.id] = { x: sx + S.indent * level, y, w: S.blockW, h }
+          y += h + S.rowGap
           if (child.collapsed) hideSubtree(child.id)
           else place(child.id, level + 1)
         }
@@ -245,8 +284,9 @@ export function computeLayout(
   let orphanY = contentBottom + 60
   for (const n of nodes) {
     if (!boxes[n.id] && !hidden.has(n.id)) {
-      boxes[n.id] = { x: 0, y: orphanY, w: S.blockW, h: S.blockH }
-      orphanY += S.blockH + S.rowGap
+      const h = blockCard(n).h
+      boxes[n.id] = { x: 0, y: orphanY, w: S.blockW, h }
+      orphanY += h + S.rowGap
     }
   }
 

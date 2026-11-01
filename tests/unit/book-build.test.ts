@@ -12,6 +12,7 @@ const MAP = '9d2b8f0e-4c1a-4b7e-9f3d-2a6c8e1b5d70'
 const USER = '1f0e7c3a-2b4d-4e6f-8a9b-0c1d2e3f4a5b'
 const server = new Map<string, Uint8Array[]>()
 let savedRows: NodeRow[] = []
+let mapType: MapRow['type'] = 'book'
 
 vi.mock('@/features/workspace/live/transport', () => ({
   supabaseDocStore: {
@@ -36,7 +37,7 @@ vi.mock('@/features/workspace/live/docCache', () => ({
 vi.mock('@/features/workspace/mapRepo', () => ({
   MapNotFoundError: class extends Error {},
   fetchMap: async () => ({
-    map: { id: MAP, type: 'book', title: 'Biology' } as MapRow,
+    map: { id: MAP, type: mapType, title: 'Biology' } as MapRow,
     nodes: savedRows,
     relations: [],
     sources: [],
@@ -139,6 +140,40 @@ describe('building a chapter of a book', () => {
       'Osmosis',
       'Osmosis',
     ])
+    useBuild.getState().clear()
+    useWorkspace.getState().reset()
+  })
+})
+
+describe('building a notes map from pasted text', () => {
+  it('puts the sections on the map, builds their blocks and finishes', async () => {
+    // As createMap() makes it: a new map with only its root saved, no live documents yet.
+    mapType = 'notes'
+    server.clear()
+    const root = makeNode({ map_id: MAP, level: 'chapter', title: 'Lecture 4' })
+    savedRows = [root]
+
+    await useWorkspace.getState().load(MAP, USER)
+    expect(useWorkspace.getState().status).toBe('ready')
+    expect(useWorkspace.getState().role).toBe('owner')
+
+    await useBuild.getState().start(
+      {
+        mapId: MAP,
+        rootId: root.id,
+        title: 'Lecture 4',
+        paragraphs: [1, 2, 3, 4].map((n) => ({ n, text: `Paragraph ${n} about cells.` })),
+        sourceLanguage: 'en',
+        explanationLanguage: 'en',
+        detailLevel: 'standard',
+      },
+      { provider: 'gemini', apiKey: 'test', model: 'fake' } as never,
+    )
+
+    expect(useBuild.getState().phase).toBe('done')
+    const nodes = Object.values(useWorkspace.getState().nodes)
+    expect(nodes.filter((n) => n.level === 'section' && n.parent_id === root.id)).toHaveLength(2)
+    expect(nodes.filter((n) => n.level === 'block')).toHaveLength(2)
     useBuild.getState().clear()
     useWorkspace.getState().reset()
   })

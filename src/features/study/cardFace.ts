@@ -1,6 +1,6 @@
 import type { CardRow } from '@/lib/database.types'
 
-/** A piece of card text: plain, a cloze gap, or a formula (LaTeX, shown as code for now). */
+/** A piece of card text: plain, a cloze gap, or a formula (LaTeX, typeset with KaTeX). */
 export type Part =
   | { kind: 'text'; text: string }
   | { kind: 'gap'; text: string }

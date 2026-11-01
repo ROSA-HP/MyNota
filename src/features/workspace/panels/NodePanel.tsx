@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { MathFormula } from '@/components/ui/MathFormula'
 import { Plus, Trash, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { BlockCards } from '@/features/study/BlockCards'
@@ -93,9 +94,9 @@ function DetailRow({
       return (
         <li className="flex items-start gap-1 rounded-neo bg-surface-muted p-2 text-sm">
           <span className="min-w-0 flex-1">
-            <code className="block font-mono text-[13px] break-words" dir="ltr">
-              {d.latex}
-            </code>
+            <span className="block overflow-x-auto py-1 text-[15px]">
+              <MathFormula latex={d.latex} display />
+            </span>
             {d.variables && (
               <span className="block text-ink-muted" dir="auto">
                 {d.variables}
@@ -309,7 +310,9 @@ export function NodePanel({ node, onClose }: { node: NodeRow; onClose: () => voi
                     onClick={() => update(node.id, { importance: imp })}
                     className={cn(
                       'flex-1 cursor-pointer rounded-[7px] px-1 text-xs font-semibold disabled:cursor-default',
-                      node.importance === imp ? 'bg-selected text-selected-ink' : 'hover:bg-paper-sunken',
+                      node.importance === imp
+                        ? 'bg-selected text-selected-ink'
+                        : 'hover:bg-paper-sunken',
                     )}
                   >
                     {imp === 'supporting' ? t('ws.panel.supporting') : t(`ws.${imp}`)}

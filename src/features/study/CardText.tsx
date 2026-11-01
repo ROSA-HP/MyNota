@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next'
+import { MathFormula } from '@/components/ui/MathFormula'
 import type { Part } from './cardFace'
 
 /** Card text: plain runs, cloze gaps (hidden or revealed) and formulas. Model text is never HTML. */
@@ -10,9 +11,11 @@ export function CardText({ parts, reveal = false }: { parts: Part[]; reveal?: bo
         if (p.kind === 'text') return <span key={i}>{p.text}</span>
         if (p.kind === 'formula')
           return (
-            <code key={i} dir="ltr" className="inline-block font-mono text-[0.85em] break-words">
-              {p.latex}
-            </code>
+            <MathFormula
+              key={i}
+              latex={p.latex}
+              className="inline-block max-w-full overflow-x-auto align-middle"
+            />
           )
         return reveal ? (
           <mark key={i} className="rounded-md bg-ch-yellow px-1 font-bold text-ink">

@@ -123,6 +123,18 @@ export const router = createBrowserRouter([
           </RequireAuth>
         ),
       },
+      // Development only: the canvas with a sample map, no account (left out of builds).
+      ...(import.meta.env.DEV
+        ? [
+            {
+              path: '/dev/canvas',
+              lazy: () =>
+                import('@/features/dev/CanvasPlayground').then((m) => ({
+                  Component: m.CanvasPlayground,
+                })),
+            },
+          ]
+        : []),
       { path: '*', element: <NotFoundPage /> },
     ],
   },
