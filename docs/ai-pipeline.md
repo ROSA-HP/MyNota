@@ -206,6 +206,25 @@ write them only inside a bullet, or write LaTeX with single backslashes in the J
 Tests: `tests/unit/formulas.test.ts` (the owner's physical-optics notes, end to end from a
 badly escaped, forgetful reply to map blocks), `merge.test.ts`, `prompts-v2.test.ts`.
 
+### Prompt: details v4, one home per formula (2026-11-01)
+
+The owner's optics map (same notes) then showed one formula on five cards and hid others: v3's
+"every equation in its paragraphs" made the model copy an equation onto every block citing the
+paragraph, and since a card shows its first formula, the right one sat hidden behind a copy.
+- **Details v4** (`details.v4.ts`, now used): each equation goes in exactly one block, the block
+  about it; never copied; blocks that use it get a `leads_to` relation from the formula block; a
+  block's formula must be its own. The re-check asks for "exactly one formula detail" per
+  equation. v3 stays for the record.
+- **Safety net** (`ensureFormulas`): an equation on several blocks stays on its home block (a
+  formula block whose title shares words with the line the equation comes from, citing that
+  paragraph); copies are removed, and a `leads_to` link with an empty label (shown in the
+  student's language) goes from the home block to each other block that cites the formula's
+  paragraph (copies on unrelated blocks are just removed; parent and child need no link). In each
+  block the formula matching its title comes first. Formulas with different constants are never
+  merged (θmin = λ/a vs θmin = 1.22 λ/D), and values such as m = ±1, ±2… are not formulas.
+- Regression test: `tests/unit/formulas.test.ts` with the owner's exact notes
+  (`tests/fixtures/optics-notes.ts`) and a reply shaped like the map that came back.
+
 ### Cross-links (v1)
 
 ```text

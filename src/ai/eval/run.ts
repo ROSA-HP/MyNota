@@ -1,7 +1,7 @@
 import { toProviderSchema } from '@/ai/jsonSchema'
 import { outlineText } from '@/ai/pipeline/convert'
 import { splitParagraphs } from '@/ai/pipeline/prepare'
-import { DETAILS_PROMPT_VERSION, detailsPrompt } from '@/ai/prompts/details.v3'
+import { DETAILS_PROMPT_VERSION, detailsPrompt } from '@/ai/prompts/details.v4'
 import { OUTLINE_PROMPT_VERSION, outlinePrompt } from '@/ai/prompts/outline.v2'
 import { SYSTEM_PROMPT, versionFor, type SourceMode } from '@/ai/prompts/shared'
 import { DetailsResponseSchema, detailsSchemaFor } from '@/ai/schemas/details'

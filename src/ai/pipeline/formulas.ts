@@ -217,6 +217,18 @@ function formulaToken(tok: string): boolean {
   return t.length <= 3 && /^[\p{L}\p{N}'’_]+$/u.test(t)
 }
 
+/**
+ * A symbol set to plain numbers is a value, not a formula: m = ±1, ±2, ±3…, n = 1.5,
+ * m = \pm1, \pm2 (plain or LaTeX).
+ */
+function isValue(eq: string): boolean {
+  const sides = eq.split(/\s*(?:=|≈|≤|≥|∝|≠)\s*/)
+  if (sides.length !== 2) return false
+  const [lhs = '', rhs = ''] = sides
+  if (lhs.replace(/\\[a-zA-Z]+|[{}\s]/g, '').length > 2) return false
+  return rhs.replace(/\\(pm|mp|ldots|dots|cdots)(?![a-zA-Z])|[\s\d.,±+\-−…]/g, '') === ''
+}
+
 /** A token that closes the formula after it (a comma, or a full stop that is not a decimal). */
 const closes = (tok: string) => /[;,:]$/.test(tok) || (/\.$/.test(tok) && !/\d\.$/.test(tok))
 
@@ -234,7 +246,7 @@ export function findEquations(text: string): string[] {
     (whole, a?: string, b?: string, c?: string, d?: string) => {
       const tex = (a ?? b ?? c ?? d ?? '').trim()
       if (!/=|≈|≤|≥|\\(approx|leq?|geq?|neq?|propto)(?![a-zA-Z])/.test(tex)) return whole
-      if (!out.includes(tex)) out.push(tex)
+      if (!isValue(tex) && !out.includes(tex)) out.push(tex)
       return ' '
     },
   )
@@ -270,13 +282,7 @@ export function findEquations(text: string): string[] {
       const sides = eq.split(/\s*(?:=|≈|≤|≥|∝|≠)\s*/)
       // Something on both sides of every sign, a letter somewhere, and not a whole paragraph.
       if (sides.some((x) => !x) || !/\p{L}/u.test(eq) || eq.length > 90) continue
-      // A symbol set to a plain number (m = ±1, n = 1.5) is a value, not a formula.
-      if (
-        sides.length === 2 &&
-        (sides[0] as string).length <= 2 &&
-        /^[±+\-−]?[\d.,]+$/.test(sides[1] as string)
-      )
-        continue
+      if (isValue(eq)) continue
       if (!out.includes(eq)) out.push(eq)
     }
   }
@@ -345,6 +351,12 @@ export function sameFormula(a: string, b: string): boolean {
   const y = formulaKey(b)
   if (!x || !y) return false
   if (x === y) return true
+  // Different constants make different formulas (θmin = λ/a is not θmin = 1.22 λ/D).
+  const nums = (s: string) =>
+    (s.replace(/./gu, (c) => SUPER[c] ?? SUB[c] ?? c).match(/\d+(?:\.\d+)?/g) ?? [])
+      .sort()
+      .join(' ')
+  if (nums(a) !== nums(b)) return false
   const [lx = '', ...rx] = x.split(/[=≈≤≥≠∝]/)
   const [ly = '', ...ry] = y.split(/[=≈≤≥≠∝]/)
   if (!rx.length || !ry.length) return similar(x, y, 0.75)
@@ -385,17 +397,122 @@ function withFormula(b: AiBlock, latex: string): AiBlock {
   return { ...b, details }
 }
 
+/** An equation in the source: the line it sits on and its paragraph. */
+interface SourceFormula {
+  eq: string
+  line: string
+  paragraph: number
+}
+
+function sourceFormulas(paragraphs: readonly Paragraph[]): SourceFormula[] {
+  const out: SourceFormula[] = []
+  for (const p of paragraphs)
+    for (const line of p.text.split('\n'))
+      for (const eq of findEquations(line)) out.push({ eq, line, paragraph: p.n })
+  return out
+}
+
+const STOP = new Set(['the', 'and', 'for', 'with', 'from', 'that', 'this', 'into', 'equation'])
+const words = (s: string) =>
+  new Set(
+    s
+      .toLowerCase()
+      .split(/[^\p{L}\p{N}]+/u)
+      .filter((w) => w.length >= 4 && !STOP.has(w))
+      .map((w) => w.replace(/s$/, '')),
+  )
+
+/** How many words a block's title shares with the line its formula comes from. */
+function titleMatch(title: string, line: string | undefined): number {
+  if (!line) return 0
+  const a = words(title)
+  let n = 0
+  for (const w of words(line)) if (a.has(w)) n++
+  return n
+}
+
 /**
- * Makes sure a section's formulas survive the details reply:
- * - formula details get their LaTeX repaired and come first in their block;
+ * Which block a formula belongs on: a formula block whose title matches the line the formula
+ * comes from (Single-Slit Minima Condition ↔ "Condition for minima: …"), citing that paragraph.
+ */
+function homeScore(b: AiBlock, src: SourceFormula | undefined, order: number): number {
+  return (
+    (b.type === 'formula' ? 3 : 0) +
+    2 * titleMatch(b.title, src?.line) +
+    (src && b.source.includes(src.paragraph) ? 2 : 0) -
+    order * 0.001
+  )
+}
+
+/**
+ * One home per formula: an equation the reply copied onto several blocks stays only on the block
+ * it belongs to; every other block that had it gets a link from that block ("leads to") instead,
+ * so the map shows the equation once with arrows to what follows from it. Within each block the
+ * formula that matches its title best comes first (the card shows the first one).
+ */
+function oneHomePerFormula(res: DetailsResponse, sources: SourceFormula[]): DetailsResponse {
+  const srcOf = (latex: string) => sources.find((s) => sameFormula(s.eq, latex))
+  const blocks = res.blocks.map((b) => ({ ...b, details: [...b.details] }))
+  const relations = [...res.relations]
+  const linked = (a: string, b: string) =>
+    relations.some((r) => (r.from === a && r.to === b) || (r.from === b && r.to === a))
+  const family = (a: AiBlock, b: AiBlock) => a.parent === b.key || b.parent === a.key
+
+  const seen: string[] = []
+  for (const b of blocks)
+    for (const latex of formulasOf(b)) {
+      if (seen.some((s) => sameFormula(s, latex))) continue
+      seen.push(latex)
+      const holders = blocks.filter((x) => formulasOf(x).some((f) => sameFormula(f, latex)))
+      if (holders.length < 2) continue
+      const src = srcOf(latex)
+      const home = holders.reduce((best, x) =>
+        homeScore(x, src, blocks.indexOf(x)) > homeScore(best, src, blocks.indexOf(best))
+          ? x
+          : best,
+      )
+      for (const other of holders) {
+        if (other === home) continue
+        const gone = other.details.filter((d) => d.kind === 'formula' && sameFormula(d.text, latex))
+        other.details = other.details.filter((d) => !gone.includes(d))
+        // Keep what the symbols mean, if only the copy explained them.
+        const kept = home.details.find((d) => d.kind === 'formula' && sameFormula(d.text, latex))
+        const extra = gone.find((d) => d.extra)?.extra
+        if (kept && !kept.extra && extra) kept.extra = extra
+        // Link only a block that really uses it (it cites the formula's paragraph); a copy on
+        // an unrelated block was the model's mistake and is just removed.
+        const uses = !src || other.source.includes(src.paragraph)
+        if (uses && !family(home, other) && !linked(home.key, other.key) && relations.length < 30)
+          relations.push({ from: home.key, to: other.key, type: 'leads_to', label: '' })
+      }
+    }
+
+  for (const b of blocks) {
+    const formulas = b.details.filter((d) => d.kind === 'formula')
+    const ranked = formulas
+      .map((d, i) => ({ d, i, score: titleMatch(b.title, srcOf(d.text)?.line) }))
+      .sort((x, y) => y.score - x.score || x.i - y.i)
+      .map((x) => x.d)
+    b.details = [...ranked, ...b.details.filter((d) => d.kind !== 'formula')]
+  }
+  return { ...res, blocks, relations }
+}
+
+/**
+ * Makes sure a section's formulas survive the details reply, each in one place:
+ * - formula details get their LaTeX repaired;
  * - an equation written only inside a block's bullet becomes a formula detail of that block;
- * - an equation in the section's source that no formula detail covers is added to the block
- *   citing its paragraph (a formula block first), so nothing in the notes is lost.
+ * - an equation in the section's source that no formula covers is added to the block that fits
+ *   it best among those citing its paragraph, so nothing in the notes is lost;
+ * - an equation copied onto several blocks stays on one, with links to the others;
+ * - in each block, formulas come first, the one matching its title first of all.
+ * Added links have an empty label: the map shows the link type in the student's language.
  */
 export function ensureFormulas(
   res: DetailsResponse,
   paragraphs: readonly Paragraph[],
 ): DetailsResponse {
+  const sources = sourceFormulas(paragraphs)
   let blocks = res.blocks.map((b) => ({
     ...b,
     details: formulasFirst(
@@ -415,11 +532,8 @@ export function ensureFormulas(
     for (const d of b.details) {
       if (d.kind !== 'bullet' && d.kind !== 'text') continue
       for (const eq of findEquations(d.text)) {
-        if (
-          known().some((k) => sameFormula(k, eq)) ||
-          formulasOf(out).some((k) => sameFormula(k, eq))
-        )
-          continue
+        if (known().some((k) => sameFormula(k, eq))) continue
+        if (formulasOf(out).some((k) => sameFormula(k, eq))) continue
         out = withFormula(out, toLatex(eq))
       }
     }
@@ -427,19 +541,20 @@ export function ensureFormulas(
   })
 
   // Equations in the source that are nowhere in the reply.
-  for (const p of paragraphs) {
-    for (const eq of findEquations(p.text)) {
-      if (known().some((k) => sameFormula(k, eq))) continue
-      const citing = blocks.filter((b) => b.source.includes(p.n))
-      const target =
-        citing.find((b) => b.type === 'formula') ??
-        citing[0] ??
-        blocks.find((b) => b.type === 'formula') ??
-        blocks[0]
-      if (!target) continue
-      blocks = blocks.map((b) => (b === target ? withFormula(b, toLatex(eq)) : b))
-    }
+  for (const s of sources) {
+    if (known().some((k) => sameFormula(k, s.eq))) continue
+    const citing = blocks.filter((b) => b.source.includes(s.paragraph))
+    const pool = citing.length ? citing : blocks
+    const target = pool.reduce<AiBlock | undefined>(
+      (best, b) =>
+        !best || homeScore(b, s, blocks.indexOf(b)) > homeScore(best, s, blocks.indexOf(best))
+          ? b
+          : best,
+      undefined,
+    )
+    if (!target) continue
+    blocks = blocks.map((b) => (b === target ? withFormula(b, toLatex(s.eq)) : b))
   }
 
-  return { ...res, blocks: blocks.map((b) => ({ ...b, details: formulasFirst(b.details) })) }
+  return oneHomePerFormula({ ...res, blocks }, sources)
 }

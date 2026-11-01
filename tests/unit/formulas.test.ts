@@ -200,3 +200,65 @@ describe('end to end: a forgetful, badly escaped reply still gives a map with ev
     expect(all[0]).toMatchObject({ latex: 'a\\sin\\theta = m\\lambda', variables: 'm = order' })
   })
 })
+
+describe('the owner’s physical optics notes (the map that repeated and lost formulas)', async () => {
+  const { splitParagraphs } = await import('@/ai/pipeline/prepare')
+  const fx = await import('../fixtures/optics-notes')
+  const ps = splitParagraphs(fx.OPTICS_NOTES)
+  const at = (s: string) => ps.find((p) => p.text.includes(s))?.n ?? 0
+  const reply = DetailsResponseSchema.parse(
+    fx.screenshotReply({
+      core: at('Fraunhofer'),
+      slit: at('Intensity equation'),
+      gratings: at('bright fringes'),
+      resolution: at('circular aperture'),
+    }),
+  )
+  const out = ensureFormulas(reply, ps)
+  const on = (title: string) =>
+    out.blocks
+      .find((b) => b.title === title)
+      ?.details.filter((d) => d.kind === 'formula')
+      .map((d) => d.text)
+  const key = (title: string) => out.blocks.find((b) => b.title === title)?.key
+
+  it('finds the five equations in the notes, not the m = ±1… values', () => {
+    expect(ps.flatMap((p) => findEquations(p.text))).toEqual([
+      fx.DARK,
+      fx.INTENSITY,
+      String.raw`d\sin\theta_{bright} = m\lambda`,
+      String.raw`\theta_{min} = \frac{\lambda}{a}`,
+      String.raw`\theta_{min} = 1.22\frac{\lambda}{D}`,
+    ])
+  })
+
+  it('puts every formula on exactly one block, the one it belongs to', () => {
+    expect(on('Single-Slit Minima Condition')).toEqual([fx.DARK])
+    expect(on('Single-Slit Intensity Equation')).toEqual([fx.INTENSITY])
+    expect(on('Grating Maxima Condition')).toEqual([String.raw`d\sin\theta_{bright} = m\lambda`])
+    expect(on('Limiting Angles of Resolution')).toEqual([
+      String.raw`\theta_{min} = \frac{\lambda}{a}`,
+      String.raw`\theta_{min} = 1.22\frac{\lambda}{D}`,
+    ])
+    for (const t of [
+      'Diffraction Definition',
+      'Fraunhofer Diffraction',
+      'Single-Slit Diffraction Pattern',
+      'Diffraction Gratings Structure',
+      'Rayleigh’s Criterion',
+    ])
+      expect(on(t)).toEqual([])
+    expect(out.blocks.flatMap((b) => b.details.filter((d) => d.kind === 'formula'))).toHaveLength(5)
+  })
+
+  it('links the formula to the blocks that use it instead of repeating it', () => {
+    const links = out.relations.map((r) => [r.from, r.to, r.type])
+    expect(links).toEqual([
+      [key('Single-Slit Minima Condition'), key('Diffraction Definition'), 'leads_to'],
+      [key('Single-Slit Minima Condition'), key('Fraunhofer Diffraction'), 'leads_to'],
+    ])
+    // A parent and its child are joined by the tree already; copies on unrelated blocks
+    // (the intensity equation on the grating and resolution blocks) are just removed.
+    expect(out.relations.every((r) => r.label === '')).toBe(true)
+  })
+})
