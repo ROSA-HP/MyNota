@@ -38,7 +38,7 @@ import {
   type ChapterSummary,
 } from './zoom'
 import { FIT } from './fit'
-import { chapterColor } from './visuals'
+import { chapterColor, relationColor } from './visuals'
 import { cn } from '@/lib/cn'
 
 /** Dashed line that follows the pointer while dragging a new link. */
@@ -343,7 +343,7 @@ export function MapCanvas() {
         const children = kids.get(n.id) ?? []
         const expanded = level === 'sections' && column
         // Zoomed out, the card grows to cover its whole column (same place, more to read).
-        const eb = expanded ? toScreen({ x: box.x, y: box.y, w: column.w, h: column.h }) : null
+        const eb = expanded ? toScreen({ x: column.x, y: column.y, w: column.w, h: column.h }) : null
         out.push({
           ...common,
           ...(eb && { position: { x: eb.x, y: eb.y }, width: eb.w, height: eb.h }),
@@ -352,7 +352,7 @@ export function MapCanvas() {
             node: n,
             childCount: book ? countDescendants(kids, n.id) : children.length,
             color: book ? colorOf(n, section) : undefined,
-            expanded: expanded ? { blockTitles: children.slice(0, 8).map((c) => c.title) } : null,
+            expanded: expanded ? { blockTitles: children.slice(0, 12).map((c) => c.title) } : null,
           },
         })
       } else {
@@ -512,7 +512,8 @@ export function MapCanvas() {
           id: `h:${n.id}`,
           source: n.parent_id,
           target: n.id,
-          type: 'tree',
+          // Grouped columns: top-level blocks hang from their section's rail.
+          type: layout.railed.has(n.id) ? 'rail' : 'tree',
           data: { rtl },
           selectable: false,
           focusable: false,
@@ -521,7 +522,7 @@ export function MapCanvas() {
     }
     for (const r of relationsList) {
       if (!visible(r.from_node) || !visible(r.to_node)) continue
-      const color = r.status === 'suggested' ? 'var(--ink-muted)' : 'var(--brand)'
+      const color = relationColor(r)
       out.push({
         id: `r:${r.id}`,
         source: r.from_node,

@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react'
+import { relationColor } from './visuals'
 import { motionMs } from '@/lib/motion'
 import { createPortal } from 'react-dom'
 import {
@@ -95,6 +96,36 @@ export function TreeEdge({ id, source, target, data }: EdgeProps<TreeEdgeT>) {
   const r = Math.min(8, Math.abs(ty - sy) / 2, Math.abs(tx - trunkX) / 2)
   const dir = tx > trunkX ? 1 : -1
   const path = `M${trunkX},${sy} L${trunkX},${ty - r} Q${trunkX},${ty} ${trunkX + dir * r},${ty} L${tx},${ty}`
+  return <BaseEdge id={id} path={path} style={{ stroke: 'var(--line)', strokeWidth: 1.6 }} />
+}
+
+export type RailEdgeT = Edge<{ rtl: boolean }, 'rail'>
+
+/**
+ * Section → a top-level block in grouped columns (canvas step 3): down from the section card
+ * to a rail just above the blocks, along it to the block's column, down beside the column and
+ * into the block. Blocks of one column share the same rail and trunk.
+ */
+export function RailEdge({ id, source, target, data }: EdgeProps<RailEdgeT>) {
+  const s = rectOf(useInternalNode(source))
+  const t = rectOf(useInternalNode(target))
+  if (!s || !t) return null
+  const rtl = data?.rtl ?? false
+  const sx = s.x + s.w / 2
+  const sy = s.y + s.h
+  const railY = sy + 15
+  const trunkX = rtl ? t.x + t.w + 12 : t.x - 12
+  const tx = rtl ? t.x + t.w : t.x
+  const ty = t.y + Math.min(t.h / 2, 24)
+  const r = 8
+  const across = trunkX > sx ? 1 : -1
+  const into = tx > trunkX ? 1 : -1
+  const path =
+    Math.abs(trunkX - sx) < r * 2
+      ? `M${sx},${sy} L${sx},${ty - r} Q${sx},${ty} ${sx + into * r},${ty} L${tx},${ty}`
+      : `M${sx},${sy} L${sx},${railY - r} Q${sx},${railY} ${sx + across * r},${railY} ` +
+        `L${trunkX - across * r},${railY} Q${trunkX},${railY} ${trunkX},${railY + r} ` +
+        `L${trunkX},${ty - r} Q${trunkX},${ty} ${trunkX + into * r},${ty} L${tx},${ty}`
   return <BaseEdge id={id} path={path} style={{ stroke: 'var(--line)', strokeWidth: 1.6 }} />
 }
 
@@ -228,7 +259,7 @@ export function RelationEdge({
         markerStart={markerStart}
         interactionWidth={18}
         style={{
-          stroke: suggested ? 'var(--ink-muted)' : 'var(--brand)',
+          stroke: relationColor(relation),
           strokeWidth: selected ? 4 : 2.4,
           strokeDasharray: suggested ? '6 5' : undefined,
         }}
@@ -267,7 +298,7 @@ export function RelationEdge({
               dir="auto"
               className="cursor-pointer rounded-full border-2 bg-surface px-2.5 py-0.5 text-xs font-bold whitespace-nowrap"
               style={{
-                borderColor: suggested ? 'var(--ink-muted)' : 'var(--brand)',
+                borderColor: relationColor(relation),
                 borderStyle: suggested ? 'dashed' : 'solid',
                 color: suggested ? 'var(--ink-muted)' : 'var(--ink)',
                 boxShadow: selected ? '2px 2px 0 var(--shadow)' : undefined,
@@ -394,7 +425,10 @@ function LinkToolbar({
       </button>
       <button
         type="button"
-        className={cn(btn, relation.direction === 'both' && 'bg-selected text-selected-ink hover:bg-selected')}
+        className={cn(
+          btn,
+          relation.direction === 'both' && 'bg-selected text-selected-ink hover:bg-selected',
+        )}
         aria-label={t('ws.link.bothWays')}
         aria-pressed={relation.direction === 'both'}
         title={t('ws.link.bothWays')}
@@ -563,6 +597,7 @@ export function BundleEdge({ id, source, target, data }: EdgeProps<BundleEdgeT>)
 export const edgeTypes = {
   branch: BranchEdge,
   tree: TreeEdge,
+  rail: RailEdge,
   step: StepEdge,
   relation: RelationEdge,
   bundle: BundleEdge,

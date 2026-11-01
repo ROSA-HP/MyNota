@@ -204,17 +204,20 @@ export function SectionNode({ data, selected }: NodeProps<SectionNodeT>) {
           {t(`ws.shapes.${node.branch_view}`)} · {t('ws.blocks', { count: childCount })}
         </span>
         <span aria-hidden className="h-0.5 shrink-0" style={{ background: c.fill }} />
-        {expanded.blockTitles.map((title, i) =>
-          cover ? (
-            <span key={i} aria-hidden className="zt-body truncate text-ink-faint">
-              ••••••
-            </span>
-          ) : (
-            <span key={i} dir="auto" className="zt-body truncate font-semibold">
-              {title}
-            </span>
-          ),
-        )}
+        {/* Wide sections (grouped columns) list their blocks in columns too. */}
+        <div className="min-h-0 overflow-hidden" style={{ columnWidth: 210, columnGap: 18 }}>
+          {expanded.blockTitles.map((title, i) =>
+            cover ? (
+              <span key={i} aria-hidden className="zt-body block truncate text-ink-faint">
+                ••••••
+              </span>
+            ) : (
+              <span key={i} dir="auto" className="zt-body block truncate font-semibold">
+                {title}
+              </span>
+            ),
+          )}
+        </div>
         {more > 0 && <span className="zt-small text-ink-muted">+{more}</span>}
         <Handles />
       </div>

@@ -14,6 +14,11 @@ export const SIZES = {
   blockW: 240,
   blockH: 66,
   indent: 32,
+  /** Top-level blocks in grouped columns sit this far in, right of their rail line. */
+  groupIndent: 22,
+  subColGap: 26,
+  /** A section's blocks spread into more columns past about this height each. */
+  columnTarget: 480,
   rowGap: 14,
   colGap: 28,
   regionPad: 18,
@@ -58,7 +63,7 @@ export function blockCard(
   const formula = f && f.kind === 'formula' && f.latex.trim() ? f.latex : null
   const badges = n.importance !== 'supporting' || n.ai_added
   const h =
-    10 + // padding
+    10 + 4 + // padding, border
     Math.max(28, titleLines * 18) +
     (summaryLines ? 6 + summaryLines * 16 : 0) +
     (formula ? 8 + 40 : 0) +
@@ -101,7 +106,7 @@ export function expandedCard(
   const details = n.details.reduce((sum, d) => sum + detailHeight(d) + 6, 0)
   const badges = n.importance !== 'supporting' || n.ai_added
   const h =
-    10 +
+    10 + 4 + // padding, border
     Math.max(28, titleLines * 18) +
     (summaryLines ? 6 + summaryLines * 16 : 0) +
     (details ? 10 + details : 0) +
@@ -140,6 +145,8 @@ export interface LayoutResult {
   chapterOf: Record<string, string>
   /** Nodes hidden because an ancestor is collapsed. */
   hidden: Set<string>
+  /** Top-level blocks in grouped columns: joined to their section by a rail (RailEdge). */
+  railed: Set<string>
 }
 
 export function childrenIndex(nodes: NodeRow[]): Map<string | null, NodeRow[]> {
@@ -173,6 +180,7 @@ export function computeLayout(
   const boxes: Record<string, Box> = {}
   const columns: Record<string, Box> = {}
   const hidden = new Set<string>()
+  const railed = new Set<string>()
   const regions: Region[] = []
   const chapterOf: Record<string, string> = {}
   const empty: LayoutResult = {
@@ -185,6 +193,7 @@ export function computeLayout(
     book: false,
     chapterOf,
     hidden,
+    railed,
   }
   if (!root) return empty
   const book = root.level === 'book'
@@ -197,37 +206,79 @@ export function computeLayout(
   }
   if (root.collapsed) hideSubtree(root.id)
 
-  // Column width grows with the deepest indentation in that section.
-  const depthOf = (id: string): number => {
-    const c = kids.get(id) ?? []
-    return c.length ? 1 + Math.max(...c.map((k) => depthOf(k.id))) : 0
+  /** Heights used to decide columns: the closed card, so opening a card never reshuffles. */
+  const stableH = (n: NodeRow) => blockCard(n).h
+  const realH = (n: NodeRow) => (n.id === opts.expandedId ? expandedCard(n).h : blockCard(n).h)
+  /** A block and its visible sub-blocks, with their depth under it. */
+  const subtreeOf = (n: NodeRow, depth = 0): Array<[NodeRow, number]> => {
+    const out: Array<[NodeRow, number]> = [[n, depth]]
+    if (n.collapsed) hideSubtree(n.id)
+    else for (const c of kids.get(n.id) ?? []) out.push(...subtreeOf(c, depth + 1))
+    return out
   }
 
-  /** Lays sections out as columns from (x0, top); returns the used width and bottom. */
+  /**
+   * Lays sections out side by side from (x0, top); returns the used width and bottom.
+   * Inside a section (canvas step 3, "grouped columns"): each top-level block with its
+   * sub-blocks is a group; groups are spread over up to 4 columns under the section card,
+   * which sits centred above them and joins them with a rail (RailEdge). Process and timeline
+   * sections stay one column, because their order matters.
+   */
   const placeColumns = (parentId: string, x0: number, top: number) => {
     let x = x0
     let bottom = top + S.sectionH
     for (const section of kids.get(parentId) ?? []) {
-      const depth = section.collapsed ? 0 : depthOf(section.id)
-      const colW = Math.max(S.sectionW, S.blockW + S.indent * depth) + S.regionPad * 2
       const sx = x + S.regionPad
-      boxes[section.id] = { x: sx, y: top, w: S.sectionW, h: S.sectionH }
-      let y = top + S.sectionH + S.blocksGap
-      const place = (pid: string, level: number) => {
-        for (const child of kids.get(pid) ?? []) {
-          const h = child.id === opts.expandedId ? expandedCard(child).h : blockCard(child).h
-          boxes[child.id] = { x: sx + S.indent * level, y, w: S.blockW, h }
-          y += h + S.rowGap
-          if (child.collapsed) hideSubtree(child.id)
-          else place(child.id, level + 1)
-        }
-      }
+      const blocksTop = top + S.sectionH + S.blocksGap
       if (section.collapsed) hideSubtree(section.id)
-      else place(section.id, 1)
-      const colBottom = Math.max(y - S.rowGap, top + S.sectionH)
-      columns[section.id] = { x: sx, y: top, w: colW - S.regionPad * 2, h: colBottom - top }
+      const groups = (section.collapsed ? [] : (kids.get(section.id) ?? [])).map((g) => {
+        const items = subtreeOf(g)
+        return {
+          items,
+          h: items.reduce((s, [n]) => s + stableH(n) + S.rowGap, 0),
+          depth: Math.max(...items.map(([, d]) => d)),
+        }
+      })
+      const ordered = section.branch_view === 'process' || section.branch_view === 'timeline'
+      const total = groups.reduce((s, g) => s + g.h, 0)
+      const nested = groups.filter((g) => g.items.length > 1).length
+      const want = ordered
+        ? 1
+        : Math.min(
+            4,
+            groups.length,
+            Math.max(1, nested >= 2 ? nested : Math.ceil(total / S.columnTarget)),
+          )
+      const cols = balancedColumns(groups, want)
+      const grouped = !ordered
+      const lead = grouped ? S.groupIndent : S.indent
+      const widths = cols.map(
+        (col) => S.blockW + lead + S.indent * Math.max(0, ...col.map((g) => g.depth)),
+      )
+      const contentW = Math.max(
+        S.sectionW,
+        widths.reduce((s, w) => s + w, 0) + S.subColGap * (widths.length - 1),
+      )
+      // One column: the section card stays at the top left, over its tree line.
+      const cardX = grouped && cols.length > 1 ? sx + (contentW - S.sectionW) / 2 : sx
+      boxes[section.id] = { x: cardX, y: top, w: S.sectionW, h: S.sectionH }
+      let colBottom = top + S.sectionH
+      let cx = sx
+      cols.forEach((col, i) => {
+        let y = blocksTop
+        for (const g of col)
+          for (const [n, depth] of g.items) {
+            const h = realH(n)
+            boxes[n.id] = { x: cx + lead + S.indent * depth, y, w: S.blockW, h }
+            if (grouped && depth === 0) railed.add(n.id)
+            y += h + S.rowGap
+          }
+        colBottom = Math.max(colBottom, y - S.rowGap)
+        cx += (widths[i] ?? 0) + S.subColGap
+      })
+      columns[section.id] = { x: sx, y: top, w: contentW, h: colBottom - top }
       bottom = Math.max(bottom, colBottom)
-      x += colW + S.colGap
+      x += contentW + S.regionPad * 2 + S.colGap
     }
     return { width: Math.max(0, x - S.colGap - x0), bottom }
   }
@@ -398,7 +449,42 @@ export function computeLayout(
     book,
     chapterOf,
     hidden,
+    railed,
   }
+}
+
+/**
+ * Splits groups (kept in reading order) into at most `k` columns so the tallest column is as
+ * short as possible (classic linear partition; a section has few groups, so this is instant).
+ */
+export function balancedColumns<T extends { h: number }>(groups: T[], k: number): T[][] {
+  const n = groups.length
+  if (n === 0) return [[]]
+  const cols = Math.max(1, Math.min(k, n))
+  const prefix = [0]
+  for (const g of groups) prefix.push((prefix.at(-1) ?? 0) + g.h)
+  const sum = (a: number, b: number) => (prefix[b] ?? 0) - (prefix[a] ?? 0)
+  // best[j][i]: smallest tallest column for the first i groups in j columns; cut[j][i]: where.
+  const best = Array.from({ length: cols + 1 }, () => new Array<number>(n + 1).fill(Infinity))
+  const cut = Array.from({ length: cols + 1 }, () => new Array<number>(n + 1).fill(0))
+  ;(best[0] as number[])[0] = 0
+  for (let j = 1; j <= cols; j++)
+    for (let i = 1; i <= n; i++)
+      for (let p = j - 1; p < i; p++) {
+        const v = Math.max((best[j - 1] as number[])[p] ?? Infinity, sum(p, i))
+        if (v < ((best[j] as number[])[i] ?? Infinity)) {
+          ;(best[j] as number[])[i] = v
+          ;(cut[j] as number[])[i] = p
+        }
+      }
+  const out: T[][] = []
+  let i = n
+  for (let j = cols; j >= 1; j--) {
+    const p = (cut[j] as number[])[i] ?? 0
+    out.unshift(groups.slice(p, i))
+    i = p
+  }
+  return out.filter((c) => c.length)
 }
 
 /** Mirrors a logical box for right-to-left display around the layout width. */

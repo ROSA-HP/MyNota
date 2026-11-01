@@ -145,6 +145,30 @@ const SECTIONS: Array<{ title: string; summary: string; blocks: Spec[] }> = [
   },
 ]
 
+// As the AI returned the owner's real map: one section, nine blocks, no grouping. Tests that a
+// flat list spreads over columns instead of one long line.
+SECTIONS.push({
+  title: 'Diffraction and Resolution (flat)',
+  summary: 'Nine blocks without sub-blocks',
+  blocks: [
+    'Diffraction Definition',
+    'Fraunhofer Pattern',
+    'Single-Slit Pattern Shape',
+    'Single-Slit Minima',
+    'Single-Slit Intensity',
+    'Diffraction Gratings Overview',
+    'Grating Maxima',
+    "Rayleigh's Limit",
+    'Limiting Angle of Resolution',
+  ].map((title, i) => ({
+    title,
+    summary: 'A short summary line about this idea from the notes.',
+    type: i % 3 === 1 ? 'formula' : 'concept',
+    importance: i % 2 ? 'core' : 'supporting',
+    details: i % 3 === 1 ? [f('d\\sin\\theta = m\\lambda')] : [],
+  })),
+})
+
 export function sampleMap(): { map: MapRow; nodes: NodeRow[]; relations: RelationRow[] } {
   const now = new Date().toISOString()
   const map = {
