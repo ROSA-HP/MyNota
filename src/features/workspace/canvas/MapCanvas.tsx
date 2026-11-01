@@ -125,6 +125,8 @@ export function useAddChild() {
       ws.addNodes([node])
       if (parent.collapsed) ws.updateNode(parent.id, { collapsed: false })
       ws.select(node.id)
+      // A new block needs a title: open it in the panel straight away.
+      useCanvasUi.getState().setPanelOpen(true)
     },
     [t],
   )
@@ -163,7 +165,9 @@ export function MapCanvas() {
 
   const sources = useWorkspace((s) => s.sources)
   const list = useMemo(() => Object.values(nodes), [nodes])
-  const layout = useMemo(() => computeLayout(list), [list])
+  // The selected block opens in place (canvas step 2); the layout makes room for it.
+  const expandedId = selectedId && nodes[selectedId]?.level === 'block' ? selectedId : null
+  const layout = useMemo(() => computeLayout(list, { expandedId }), [list, expandedId])
   const kids = useMemo(() => childrenIndex(list), [list])
   const { book, rootId } = layout
   const isSection = useMemo(() => isSectionOf(nodes, rootId, book), [nodes, rootId, book])
@@ -366,6 +370,7 @@ export function MapCanvas() {
             step,
             connectFrom: connectFrom === n.id,
             rtl,
+            expanded: n.id === expandedId && level === 'blocks',
           },
         })
       }
@@ -378,6 +383,7 @@ export function MapCanvas() {
     toScreen,
     drag,
     selectedId,
+    expandedId,
     canEdit,
     map,
     kids,
@@ -624,7 +630,12 @@ export function MapCanvas() {
       if (e.key === 'Escape') {
         if (ui.connecting) cancelConnect()
         else if (ui.multi.length) ui.clearMulti()
+        else if (ui.panelOpen) ui.setPanelOpen(false)
         else select(null)
+      } else if (e.key === 'Enter' && ws.selectedId && ws.nodes[ws.selectedId]?.level === 'block') {
+        // Enter opens the selected block in the details panel.
+        e.preventDefault()
+        ui.setPanelOpen(true)
       } else if ((e.key === 'l' || e.key === 'L') && canEdit) {
         const sources = ui.multi.length ? ui.multi : ws.selectedId ? [ws.selectedId] : []
         e.preventDefault()
@@ -738,6 +749,12 @@ export function MapCanvas() {
             select(node.id)
           }
         }}
+        onNodeDoubleClick={(_, node) => {
+          // Double-click: straight to the details panel.
+          if (node.type !== 'block' || connecting) return
+          select(node.id)
+          useCanvasUi.getState().setPanelOpen(true)
+        }}
         onNodeContextMenu={(e, node) => {
           if (node.type === 'region' || node.type === 'chapterRegion') return
           e.preventDefault()
@@ -759,6 +776,7 @@ export function MapCanvas() {
           if (connecting) cancelConnect()
           useCanvasUi.getState().clearMulti()
           useCanvasUi.getState().setSpotlight([])
+          useCanvasUi.getState().setPanelOpen(false)
           select(null)
         }}
         nodesConnectable={canEdit}

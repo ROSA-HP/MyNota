@@ -316,6 +316,29 @@
 .mynota-flow .react-flow__node {
   font-family: inherit;
 }
+/* Cards slide to their new places when one opens or the layout changes (canvas step 2), and
+   link lines follow; never while a card is being dragged. Reduced motion turns this off (the
+   global rule above sets every transition to 0 ms). */
+.mynota-flow .react-flow__node:not(.dragging) {
+  transition:
+    transform 260ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    width 260ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    height 260ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.mynota-flow .react-flow__edge-path,
+.mynota-flow .react-flow__connection-path {
+  transition: d 260ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+/* What an opened card adds fades in after it has grown. */
+.mynota-reveal {
+  animation: mynota-reveal 220ms 90ms ease-out both;
+}
+@keyframes mynota-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
 .mynota-flow .react-flow__node:focus-visible {
   outline: none;
 }

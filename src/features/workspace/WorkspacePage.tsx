@@ -184,6 +184,7 @@ function Workspace() {
   const buildMapId = useBuild((s) => s.mapId)
   const [outlineOpen, setOutlineOpen] = useState(false)
   const linksTray = useCanvasUi((s) => s.linksTray)
+  const blockPanel = useCanvasUi((s) => s.panelOpen)
   const [addNotesOpen, setAddNotesOpen] = useState(false)
   const [exportOpen, setExportOpen] = useState(false)
   const subject = useSubject(map?.subject_id)
@@ -283,10 +284,14 @@ function Workspace() {
     )
   }
 
-  const selectedNode = selectedId ? nodes[selectedId] : undefined
+  // A selected block opens in place on the canvas; the panel only when asked (Open, double-click).
+  const selected = selectedId ? nodes[selectedId] : undefined
+  const selectedNode = selected && (selected.level !== 'block' || blockPanel) ? selected : undefined
   const selectedRelation = selectedRelationId ? relations[selectedRelationId] : undefined
   const panelOpen = Boolean(selectedNode || selectedRelation || linksTray)
   const closePanel = () => {
+    // Closing the panel of a block keeps the block open on the canvas.
+    if (selected?.level === 'block') return useCanvasUi.getState().setPanelOpen(false)
     select(null)
     selectRelation(null)
   }

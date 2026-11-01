@@ -1,6 +1,6 @@
 import { useLayoutEffect, useRef, type PointerEvent } from 'react'
 import { Handle, Position, type Node, type NodeProps } from '@xyflow/react'
-import { CircleAlert, Clock, RotateCcw, Sparkles } from 'lucide-react'
+import { CircleAlert, Clock, Maximize2, Pencil, RotateCcw, Sparkles } from 'lucide-react'
 import { Link } from 'react-router'
 import { useTranslation } from 'react-i18next'
 import { Spinner } from '@/components/ui'
@@ -15,7 +15,8 @@ import { EditingTag } from '../live/LivePresence'
 import { useBuild } from '../buildStore'
 import { useWorkspace } from '../workspaceStore'
 import { useCanvasUi } from './canvasUi'
-import { blockCard } from './layout'
+import { DetailList } from './DetailList'
+import { blockCard, expandedCard } from './layout'
 import { chapterColor, TYPE_ICON } from './visuals'
 import type { ChapterSummary, ZoomLevel } from './zoom'
 
@@ -38,6 +39,8 @@ export type BlockNodeT = Node<
     step: number | null
     connectFrom: boolean
     rtl: boolean
+    /** Selected at the blocks level: the card opens in place with all its details. */
+    expanded?: boolean
   },
   'block'
 >
@@ -298,7 +301,10 @@ export function BlockNode({ data, selected }: NodeProps<BlockNodeT>) {
   const Icon = node.type ? TYPE_ICON[node.type] : null
   const typeLabel = node.type ? t(`ws.types.${node.type}`) : null
   const covered = useCanvasUi((s) => s.cover && !selected && !s.revealed.includes(node.id))
+  const open = Boolean(data.expanded) && !covered
   const card = blockCard(node)
+  const big = open ? expandedCard(node) : null
+  const titleLines = big?.titleLines ?? card.titleLines
   return (
     <div
       {...useLongPress(node.id)}
@@ -306,6 +312,7 @@ export function BlockNode({ data, selected }: NodeProps<BlockNodeT>) {
         'relative flex size-full flex-col gap-1.5 rounded-neo border-2 bg-surface px-2.5 py-2.5 text-ink',
         covered && 'border-dashed bg-surface-muted',
         selected ? 'border-[2.5px] neo-shadow outline-3 outline-offset-2' : '',
+        open && 'z-10',
       )}
       style={{
         borderColor: selected ? 'var(--line)' : c.strong,
@@ -341,7 +348,7 @@ export function BlockNode({ data, selected }: NodeProps<BlockNodeT>) {
             dir="auto"
             className={cn(
               'min-w-0 flex-1 pt-0.5 text-sm leading-[18px]',
-              CLAMP[card.titleLines],
+              CLAMP[Math.min(3, titleLines) as 1 | 2 | 3],
               node.importance === 'core'
                 ? 'font-bold'
                 : node.importance === 'extra'
@@ -353,7 +360,9 @@ export function BlockNode({ data, selected }: NodeProps<BlockNodeT>) {
           </span>
         )}
       </div>
-      {!covered && card.summaryLines > 0 && (
+      {/* Formulas come first: for a block about a formula, the formula is the point. */}
+      {!open && !covered && card.formula && <CardFormula latex={card.formula} />}
+      {!open && !covered && card.summaryLines > 0 && (
         <p
           dir="auto"
           className={cn('text-[12.5px] leading-4 text-ink-muted', CLAMP[card.summaryLines])}
@@ -361,7 +370,18 @@ export function BlockNode({ data, selected }: NodeProps<BlockNodeT>) {
           {node.summary}
         </p>
       )}
-      {!covered && card.formula && <CardFormula latex={card.formula} />}
+      {open && (
+        <div className="mynota-reveal nowheel flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto pe-0.5">
+          <DetailList details={node.details.filter((d) => d.kind === 'formula')} compact />
+          {node.summary && (
+            <p dir="auto" className="text-[12.5px] leading-4 text-ink-muted">
+              {node.summary}
+            </p>
+          )}
+          <DetailList details={node.details.filter((d) => d.kind !== 'formula')} compact />
+        </div>
+      )}
+
       {card.badges && (
         <span className="mt-auto flex h-[18px] items-center gap-1.5">
           {node.importance === 'core' && (
@@ -382,9 +402,45 @@ export function BlockNode({ data, selected }: NodeProps<BlockNodeT>) {
           )}
         </span>
       )}
+      {open && <CardActions />}
       <MasteryDot nodeId={node.id} />
       <EditingTag nodeId={node.id} />
       <Handles />
+    </div>
+  )
+}
+
+/** Open / Edit under an expanded card: both open the details panel (editing lives there). */
+function CardActions() {
+  const { t } = useTranslation()
+  const canEdit = useWorkspace((s) => s.role === 'owner' || s.role === 'editor')
+  const open = () => useCanvasUi.getState().setPanelOpen(true)
+  const btn =
+    'nodrag inline-flex h-8 cursor-pointer items-center gap-1 rounded-md border-2 border-line px-2 text-xs font-bold'
+  return (
+    <div className="mynota-reveal flex shrink-0 justify-end gap-1.5">
+      <button
+        type="button"
+        className={cn(btn, 'bg-surface hover:bg-surface-muted')}
+        onClick={(e) => {
+          e.stopPropagation()
+          open()
+        }}
+      >
+        <Maximize2 size={13} aria-hidden /> {t('ws.card.open')}
+      </button>
+      {canEdit && (
+        <button
+          type="button"
+          className={cn(btn, 'bg-brand text-brand-ink hover:bg-brand-hover')}
+          onClick={(e) => {
+            e.stopPropagation()
+            open()
+          }}
+        >
+          <Pencil size={13} aria-hidden /> {t('ws.card.edit')}
+        </button>
+      )}
     </div>
   )
 }

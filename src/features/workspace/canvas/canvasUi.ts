@@ -55,6 +55,12 @@ interface CanvasUiState {
   /** The outline filter; while set, the canvas dims what does not match (live filter). */
   filter: string
   setFilter: (q: string) => void
+  /**
+   * The details panel beside the canvas. Selecting a block only opens it in place (canvas
+   * step 2); the panel opens from the card's Open / Edit, a double-click or Enter.
+   */
+  panelOpen: boolean
+  setPanelOpen: (open: boolean) => void
 }
 
 const MASTERY_KEY = 'mynota.mastery'
@@ -128,4 +134,6 @@ export const useCanvasUi = create<CanvasUiState>((set, get) => ({
   setFocus: (id) => set({ focusId: id }),
   filter: '',
   setFilter: (q) => set({ filter: q }),
+  panelOpen: false,
+  setPanelOpen: (open) => set({ panelOpen: open }),
 }))

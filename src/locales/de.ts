@@ -546,6 +546,14 @@ export const de: Messages = {
     tidy: 'Aufräumen',
     undo: 'Rückgängig (Strg+Z)',
     redo: 'Wiederholen (Strg+Umschalt+Z)',
+    detail: {
+      example: 'Beispiel',
+      showAnswer: 'Antwort zeigen',
+    },
+    card: {
+      open: 'Öffnen',
+      edit: 'Bearbeiten',
+    },
     live: {
       editing: '{{name}} bearbeitet',
       hereNow: 'gerade hier',

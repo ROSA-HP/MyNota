@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { ReactFlowProvider } from '@xyflow/react'
+import { useCanvasUi } from '@/features/workspace/canvas/canvasUi'
 import { MapCanvas } from '@/features/workspace/canvas/MapCanvas'
 import { NodePanel } from '@/features/workspace/panels/NodePanel'
 import { Toolbar } from '@/features/workspace/Toolbar'
@@ -14,7 +15,10 @@ import { sampleMap } from './sampleMap'
  */
 export function CanvasPlayground() {
   const selectedId = useWorkspace((s) => s.selectedId)
-  const node = useWorkspace((s) => (s.selectedId ? s.nodes[s.selectedId] : undefined))
+  const selected = useWorkspace((s) => (s.selectedId ? s.nodes[s.selectedId] : undefined))
+  const panelOpen = useCanvasUi((s) => s.panelOpen)
+  // Same rule as the workspace: a selected block opens in place; the panel when asked.
+  const node = selected && (selected.level !== 'block' || panelOpen) ? selected : undefined
 
   useEffect(() => {
     const { map, nodes, relations } = sampleMap()
@@ -53,7 +57,7 @@ export function CanvasPlayground() {
               <NodePanel
                 key={node.id}
                 node={node}
-                onClose={() => useWorkspace.getState().select(null)}
+                onClose={() => useCanvasUi.getState().setPanelOpen(false)}
               />
             </aside>
           )}

@@ -1,4 +1,4 @@
-import type { NodeRow } from '@/lib/database.types'
+import type { DetailBlock, NodeRow } from '@/lib/database.types'
 
 /**
  * Top-down map layout (docs/design-system.md): the map title on top, top-level sections as
@@ -67,6 +67,51 @@ export function blockCard(
   return { titleLines, summaryLines, formula, badges, h: Math.max(SIZES.blockH, h) }
 }
 
+/** Estimated height of one detail in a card's list (canvas/DetailList.tsx, compact). */
+export function detailHeight(d: DetailBlock): number {
+  const lines = (s: string | undefined, per = 33) => linesFor(s ?? '', per, 40)
+  switch (d.kind) {
+    case 'bullet':
+    case 'text':
+    case 'cloze':
+      return lines(d.text) * 17
+    case 'formula':
+      return 16 + 58 + lines(d.variables, 36) * 16
+    case 'example':
+      return 8 + (lines(d.text, 30) + lines(d.translation, 30)) * 17
+    case 'vocab':
+      return lines(`${d.term} — ${d.meaning}`) * 17
+    case 'question':
+      return 12 + (lines(d.front, 30) + 1) * 17
+  }
+}
+
+/** Expanded cards stop growing here; longer details scroll inside the card. */
+export const EXPANDED_MAX_H = 560
+
+/**
+ * The selected block opens in place (canvas step 2): full title and summary, every detail,
+ * and a row with Open / Edit. Height follows the content up to EXPANDED_MAX_H.
+ */
+export function expandedCard(
+  n: Pick<NodeRow, 'title' | 'summary' | 'details' | 'importance' | 'ai_added'>,
+): { titleLines: number; summaryLines: number; h: number } {
+  const titleLines = Math.max(1, linesFor(n.title, 22, 3))
+  const summaryLines = linesFor(n.summary, 36, 8)
+  const details = n.details.reduce((sum, d) => sum + detailHeight(d) + 6, 0)
+  const badges = n.importance !== 'supporting' || n.ai_added
+  const h =
+    10 +
+    Math.max(28, titleLines * 18) +
+    (summaryLines ? 6 + summaryLines * 16 : 0) +
+    (details ? 10 + details : 0) +
+    (badges ? 8 + 18 : 0) +
+    8 +
+    32 + // Open / Edit
+    10
+  return { titleLines, summaryLines, h: Math.min(EXPANDED_MAX_H, Math.max(SIZES.blockH, h)) }
+}
+
 export interface Box {
   x: number
   y: number
@@ -120,7 +165,7 @@ export const tabWidth = (title: string, max: number): number =>
 
 export function computeLayout(
   nodes: NodeRow[],
-  opts: { useSavedPositions?: boolean } = {},
+  opts: { useSavedPositions?: boolean; expandedId?: string | null } = {},
 ): LayoutResult {
   const S = SIZES
   const kids = childrenIndex(nodes)
@@ -170,7 +215,7 @@ export function computeLayout(
       let y = top + S.sectionH + S.blocksGap
       const place = (pid: string, level: number) => {
         for (const child of kids.get(pid) ?? []) {
-          const h = blockCard(child).h
+          const h = child.id === opts.expandedId ? expandedCard(child).h : blockCard(child).h
           boxes[child.id] = { x: sx + S.indent * level, y, w: S.blockW, h }
           y += h + S.rowGap
           if (child.collapsed) hideSubtree(child.id)

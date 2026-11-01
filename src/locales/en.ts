@@ -528,6 +528,14 @@ export const en = {
     tidy: 'Tidy up',
     undo: 'Undo (Ctrl+Z)',
     redo: 'Redo (Ctrl+Shift+Z)',
+    detail: {
+      example: 'Example',
+      showAnswer: 'Show answer',
+    },
+    card: {
+      open: 'Open',
+      edit: 'Edit',
+    },
     live: {
       editing: '{{name}} is editing',
       hereNow: 'here now',

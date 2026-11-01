@@ -580,6 +580,14 @@ export const ar: Messages = {
     tidy: 'ترتيب تلقائي',
     undo: 'تراجع (Ctrl+Z)',
     redo: 'إعادة (Ctrl+Shift+Z)',
+    detail: {
+      example: 'مثال',
+      showAnswer: 'إظهار الإجابة',
+    },
+    card: {
+      open: 'فتح',
+      edit: 'تعديل',
+    },
     live: {
       editing: 'جارٍ التعديل: {{name}}',
       hereNow: 'موجود الآن',
