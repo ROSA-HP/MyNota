@@ -48,7 +48,7 @@ export function ResetPasswordPage() {
       ) : status === 'signedOut' ? (
         <div className="flex flex-col gap-4">
           <Alert tone="danger">{t('auth.reset.invalidLink')}</Alert>
-          <Link to="/forgot-password" className="font-bold underline underline-offset-4">
+          <Link to="/forgot-password" className="-my-3 py-3 font-bold underline underline-offset-4">
             {t('auth.forgot.title')}
           </Link>
         </div>

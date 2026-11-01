@@ -30,7 +30,7 @@ export function AuthCallbackPage() {
     <AuthLayout title={failed ? t('auth.callback.failed') : t('auth.callback.working')}>
       {failed ? (
         <div className="flex flex-col gap-4">
-          <Link to="/sign-in" className="font-bold underline underline-offset-4">
+          <Link to="/sign-in" className="-my-3 py-3 font-bold underline underline-offset-4">
             {t('auth.callback.back')}
           </Link>
         </div>

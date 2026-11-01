@@ -33,11 +33,11 @@ export function LandingPage() {
       <header className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-4 sm:px-8">
         <Logo />
         <div className="flex items-center gap-2">
-          <ThemeToggle className="hidden sm:inline-flex" />
+          <ThemeToggle className="max-sm:hidden" />
           <LanguageSelect />
           <Link
             to="/sign-in"
-            className={buttonClasses({ variant: 'secondary', className: 'hidden md:inline-flex' })}
+            className={buttonClasses({ variant: 'secondary', className: 'max-md:hidden' })}
           >
             {t('auth.signIn.submit')}
           </Link>

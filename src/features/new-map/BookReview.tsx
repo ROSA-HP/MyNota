@@ -256,7 +256,7 @@ export function BookReview({
                   key={d.key}
                   className={cn(
                     'grid grid-cols-[44px_34px_minmax(0,1fr)_96px_104px_40px] items-center gap-2 border-b-2 border-line-soft px-3 py-2 last:border-b-0 max-sm:grid-cols-[40px_30px_minmax(0,1fr)_40px]',
-                    isSel && 'bg-ch-yellow/30',
+                    isSel && 'bg-[color-mix(in_srgb,var(--ch-yellow)_var(--wash),transparent)]',
                     !content && !d.build && 'text-ink-faint',
                   )}
                   onClick={() => setSelected(d.key)}

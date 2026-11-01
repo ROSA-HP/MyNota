@@ -57,7 +57,7 @@ export function SignInPage() {
           {t('auth.signIn.noAccount')}{' '}
           <Link
             to="/sign-up"
-            className="font-bold text-ink underline decoration-2 underline-offset-4"
+            className="-my-3 py-3 font-bold text-ink underline decoration-2 underline-offset-4"
           >
             {t('auth.signIn.toSignUp')}
           </Link>
@@ -109,7 +109,7 @@ export function SignInPage() {
           status={
             <Link
               to="/forgot-password"
-              className="text-sm font-semibold text-ink-muted underline underline-offset-4 hover:text-ink"
+              className="-my-3 py-3 text-sm font-semibold text-ink-muted underline underline-offset-4 hover:text-ink"
             >
               {t('auth.signIn.forgot')}
             </Link>

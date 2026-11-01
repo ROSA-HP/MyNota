@@ -206,13 +206,15 @@ export const en = {
       title: 'Your data',
       hint: 'Download everything you made, or delete your account.',
       exportTitle: 'Download my data',
-      exportHint: 'One file with your maps (blocks, links, source text, cards), subjects, study progress and review history. Your AI key is not included.',
+      exportHint:
+        'One file with your maps (blocks, links, source text, cards), subjects, study progress and review history. Your AI key is not included.',
       export: 'Download my data',
       collecting: 'Collecting…',
       progress: 'Maps: {{done}} of {{total}}',
       downloaded: 'Your data is downloaded.',
       deleteTitle: 'Delete my account',
-      deleteHint: 'Deletes your account and everything it owns. Maps you share are deleted for everyone on them.',
+      deleteHint:
+        'Deletes your account and everything it owns. Maps you share are deleted for everyone on them.',
       delete: 'Delete my account…',
       deleteWarning: 'This cannot be undone. Download your data first if you want to keep it.',
       typeUsername: 'Type your username ({{username}}) to confirm',
@@ -480,6 +482,7 @@ export const en = {
     errLimit: 'You reached today’s limit for new maps or uploads. Try again tomorrow.',
   },
   ws: {
+    moreActions: 'More actions',
     studyView: {
       covered: 'Hidden block',
       mastery: 'Mastery dots',
@@ -1317,7 +1320,8 @@ export const en = {
       explain: {
         active: 'The account can sign in and use its maps again.',
         suspended: 'The account is signed out and cannot use MyNota until reactivated. Maps stay.',
-        banned: 'Like suspending, but meant to be permanent. Maps stay until the account is deleted.',
+        banned:
+          'Like suspending, but meant to be permanent. Maps stay until the account is deleted.',
       },
     },
     maps: {
@@ -1340,9 +1344,11 @@ export const en = {
         edit: 'Anyone can edit',
       },
       openTitle: 'Open “{{title}}”',
-      openBody: 'You are about to read a student’s map. This is recorded in the audit log with your reason.',
+      openBody:
+        'You are about to read a student’s map. This is recorded in the audit log with your reason.',
       takedownTitle: 'Take down the link of “{{title}}”',
-      takedownBody: 'The share link is turned off and its address stops working. Members keep access.',
+      takedownBody:
+        'The share link is turned off and its address stops working. Members keep access.',
       contentNote: 'Read only. Blocks and sections: {{nodes}} · links: {{links}}.',
     },
     errors: {
@@ -1391,10 +1397,12 @@ export const en = {
   legal: {
     updated: 'Last updated: {{date}}',
     contactTitle: 'Contact',
-    contactSoon: 'Contact details for privacy and legal questions will be added here before MyNota opens to the public.',
+    contactSoon:
+      'Contact details for privacy and legal questions will be added here before MyNota opens to the public.',
     privacy: {
       title: 'Privacy policy',
-      intro: 'MyNota turns study material into mind maps and flashcards. This page explains what we store, where it goes, and what you can do about it.',
+      intro:
+        'MyNota turns study material into mind maps and flashcards. This page explains what we store, where it goes, and what you can do about it.',
       sections: {
         who: {
           title: 'Who is responsible',

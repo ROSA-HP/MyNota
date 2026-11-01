@@ -7,6 +7,7 @@ import {
   Eye,
   GitMerge,
   Layers,
+  MoreHorizontal,
   PanelLeft,
   Sparkles,
 } from 'lucide-react'
@@ -164,11 +165,72 @@ function AddNotesButton({ onOpen }: { onOpen: () => void }) {
       className={buttonClasses({
         variant: 'secondary',
         size: 'sm',
+        className: 'max-sm:hidden',
       })}
     >
       <GitMerge size={16} aria-hidden />
       <span className="hidden xl:inline">{t('ws.merge.open')}</span>
     </button>
+  )
+}
+
+/**
+ * Phones: Export and Add notes move into this menu so the top bar fits (the bar shows them
+ * as buttons from 640px up).
+ */
+function MoreActions({ onExport, onAddNotes }: { onExport: () => void; onAddNotes: () => void }) {
+  const { t } = useTranslation()
+  const [open, setOpen] = useState(false)
+  const canEdit = useWorkspace((s) => s.role === 'owner' || s.role === 'editor')
+  const fromCache = useWorkspace((s) => s.fromCache)
+  const building = useBuild((s) => s.phase === 'outline' || s.phase === 'details')
+  const item =
+    'flex min-h-11 w-full cursor-pointer items-center gap-2.5 rounded-lg px-2.5 text-sm font-semibold hover:bg-paper-sunken disabled:cursor-default disabled:opacity-40'
+  const pick = (run: () => void) => () => {
+    setOpen(false)
+    run()
+  }
+  return (
+    <div className="relative sm:hidden">
+      <IconButton
+        label={t('ws.moreActions')}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={() => setOpen((o) => !o)}
+      >
+        <MoreHorizontal size={18} aria-hidden />
+      </IconButton>
+      {open && (
+        <>
+          <button
+            type="button"
+            aria-hidden
+            tabIndex={-1}
+            className="fixed inset-0 z-40 cursor-default"
+            onClick={() => setOpen(false)}
+          />
+          <div
+            role="menu"
+            className="absolute end-0 top-12 z-50 w-52 origin-top-right animate-pop rounded-neo-lg border-2 border-line bg-surface p-1.5 neo-shadow [animation-duration:220ms] rtl:origin-top-left"
+          >
+            <button type="button" role="menuitem" className={item} onClick={pick(onExport)}>
+              <Download size={17} aria-hidden /> {t('export.open')}
+            </button>
+            {canEdit && !fromCache && (
+              <button
+                type="button"
+                role="menuitem"
+                className={item}
+                disabled={building}
+                onClick={pick(onAddNotes)}
+              >
+                <GitMerge size={17} aria-hidden /> {t('ws.merge.open')}
+              </button>
+            )}
+          </div>
+        </>
+      )}
+    </div>
   )
 }
 
@@ -360,9 +422,14 @@ function Workspace() {
             <Eye size={12} aria-hidden /> {fromCache ? t('ws.fromCache') : t('ws.readOnly')}
           </Badge>
         )}
-        <div className="ms-auto flex items-center gap-2">
+        {/* On phones the actions scroll sideways instead of widening the page. */}
+        <div className="ms-auto flex min-w-0 shrink-0 items-center gap-2 max-sm:max-w-[60vw] max-sm:overflow-x-auto max-sm:[scrollbar-width:none]">
           <SearchButton compact />
-          <IconButton label={t('export.open')} onClick={() => setExportOpen(true)}>
+          <IconButton
+            label={t('export.open')}
+            className="max-sm:hidden"
+            onClick={() => setExportOpen(true)}
+          >
             <Download size={18} aria-hidden />
           </IconButton>
           <AddNotesButton onOpen={() => setAddNotesOpen(true)} />
@@ -370,6 +437,10 @@ function Workspace() {
           <StudyButton mapId={mapId} />
           <ShareControls mapId={mapId} />
         </div>
+        <MoreActions
+          onExport={() => setExportOpen(true)}
+          onAddNotes={() => setAddNotesOpen(true)}
+        />
       </header>
 
       <div className="relative flex min-h-0 flex-1">

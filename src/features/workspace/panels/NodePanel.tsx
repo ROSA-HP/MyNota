@@ -368,7 +368,7 @@ export function NodePanel({ node, onClose }: { node: NodeRow; onClose: () => voi
             </Badge>
           )}
           {paragraphs.length ? (
-            <div className="flex max-h-64 flex-col gap-2 overflow-y-auto rounded-neo border-2 border-line bg-ch-yellow/50 p-3 text-sm leading-relaxed">
+            <div className="flex max-h-64 flex-col gap-2 overflow-y-auto rounded-neo border-2 border-line bg-[color-mix(in_srgb,var(--ch-yellow)_var(--wash-strong),transparent)] p-3 text-sm leading-relaxed">
               {paragraphs.slice(0, 12).map((p) => (
                 <p key={p.n} dir="auto" className="whitespace-pre-line">
                   <span className="me-1.5 font-mono text-xs font-bold text-ink-muted" dir="ltr">

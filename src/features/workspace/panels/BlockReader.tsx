@@ -5,7 +5,7 @@ import { Badge, Button, IconButton } from '@/components/ui'
 import { BlockCards } from '@/features/study/BlockCards'
 import { cn } from '@/lib/cn'
 import type { NodeRow, RelationRow } from '@/lib/database.types'
-import { motionMs } from '@/lib/motion'
+import { camera } from '@/lib/motion'
 import { DetailList } from '../canvas/DetailList'
 import { useCanvasUi } from '../canvas/canvasUi'
 import { FIT } from '../canvas/fit'
@@ -50,7 +50,7 @@ export function BlockReader({ node, onClose }: { node: NodeRow; onClose: () => v
   const go = (id: string) => {
     useWorkspace.getState().select(id)
     useCanvasUi.getState().lockView()
-    void fitView({ nodes: [{ id }], ...FIT, maxZoom: 1.1, duration: motionMs(450) })
+    void fitView({ nodes: [{ id }], ...FIT, maxZoom: 1.1, ...camera(450) })
   }
 
   return (

@@ -48,7 +48,7 @@ export function LegalPage({ kind }: { kind: 'privacy' | 'terms' }) {
           <Logo />
         </Link>
         <div className="flex items-center gap-2">
-          <ThemeToggle className="hidden sm:inline-flex" />
+          <ThemeToggle className="max-sm:hidden" />
           <LanguageSelect />
         </div>
       </header>

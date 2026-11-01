@@ -210,15 +210,18 @@ export const de: Messages = {
       title: 'Deine Daten',
       hint: 'Alles herunterladen, was du erstellt hast, oder dein Konto löschen.',
       exportTitle: 'Meine Daten herunterladen',
-      exportHint: 'Eine Datei mit deinen Maps (Blöcke, Verbindungen, Quelltext, Karten), Fächern, Lernfortschritt und Wiederholungsverlauf. Dein KI-Schlüssel ist nicht enthalten.',
+      exportHint:
+        'Eine Datei mit deinen Maps (Blöcke, Verbindungen, Quelltext, Karten), Fächern, Lernfortschritt und Wiederholungsverlauf. Dein KI-Schlüssel ist nicht enthalten.',
       export: 'Meine Daten herunterladen',
       collecting: 'Wird gesammelt …',
       progress: 'Maps: {{done}} von {{total}}',
       downloaded: 'Deine Daten sind heruntergeladen.',
       deleteTitle: 'Mein Konto löschen',
-      deleteHint: 'Löscht dein Konto und alles, was dazugehört. Geteilte Maps werden für alle darauf gelöscht.',
+      deleteHint:
+        'Löscht dein Konto und alles, was dazugehört. Geteilte Maps werden für alle darauf gelöscht.',
       delete: 'Mein Konto löschen …',
-      deleteWarning: 'Das kann nicht rückgängig gemacht werden. Lade vorher deine Daten herunter, wenn du sie behalten willst.',
+      deleteWarning:
+        'Das kann nicht rückgängig gemacht werden. Lade vorher deine Daten herunter, wenn du sie behalten willst.',
       typeUsername: 'Gib zur Bestätigung deinen Nutzernamen ({{username}}) ein',
       deleteForever: 'Endgültig löschen',
       deleted: 'Dein Konto ist gelöscht.',
@@ -495,9 +498,11 @@ export const de: Messages = {
       'Dieser Text ist für eine Anfrage mit {{model}} zu lang. Teile ihn auf kleinere Karten auf.',
     errCreate:
       'Die Karte konnte nicht angelegt werden. Prüfe deine Verbindung und versuche es erneut.',
-    errLimit: 'Du hast das heutige Limit für neue Maps oder Uploads erreicht. Versuche es morgen wieder.',
+    errLimit:
+      'Du hast das heutige Limit für neue Maps oder Uploads erreicht. Versuche es morgen wieder.',
   },
   ws: {
+    moreActions: 'Weitere Aktionen',
     studyView: {
       covered: 'Verdeckter Block',
       mastery: 'Lernstand-Punkte',
@@ -1351,8 +1356,7 @@ export const de: Messages = {
         active: 'Das Konto kann sich wieder anmelden und seine Maps nutzen.',
         suspended:
           'Das Konto wird abgemeldet und kann MyNota bis zur Freischaltung nicht nutzen. Maps bleiben erhalten.',
-        banned:
-          'Wie Sperren, aber dauerhaft gemeint. Maps bleiben, bis das Konto gelöscht wird.',
+        banned: 'Wie Sperren, aber dauerhaft gemeint. Maps bleiben, bis das Konto gelöscht wird.',
       },
     },
     maps: {
@@ -1428,10 +1432,12 @@ export const de: Messages = {
   legal: {
     updated: 'Zuletzt geändert: {{date}}',
     contactTitle: 'Kontakt',
-    contactSoon: 'Kontaktdaten für Datenschutz- und Rechtsfragen werden hier ergänzt, bevor MyNota öffentlich startet.',
+    contactSoon:
+      'Kontaktdaten für Datenschutz- und Rechtsfragen werden hier ergänzt, bevor MyNota öffentlich startet.',
     privacy: {
       title: 'Datenschutzerklärung',
-      intro: 'MyNota macht aus Lernmaterial Mindmaps und Karteikarten. Hier steht, was wir speichern, wohin es geht und was du tun kannst.',
+      intro:
+        'MyNota macht aus Lernmaterial Mindmaps und Karteikarten. Hier steht, was wir speichern, wohin es geht und was du tun kannst.',
       sections: {
         who: {
           title: 'Verantwortlich',

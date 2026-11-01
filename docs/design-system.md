@@ -169,3 +169,29 @@ style). Shared pieces live in `src/styles/index.css`:
 - **Admin**: the open tab carries a brand bar, each tab page rises in, stats stagger in (links
   lift like buttons), the signups chart grows, table rows fade in and highlight on hover,
   skeletons while loading.
+
+### Charcoal dark mode, bright colors, organic lines (2026-11-01)
+
+Asked for by the owner: a charcoal background instead of near-black, brighter colored elements
+(the contrast on them was too low), organic connection lines, smoother motion, and phones.
+- **Charcoal**: paper `#25272b`, surfaces `#2e3136` / `#373a40`, ink `#f5f4ef`, outlines
+  `#959ea8` (>= 4.2:1 on every background).
+- **Bright colors**: chapter colors in dark mode are bright pastels (`oklch(0.82 0.11 <hue>)`).
+  Every colored fill is a **light island**: a rule in `index.css` gives elements with an exact
+  `bg-ch-*` class (or `.on-color`, for fills set by inline style) the light-theme text, line and
+  surface values, so dark text sits on the bright color (>= 9.4:1). Washes behind light text
+  use little color: `--region-mix` (map regions, 30% in dark), `--wash` / `--wash-strong`.
+  Icons on a colored tile chosen by a variant use `text-on-color`.
+- **Organic lines** (`canvas/organic.ts`): tree lines are smooth curves with a tapered, filled
+  body (thick at the parent, thin at the child) and the thin centre line on top carrying the
+  arrowhead. Every branch of one kind has the same number of points, so lines morph with the
+  cards when the layout changes. Section → block branches sweep in the 30px gap above the
+  blocks, then run down the gap beside the column and curl into each block.
+- **Smoother motion**: one ease-out curve (`--ease-soft`, quint) and a softer spring; cards glide
+  480 ms and their lines morph in step (not while dragging); map camera moves use
+  `camera(ms)` from `lib/motion.ts` (eased out, a little longer); no double-tap delay on
+  touch controls.
+- **Phones**: `cn` does not resolve conflicting classes, so hide things on small screens with
+  a variant (`max-sm:hidden`), never a plain `hidden` next to a component's own `inline-flex`.
+  The map header moves Export and Add notes into a "More actions" menu below 640px; auth
+  links have 44px tap areas.

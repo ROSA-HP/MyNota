@@ -1,7 +1,7 @@
 import { useReactFlow } from '@xyflow/react'
 import { useEffect } from 'react'
 import { useSearchParams } from 'react-router'
-import { motionMs } from '@/lib/motion'
+import { camera } from '@/lib/motion'
 import { useCanvasUi } from './canvas/canvasUi'
 import { useWorkspace } from './workspaceStore'
 
@@ -29,7 +29,7 @@ export function FocusFromUrl() {
         const { x, y } = internal.internals.positionAbsolute
         void setCenter(x + width / 2, y + (internal.measured.height ?? 0) / 2, {
           zoom: 1,
-          duration: motionMs(450),
+          ...camera(450),
         })
         const next = new URLSearchParams(params)
         next.delete('node')

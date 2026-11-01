@@ -40,7 +40,7 @@ function NavIcon({ Icon, tile }: { Icon: typeof House; tile: string }) {
     <span
       className={cn(
         'flex size-8 shrink-0 items-center justify-center rounded-lg border-2 border-transparent transition-colors duration-200',
-        'group-aria-[current=page]:border-line',
+        'group-aria-[current=page]:border-line group-aria-[current=page]:text-on-color',
         tile,
       )}
     >
@@ -190,7 +190,7 @@ export function AppShell() {
           <span className="md:hidden">
             <SearchButton compact />
           </span>
-          <ThemeToggle className="hidden sm:inline-flex" />
+          <ThemeToggle className="max-sm:hidden" />
           <LanguageSelect />
         </div>
       </header>

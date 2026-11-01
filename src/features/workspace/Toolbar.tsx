@@ -1,5 +1,5 @@
 import { useReactFlow, useStore, useViewport } from '@xyflow/react'
-import { motionMs } from '@/lib/motion'
+import { camera } from '@/lib/motion'
 import {
   BookOpen,
   CircleDot,
@@ -82,9 +82,9 @@ function LevelSwitch() {
         ...FIT,
         maxZoom: zoomForLevel(l, book),
         minZoom: 0.15,
-        duration: motionMs(350),
+        ...camera(350),
       })
-    else void zoomTo(zoomForLevel(l, book), { duration: motionMs(350) })
+    else void zoomTo(zoomForLevel(l, book), { ...camera(350) })
   }
   return (
     <div
@@ -136,7 +136,7 @@ function StudyViews() {
     void fitView({
       nodes: [{ id: `region:${group}` }, { id: group }],
       ...FIT,
-      duration: motionMs(400),
+      ...camera(400),
     })
   }
 
@@ -191,7 +191,7 @@ export function Toolbar() {
         .filter((n) => n.position)
         .map((n) => ({ id: n.id, patch: { position: null } })),
     )
-    requestAnimationFrame(() => void fitView({ ...FIT, duration: motionMs(300) }))
+    requestAnimationFrame(() => void fitView({ ...FIT, ...camera(300) }))
   }
 
   return (
@@ -253,7 +253,7 @@ export function Toolbar() {
         label={t('ws.zoomOut')}
         onClick={() => {
           useCanvasUi.getState().lockView()
-          void zoomOut({ duration: motionMs(150) })
+          void zoomOut({ ...camera(150) })
         }}
       >
         <Minus size={19} aria-hidden />
@@ -265,15 +265,12 @@ export function Toolbar() {
         label={t('ws.zoomIn')}
         onClick={() => {
           useCanvasUi.getState().lockView()
-          void zoomIn({ duration: motionMs(150) })
+          void zoomIn({ ...camera(150) })
         }}
       >
         <Plus size={19} aria-hidden />
       </ToolButton>
-      <ToolButton
-        label={t('ws.fit')}
-        onClick={() => void fitView({ ...FIT, duration: motionMs(300) })}
-      >
+      <ToolButton label={t('ws.fit')} onClick={() => void fitView({ ...FIT, ...camera(300) })}>
         <Maximize size={18} aria-hidden />
       </ToolButton>
     </div>

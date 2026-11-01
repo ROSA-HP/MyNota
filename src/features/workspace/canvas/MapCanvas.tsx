@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { motionMs } from '@/lib/motion'
+import { camera, motionMs } from '@/lib/motion'
 import {
   Background,
   BackgroundVariant,
@@ -744,7 +744,7 @@ export function MapCanvas() {
               nodes: [{ id: node.id }],
               ...FIT,
               maxZoom: 0.9,
-              duration: motionMs(450),
+              ...camera(450),
             })
             return
           }
@@ -785,7 +785,7 @@ export function MapCanvas() {
             nodes: [{ id: edge.source }, { id: edge.target }],
             ...FIT,
             minZoom: 0.7,
-            duration: motionMs(450),
+            ...camera(450),
           })
         }}
         onPaneClick={() => {

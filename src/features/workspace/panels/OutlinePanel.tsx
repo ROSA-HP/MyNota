@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { motionMs } from '@/lib/motion'
+import { camera } from '@/lib/motion'
 import { useReactFlow } from '@xyflow/react'
 import { ChevronRight, Search, Sparkles } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
@@ -61,7 +61,7 @@ export function OutlinePanel({ onNavigate }: { onNavigate?: () => void }) {
       void setCenter(
         x + (internal.measured.width ?? 0) / 2,
         y + (internal.measured.height ?? 0) / 2,
-        { zoom: 1, duration: motionMs(350) },
+        { zoom: 1, ...camera(350) },
       )
     }
     onNavigate?.()
@@ -109,7 +109,7 @@ export function OutlinePanel({ onNavigate }: { onNavigate?: () => void }) {
             (chapterById.get(n.id) ? (
               <span
                 aria-hidden
-                className="flex size-5 shrink-0 items-center justify-center rounded-full border-[1.5px] border-line font-mono text-[10px] font-bold"
+                className="on-color flex size-5 shrink-0 items-center justify-center rounded-full border-[1.5px] border-line font-mono text-[10px] font-bold"
                 style={{ background: chapterColor(color).fill }}
               >
                 {chapterById.get(n.id)?.number}

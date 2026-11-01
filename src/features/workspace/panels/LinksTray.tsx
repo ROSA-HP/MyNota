@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { motionMs } from '@/lib/motion'
+import { camera } from '@/lib/motion'
 import { useReactFlow } from '@xyflow/react'
 import { ArrowLeftRight, ArrowRight, Check, Search, Sparkles, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
@@ -133,7 +133,7 @@ export function LinksTray({ onClose }: { onClose: () => void }) {
         ? LEVEL_THRESHOLDS.book.sections + 0.02
         : LEVEL_THRESHOLDS.notes.sections + 0.02,
       maxZoom: 1,
-      duration: motionMs(450),
+      ...camera(450),
     })
   }
 

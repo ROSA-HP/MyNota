@@ -42,7 +42,7 @@ export function ForgotPasswordPage() {
       footer={
         <Link
           to="/sign-in"
-          className="font-bold text-ink underline decoration-2 underline-offset-4"
+          className="-my-3 py-3 font-bold text-ink underline decoration-2 underline-offset-4"
         >
           {t('auth.forgot.back')}
         </Link>

@@ -499,7 +499,7 @@ export function ChapterTabNode({ data, selected }: NodeProps<ChapterTabNodeT>) {
       {...useLongPress(chapter.id)}
       className={cn(
         'mynota-tab flex size-full items-center gap-2 rounded-t-[12px] border-[2.5px] border-b-0 border-line px-2.5 text-ink',
-        waiting && 'border-dashed',
+        waiting ? 'border-dashed' : 'on-color',
         selected && 'outline-3 outline-offset-2 outline-ink',
       )}
       style={{ background: waiting ? 'var(--surface)' : c.fill }}

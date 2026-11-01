@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react'
 import { relationColor } from './visuals'
-import { motionMs } from '@/lib/motion'
+import { camera } from '@/lib/motion'
 import { createPortal } from 'react-dom'
 import {
   BaseEdge,
@@ -31,6 +31,7 @@ import { useWorkspace } from '../workspaceStore'
 import { useCanvasUi } from './canvasUi'
 import { bezierAt, labelSize, pickLabelPoint } from './labelPlacement'
 import { existingLink, nodeIdAt } from './linking'
+import { centrePath, downThenAcross, taperedPath, verticalS, type Cubic } from './organic'
 
 /**
  * Edges are drawn from the live node boxes (not from handles), so they follow nodes while
@@ -54,11 +55,6 @@ type Tinted = { color?: string }
 export type BranchEdgeT = Edge<Tinted, 'branch'>
 export type TreeEdgeT = Edge<{ rtl: boolean } & Tinted, 'tree'>
 export type StepEdgeT = Edge<Tinted, 'step'>
-const treeStroke = (color: string | undefined) => ({
-  stroke: color ?? 'var(--line)',
-  strokeWidth: 2,
-  strokeLinecap: 'round' as const,
-})
 export type RelationEdgeT = Edge<
   {
     relation: RelationRow
@@ -71,87 +67,92 @@ export type RelationEdgeT = Edge<
   'relation'
 >
 
-/** Map title → section: a curve from the bottom centre to the top centre. */
+/**
+ * An organic tree line: a tapered, filled body (thick at the parent, thin at the child) with the
+ * thin centre line on top carrying the arrowhead. Both morph smoothly when cards move.
+ */
+function OrganicBranch({
+  id,
+  segs,
+  color,
+  markerEnd,
+  from,
+  to = 1.8,
+}: {
+  id: string
+  segs: Cubic[]
+  color: string | undefined
+  markerEnd: string | undefined
+  from: number
+  to?: number
+}) {
+  const stroke = color ?? 'var(--line)'
+  return (
+    <>
+      <path className="mynota-branch" d={taperedPath(segs, from, to)} fill={stroke} />
+      <BaseEdge
+        id={id}
+        path={centrePath(segs)}
+        markerEnd={markerEnd}
+        style={{ stroke, strokeWidth: to, strokeLinecap: 'round', fill: 'none' }}
+      />
+    </>
+  )
+}
+
+/** Map title → section: a flowing S-curve from the bottom centre to the top centre. */
 export function BranchEdge({ id, source, target, data, markerEnd }: EdgeProps<BranchEdgeT>) {
   const s = rectOf(useInternalNode(source))
   const t = rectOf(useInternalNode(target))
   if (!s || !t) return null
-  const sx = s.x + s.w / 2
-  const sy = s.y + s.h
-  const tx = t.x + t.w / 2
-  const ty = t.y
-  const my = (sy + ty) / 2
-  return (
-    <BaseEdge
-      id={id}
-      path={`M${sx},${sy} C${sx},${my} ${tx},${my} ${tx},${ty - 2}`}
-      markerEnd={markerEnd}
-      style={treeStroke(data?.color)}
-    />
-  )
+  const segs = [verticalS({ x: s.x + s.w / 2, y: s.y + s.h }, { x: t.x + t.w / 2, y: t.y - 2 })]
+  return <OrganicBranch id={id} segs={segs} color={data?.color} markerEnd={markerEnd} from={5} />
 }
 
-/** Parent → child in a stacked column: down the trunk, then across into the child. */
+/** Parent → child in a stacked column: from the parent's trunk, a branch sweeps into the child. */
 export function TreeEdge({ id, source, target, data, markerEnd }: EdgeProps<TreeEdgeT>) {
   const s = rectOf(useInternalNode(source))
   const t = rectOf(useInternalNode(target))
   if (!s || !t) return null
   const rtl = data?.rtl ?? false
-  const trunkX = rtl ? s.x + s.w - 16 : s.x + 16
-  const sy = s.y + s.h
-  const ty = t.y + t.h / 2
-  const tx = rtl ? t.x + t.w : t.x
-  const r = Math.min(8, Math.abs(ty - sy) / 2, Math.abs(tx - trunkX) / 2)
-  const dir = tx > trunkX ? 1 : -1
-  const path = `M${trunkX},${sy} L${trunkX},${ty - r} Q${trunkX},${ty} ${trunkX + dir * r},${ty} L${tx},${ty}`
-  return <BaseEdge id={id} path={path} markerEnd={markerEnd} style={treeStroke(data?.color)} />
+  const trunk = { x: rtl ? s.x + s.w - 16 : s.x + 16, y: s.y + s.h }
+  const end = { x: rtl ? t.x + t.w : t.x, y: t.y + t.h / 2 }
+  const segs = [downThenAcross(trunk, end)]
+  return <OrganicBranch id={id} segs={segs} color={data?.color} markerEnd={markerEnd} from={4} />
 }
 
 export type RailEdgeT = Edge<{ rtl: boolean } & Tinted, 'rail'>
 
 /**
- * Section → a top-level block in grouped columns (canvas step 3): down from the section card
- * to a rail just above the blocks, along it to the block's column, down beside the column and
- * into the block. Blocks of one column share the same rail and trunk.
+ * Section → a top-level block in grouped columns: the branch flows from the section card over
+ * the gap above the blocks to its column, then down beside the column and into the block. Blocks
+ * of one column share the same path at the top, so they fan out from one limb.
  */
 export function RailEdge({ id, source, target, data, markerEnd }: EdgeProps<RailEdgeT>) {
   const s = rectOf(useInternalNode(source))
   const t = rectOf(useInternalNode(target))
   if (!s || !t) return null
   const rtl = data?.rtl ?? false
-  const sx = s.x + s.w / 2
-  const sy = s.y + s.h
-  const railY = sy + 15
+  const start = { x: s.x + s.w / 2, y: s.y + s.h }
   const trunkX = rtl ? t.x + t.w + 12 : t.x - 12
-  const tx = rtl ? t.x + t.w : t.x
-  const ty = t.y + Math.min(t.h / 2, 24)
-  const r = 8
-  const across = trunkX > sx ? 1 : -1
-  const into = tx > trunkX ? 1 : -1
-  const path =
-    Math.abs(trunkX - sx) < r * 2
-      ? `M${sx},${sy} L${sx},${ty - r} Q${sx},${ty} ${sx + into * r},${ty} L${tx},${ty}`
-      : `M${sx},${sy} L${sx},${railY - r} Q${sx},${railY} ${sx + across * r},${railY} ` +
-        `L${trunkX - across * r},${railY} Q${trunkX},${railY} ${trunkX},${railY + r} ` +
-        `L${trunkX},${ty - r} Q${trunkX},${ty} ${trunkX + into * r},${ty} L${tx},${ty}`
-  return <BaseEdge id={id} path={path} markerEnd={markerEnd} style={treeStroke(data?.color)} />
+  const end = { x: rtl ? t.x + t.w : t.x, y: t.y + Math.min(t.h / 2, 24) }
+  // The sideways sweep stays in the gap above the blocks (SIZES.blocksGap is 30); then the limb
+  // runs down the gap beside the column and curls into the block.
+  const limb = { x: trunkX, y: Math.min(start.y + 22, end.y) }
+  const segs: Cubic[] = [
+    [start, { x: start.x, y: start.y + 16 }, { x: trunkX, y: start.y + 6 }, limb],
+    downThenAcross(limb, end),
+  ]
+  return <OrganicBranch id={id} segs={segs} color={data?.color} markerEnd={markerEnd} from={4.5} />
 }
 
-/** Process sections: an arrow from one step down to the next. */
+/** Process sections: a gentle S-curve from one step down to the next. */
 export function StepEdge({ id, source, target, data, markerEnd }: EdgeProps<StepEdgeT>) {
   const s = rectOf(useInternalNode(source))
   const t = rectOf(useInternalNode(target))
   if (!s || !t) return null
-  const x1 = s.x + s.w / 2
-  const x2 = t.x + t.w / 2
-  return (
-    <BaseEdge
-      id={id}
-      path={`M${x1},${s.y + s.h} L${x2},${t.y - 2}`}
-      markerEnd={markerEnd}
-      style={treeStroke(data?.color)}
-    />
-  )
+  const segs = [verticalS({ x: s.x + s.w / 2, y: s.y + s.h }, { x: t.x + t.w / 2, y: t.y - 2 })]
+  return <OrganicBranch id={id} segs={segs} color={data?.color} markerEnd={markerEnd} from={3.5} />
 }
 
 /** Picks the facing sides of two boxes and returns a smooth curve between them. */
@@ -462,7 +463,7 @@ function LinkToolbar({
         title={t('ws.link.goOther')}
         onClick={() => {
           select(relation.to_node)
-          void fitView({ nodes: [{ id: relation.to_node }], duration: motionMs(400), maxZoom: 1.1 })
+          void fitView({ nodes: [{ id: relation.to_node }], ...camera(400), maxZoom: 1.1 })
         }}
       >
         <SquareArrowOutUpRight size={16} aria-hidden className="rtl:-scale-x-100" />

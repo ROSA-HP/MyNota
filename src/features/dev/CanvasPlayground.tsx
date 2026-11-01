@@ -38,8 +38,10 @@ export function CanvasPlayground() {
     <ReactFlowProvider>
       <div className="flex h-dvh flex-col bg-paper text-ink">
         <header className="flex h-12 shrink-0 items-center gap-2 border-b-2 border-line bg-surface px-3">
-          <strong>Canvas playground</strong>
-          <span className="text-sm text-ink-muted">development only, nothing is saved</span>
+          <strong className="min-w-0 truncate">Canvas playground</strong>
+          <span className="text-sm text-ink-muted max-md:hidden">
+            development only, nothing is saved
+          </span>
           <span className="ms-auto flex items-center gap-2">
             <ThemeToggle />
             <LanguageSelect />
@@ -48,12 +50,12 @@ export function CanvasPlayground() {
         <div className="relative flex min-h-0 flex-1">
           <main className="relative min-w-0 flex-1">
             <MapCanvas />
-            <div className="pointer-events-none absolute inset-x-0 bottom-3 flex justify-center [&>*]:pointer-events-auto">
+            <div className="pointer-events-none absolute inset-x-0 bottom-3 flex justify-center px-3 [&>*]:pointer-events-auto">
               <Toolbar />
             </div>
           </main>
           {selectedId && node && (
-            <aside className="z-30 w-[360px] shrink-0 border-s-2 border-line bg-surface">
+            <aside className="mynota-sheet z-30 w-[360px] max-w-[92vw] shrink-0 border-s-2 border-line bg-surface max-xl:absolute max-xl:inset-y-0 max-xl:end-0 max-xl:neo-shadow-lg">
               <NodePanel
                 key={node.id}
                 node={node}
