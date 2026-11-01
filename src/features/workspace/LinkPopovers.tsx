@@ -126,7 +126,7 @@ function LinkPickerInner({
       ref={ref}
       role="dialog"
       aria-label={isNew ? t('ws.link.newTitle') : t('ws.link.editTitle')}
-      className="fixed z-50 flex flex-col overflow-hidden rounded-neo-lg border-[2.5px] border-line bg-surface text-ink neo-shadow-lg"
+      className="fixed z-50 flex animate-pop flex-col overflow-hidden rounded-neo-lg border-[2.5px] border-line bg-surface text-ink neo-shadow-lg [animation-duration:240ms]"
       style={style}
     >
       <div className="flex items-center gap-2 border-b-2 border-line-soft px-3.5 py-2.5">
@@ -350,7 +350,7 @@ function LinkSearchInner({ fromIds, anchor }: { fromIds: string[]; anchor: Ancho
       ref={ref}
       role="dialog"
       aria-label={t('ws.link.searchLabel')}
-      className="fixed z-50 flex flex-col overflow-hidden rounded-neo-lg border-[2.5px] border-line bg-surface text-ink neo-shadow-lg"
+      className="fixed z-50 flex animate-pop flex-col overflow-hidden rounded-neo-lg border-[2.5px] border-line bg-surface text-ink neo-shadow-lg [animation-duration:240ms]"
       style={style}
     >
       <div className="flex flex-col gap-2 border-b-2 border-line-soft px-3.5 pt-3 pb-2.5">

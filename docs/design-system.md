@@ -162,3 +162,10 @@ style). Shared pieces live in `src/styles/index.css`:
   count badges pop when the number changes.
 - Animations fill **backwards only**, so no transform stays on an element after it ends.
 - **Reduced motion** turns all of it off (global rule at the end of the stylesheet).
+- **Workspace**: the details sheet slides in from its side and each opened block fades in; the
+  outline drawer eases open and its chevrons turn; menus and link popovers pop; hint pills,
+  notices and the toolbar rise in; a tool that is switched on pops its icon; "Saved" shows a
+  check that pops.
+- **Admin**: the open tab carries a brand bar, each tab page rises in, stats stagger in (links
+  lift like buttons), the signups chart grows, table rows fade in and highlight on hover,
+  skeletons while loading.

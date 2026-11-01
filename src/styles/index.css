@@ -942,3 +942,17 @@ dialog:not([open])::backdrop {
     display: none;
   }
 }
+
+/* Workspace: the details sheet slides in from its side. */
+.mynota-sheet {
+  animation: mynota-sheet 300ms var(--ease-soft) backwards;
+}
+@keyframes mynota-sheet {
+  from {
+    opacity: 0;
+    transform: translateX(var(--sheet-from, 28px));
+  }
+}
+[dir='rtl'] .mynota-sheet {
+  --sheet-from: -28px;
+}

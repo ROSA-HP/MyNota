@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { motionMs } from '@/lib/motion'
 import { useReactFlow } from '@xyflow/react'
-import { ChevronDown, ChevronRight, Search, Sparkles } from 'lucide-react'
+import { ChevronRight, Search, Sparkles } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/cn'
 import type { NodeRow } from '@/lib/database.types'
@@ -92,11 +92,15 @@ export function OutlinePanel({ onNavigate }: { onNavigate?: () => void }) {
               onClick={() => canEdit && update(n.id, { collapsed: !n.collapsed })}
               className="flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-md hover:bg-paper-sunken pointer-coarse:size-11"
             >
-              {open ? (
-                <ChevronDown size={17} aria-hidden />
-              ) : (
-                <ChevronRight size={17} aria-hidden className="rtl:-scale-x-100" />
-              )}
+              {/* One chevron that turns to point down when the branch opens. */}
+              <ChevronRight
+                size={17}
+                aria-hidden
+                className={cn(
+                  'transition-transform duration-200 ease-spring',
+                  open ? 'rotate-90' : 'rtl:-scale-x-100',
+                )}
+              />
             </button>
           ) : (
             <span className="size-7 shrink-0" />
@@ -159,7 +163,9 @@ export function OutlinePanel({ onNavigate }: { onNavigate?: () => void }) {
           )}
         </div>
         {open && children.length > 0 && (
-          <ul>{children.map((c) => renderNode(c, depth + 1, depth === 0 ? c.color : color))}</ul>
+          <ul className="animate-fade">
+            {children.map((c) => renderNode(c, depth + 1, depth === 0 ? c.color : color))}
+          </ul>
         )}
       </li>
     )

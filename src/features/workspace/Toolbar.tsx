@@ -53,7 +53,9 @@ function ToolButton({
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        'flex h-11 min-w-11 cursor-pointer items-center justify-center gap-1.5 rounded-lg px-2.5 text-sm font-semibold whitespace-nowrap disabled:cursor-default disabled:opacity-35 disabled:hover:bg-transparent',
+        'flex h-11 min-w-11 cursor-pointer items-center justify-center gap-1.5 rounded-lg px-2.5 text-sm font-semibold whitespace-nowrap transition-[background-color,color,scale] duration-150 active:scale-90 disabled:cursor-default disabled:opacity-35 disabled:hover:bg-transparent',
+        // The icon pops when a tool is switched on.
+        '[&[aria-pressed=true]>svg]:animate-pop',
         active ? 'bg-selected text-selected-ink' : 'text-ink hover:bg-paper-sunken',
       )}
     >
@@ -101,7 +103,7 @@ function LevelSwitch() {
             title={t(`ws.book.level.${l}`)}
             onClick={() => go(l)}
             className={cn(
-              'flex h-10 min-w-10 cursor-pointer items-center justify-center gap-1.5 rounded-md px-2 text-sm font-semibold whitespace-nowrap',
+              'flex h-10 min-w-10 cursor-pointer items-center justify-center gap-1.5 rounded-md px-2 text-sm font-semibold whitespace-nowrap transition-colors duration-150 [&[aria-pressed=true]>svg]:animate-pop',
               active ? 'border-2 border-line bg-surface text-ink' : 'text-ink-muted hover:text-ink',
             )}
           >
@@ -196,7 +198,7 @@ export function Toolbar() {
     <div
       role="toolbar"
       aria-label={t('ws.tools')}
-      className="flex max-w-full items-center gap-1 overflow-x-auto rounded-neo-lg border-2 border-line bg-surface p-1 neo-shadow [scrollbar-width:thin]"
+      className="flex max-w-full animate-rise items-center gap-1 overflow-x-auto rounded-neo-lg border-2 border-line bg-surface p-1 neo-shadow [animation-delay:150ms] [scrollbar-width:thin]"
     >
       <ToolButton label={t('ws.select')} active={!connecting} onClick={cancelConnect}>
         <MousePointer2 size={19} aria-hidden className="rtl:-scale-x-100" />

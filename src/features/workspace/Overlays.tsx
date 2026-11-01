@@ -42,7 +42,7 @@ export function NodeMenu() {
       ref={ref}
       role="menu"
       aria-label={t('ws.nodeActions')}
-      className="fixed z-50 w-52 rounded-neo-lg border-2 border-line bg-surface p-1.5 text-ink neo-shadow"
+      className="fixed z-50 w-52 origin-top-left animate-pop rounded-neo-lg border-2 border-line bg-surface p-1.5 text-ink neo-shadow [animation-duration:220ms] rtl:origin-top-right"
       style={{ left: x, top: y }}
     >
       <button
@@ -144,7 +144,7 @@ export function ConnectHint() {
   return (
     <div
       role="status"
-      className="rounded-full border-2 border-line bg-brand-soft px-4 py-2 text-sm font-semibold text-ink neo-shadow-sm"
+      className="animate-rise rounded-full border-2 border-line bg-brand-soft px-4 py-2 text-sm font-semibold text-ink neo-shadow-sm"
     >
       {text}
     </div>
@@ -169,7 +169,7 @@ export function StudyViewBanner() {
 
   if (!focusId && !cover) return null
   return (
-    <div className="flex flex-wrap items-center justify-center gap-2" role="status">
+    <div className="mynota-stagger flex flex-wrap items-center justify-center gap-2" role="status">
       {focusId && (
         <span className="flex items-center gap-2 rounded-full border-2 border-line bg-surface py-1 ps-4 pe-1 text-sm font-semibold neo-shadow-sm">
           <span dir="auto">{t('ws.studyView.focusOn', { name: title })}</span>

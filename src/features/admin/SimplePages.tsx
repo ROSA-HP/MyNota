@@ -16,7 +16,7 @@ function Stat({ label, value, to }: { label: string; value: number | string; to?
   return to ? (
     <Link
       to={to}
-      className="flex flex-col gap-1 rounded-neo border-2 border-line bg-surface p-4 hover:bg-paper-sunken"
+      className="neo-btn flex flex-col gap-1 rounded-neo border-2 border-line bg-surface p-4 neo-shadow-sm hover:bg-surface-muted"
     >
       {body}
     </Link>
@@ -36,7 +36,7 @@ export function OverviewPage() {
   })
   return (
     <div className="flex flex-col gap-6">
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+      <div className="mynota-stagger grid grid-cols-2 gap-3 md:grid-cols-4">
         <Stat label={t('admin.overview.users')} value={n(data.users)} to="/admin/users" />
         <Stat label={t('admin.overview.active7')} value={n(data.active_7d)} />
         <Stat label={t('admin.overview.studying7')} value={n(data.studying_7d)} />
@@ -61,12 +61,15 @@ export function OverviewPage() {
               role="img"
               aria-label={t('admin.overview.signups')}
             >
-              {data.signups.map((s) => (
+              {data.signups.map((s, i) => (
                 <div
                   key={s.day}
                   title={`${s.day}: ${s.count}`}
-                  className="flex-1 rounded-t-sm bg-brand"
-                  style={{ height: `${Math.max(4, (s.count / max) * 100)}%` }}
+                  className="mynota-grow-y flex-1 rounded-t-sm bg-brand"
+                  style={{
+                    height: `${Math.max(4, (s.count / max) * 100)}%`,
+                    animationDelay: `${Math.min(i, 30) * 15}ms`,
+                  }}
                 />
               ))}
             </div>

@@ -1,8 +1,8 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { ShieldAlert } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { Link, NavLink, Outlet } from 'react-router'
-import { Alert, Badge, Button, Dialog, Spinner, TextField, buttonClasses } from '@/components/ui'
+import { Link, NavLink, Outlet, useLocation } from 'react-router'
+import { Alert, Badge, Button, Dialog, Skeleton, TextField, buttonClasses } from '@/components/ui'
 import { useAuth } from '@/features/auth/authStore'
 import { cn } from '@/lib/cn'
 import { AdminError, type UserStatus } from './adminApi'
@@ -16,6 +16,7 @@ export function AdminLayout() {
   const { t } = useTranslation()
   const profile = useAuth((s) => s.profile)
   const verified = useAuth((s) => s.mfaVerified)
+  const { pathname } = useLocation()
 
   if (!profile) return null
   if (profile.role !== 'admin')
@@ -70,10 +71,11 @@ export function AdminLayout() {
               end={to === '/admin'}
               className={({ isActive }) =>
                 cn(
-                  'rounded-t-neo border-2 border-b-0 px-3 py-2 text-sm font-semibold whitespace-nowrap',
+                  'relative rounded-t-neo border-2 border-b-0 px-3 py-2 text-sm font-semibold whitespace-nowrap transition-colors duration-150',
                   isActive
-                    ? 'border-line bg-paper text-ink'
-                    : 'border-transparent text-ink-muted hover:text-ink',
+                    ? // The open tab carries a brand bar that pops in.
+                      'border-line bg-paper text-ink before:absolute before:inset-x-2 before:top-1 before:h-1 before:animate-pop before:rounded-full before:bg-brand'
+                    : 'border-transparent text-ink-muted hover:bg-paper-sunken hover:text-ink',
                 )
               }
             >
@@ -82,7 +84,8 @@ export function AdminLayout() {
           ))}
         </nav>
       </div>
-      <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-8">
+      {/* Each admin page rises in when its tab opens. */}
+      <div key={pathname} className="mynota-page mx-auto w-full max-w-6xl px-4 py-6 sm:px-8">
         <Outlet />
       </div>
     </div>
@@ -118,8 +121,11 @@ export function Loading({ error }: { error: string | null }) {
   const { t } = useTranslation()
   if (error) return <Alert tone="danger">{t('admin.loadFailed', { error })}</Alert>
   return (
-    <div className="flex justify-center py-10">
-      <Spinner size={24} />
+    <div className="flex flex-col gap-3" role="status">
+      <span className="sr-only">{t('common.loading')}</span>
+      <Skeleton className="h-10" />
+      <Skeleton className="h-10" />
+      <Skeleton className="h-10" />
     </div>
   )
 }
@@ -134,7 +140,7 @@ export function Section({
   actions?: ReactNode
 }) {
   return (
-    <section className="flex flex-col gap-3">
+    <section className="flex animate-rise flex-col gap-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-lg font-bold">{title}</h2>
         {actions}
@@ -167,7 +173,7 @@ export function Table({
             ))}
           </tr>
         </thead>
-        <tbody className="divide-y-2 divide-line-soft">
+        <tbody className="divide-y-2 divide-line-soft [&>tr]:animate-fade [&>tr]:transition-colors [&>tr:hover]:bg-paper-sunken">
           {empty ? (
             <tr>
               <td colSpan={head.length} className="px-3 py-6 text-center text-ink-muted">

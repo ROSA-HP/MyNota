@@ -30,7 +30,7 @@ export function LinksNotice() {
     return (
       <div
         role="status"
-        className="flex items-center gap-2 rounded-full border-2 border-line bg-surface px-3.5 py-1.5 text-sm font-semibold neo-shadow-sm"
+        className="flex animate-rise items-center gap-2 rounded-full border-2 border-line bg-surface px-3.5 py-1.5 text-sm font-semibold neo-shadow-sm"
       >
         <Spinner size={13} />
         {status.scope === 'book' ? t('ws.suggest.runningBook') : t('ws.suggest.running')}
@@ -48,7 +48,7 @@ export function LinksNotice() {
   return (
     <div
       role="status"
-      className="flex max-w-[min(640px,100%)] items-center gap-3 rounded-neo-lg border-2 border-line bg-surface py-2 ps-3.5 pe-2 neo-shadow"
+      className="flex max-w-[min(640px,100%)] animate-rise items-center gap-3 rounded-neo-lg border-2 border-line bg-surface py-2 ps-3.5 pe-2 neo-shadow"
     >
       <CircleCheck size={18} aria-hidden className="shrink-0 text-success" />
       <span className="text-sm">{text}</span>

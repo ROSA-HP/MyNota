@@ -1,6 +1,15 @@
 import { useEffect, useRef, useState } from 'react'
 import { ReactFlowProvider } from '@xyflow/react'
-import { ChevronRight, Download, Eye, GitMerge, Layers, PanelLeft, Sparkles } from 'lucide-react'
+import {
+  Check,
+  ChevronRight,
+  Download,
+  Eye,
+  GitMerge,
+  Layers,
+  PanelLeft,
+  Sparkles,
+} from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Link, useLocation, useNavigate, useParams } from 'react-router'
 import { Alert, Badge, IconButton, Logo, Spinner, buttonClasses } from '@/components/ui'
@@ -64,12 +73,15 @@ function SaveIndicator() {
   return (
     <span
       role="status"
+      // Each change of state fades in; "Saved" gets a little check that pops.
+      key={state}
       className={cn(
-        'hidden items-center gap-1.5 text-[13px] font-semibold md:inline-flex',
+        'hidden animate-fade items-center gap-1.5 text-[13px] font-semibold md:inline-flex',
         state === 'error' ? 'text-warning' : state === 'saved' ? 'text-success' : 'text-ink-muted',
       )}
     >
       {state === 'saving' && <Spinner size={12} />}
+      {state === 'saved' && <Check size={14} strokeWidth={3} aria-hidden className="animate-pop" />}
       {label}
     </span>
   )
@@ -366,7 +378,7 @@ function Workspace() {
           aria-label={t('ws.outline')}
           className={cn(
             'z-30 w-[264px] shrink-0 border-e-2 border-line bg-surface-muted',
-            'max-xl:absolute max-xl:inset-y-0 max-xl:start-0 max-xl:neo-shadow-lg max-xl:transition-transform',
+            'max-xl:absolute max-xl:inset-y-0 max-xl:start-0 max-xl:neo-shadow-lg max-xl:transition-[translate,visibility] max-xl:duration-300 max-xl:ease-soft',
             outlineOpen
               ? ''
               : 'max-xl:pointer-events-none max-xl:invisible max-xl:ltr:-translate-x-full max-xl:rtl:translate-x-full',
@@ -406,7 +418,8 @@ function Workspace() {
         {panelOpen && (
           <aside
             aria-label={t('ws.panel.label')}
-            className="z-30 w-[360px] max-w-[92vw] shrink-0 border-s-2 border-line bg-surface max-xl:absolute max-xl:inset-y-0 max-xl:end-0 max-xl:neo-shadow-lg"
+            // The sheet slides in; each block opened in it fades in.
+            className="mynota-sheet z-30 w-[360px] max-w-[92vw] shrink-0 border-s-2 border-line bg-surface max-xl:absolute max-xl:inset-y-0 max-xl:end-0 max-xl:neo-shadow-lg [&>*]:animate-fade"
           >
             {selectedNode ? (
               <NodePanel key={selectedNode.id} node={selectedNode} onClose={closePanel} />
