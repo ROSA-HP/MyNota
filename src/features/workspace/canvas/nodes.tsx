@@ -274,7 +274,7 @@ function MasteryDot({ nodeId }: { nodeId: string }) {
 const CLAMP = ['', 'line-clamp-1', 'line-clamp-2', 'line-clamp-3'] as const
 
 /** A formula on a card: typeset, centered, and scaled down when wider than the card. */
-function CardFormula({ latex }: { latex: string }) {
+function CardFormula({ latex, accent }: { latex: string; accent: string }) {
   const box = useRef<HTMLDivElement>(null)
   const inner = useRef<HTMLDivElement>(null)
   useLayoutEffect(() => {
@@ -288,9 +288,10 @@ function CardFormula({ latex }: { latex: string }) {
   return (
     <div
       ref={box}
-      className="flex h-10 shrink-0 items-center justify-center overflow-hidden rounded-md bg-paper-sunken px-1.5"
+      className="flex h-[52px] shrink-0 items-center justify-center overflow-hidden rounded-md border-s-[3px] bg-paper-sunken px-1.5"
+      style={{ borderInlineStartColor: accent }}
     >
-      <div ref={inner} className="origin-center text-[15px] whitespace-nowrap">
+      <div ref={inner} className="origin-center text-[14px] whitespace-nowrap">
         <MathFormula latex={latex} />
       </div>
     </div>
@@ -364,7 +365,7 @@ export function BlockNode({ data, selected }: NodeProps<BlockNodeT>) {
         )}
       </div>
       {/* Formulas come first: for a block about a formula, the formula is the point. */}
-      {!open && !covered && card.formula && <CardFormula latex={card.formula} />}
+      {!open && !covered && card.formula && <CardFormula latex={card.formula} accent={c.strong} />}
       {!open && !covered && card.summaryLines > 0 && (
         <p
           dir="auto"

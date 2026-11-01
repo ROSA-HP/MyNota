@@ -494,7 +494,9 @@ export function LibraryPage() {
             onClick={() => setFilter(null)}
             className={cn(
               'h-10 cursor-pointer rounded-full border-2 border-line px-3.5 text-sm font-semibold',
-              !activeSubject ? 'bg-selected text-selected-ink' : 'bg-surface hover:bg-surface-muted',
+              !activeSubject
+                ? 'bg-selected text-selected-ink'
+                : 'bg-surface hover:bg-surface-muted',
             )}
           >
             {t('library.all')} · {ready.maps.length}

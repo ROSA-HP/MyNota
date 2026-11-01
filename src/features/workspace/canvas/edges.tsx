@@ -49,9 +49,16 @@ function rectOf(n: InternalNode | undefined): Rect | null {
   return { x, y, w: n.measured.width ?? n.width ?? 0, h: n.measured.height ?? n.height ?? 0 }
 }
 
-export type BranchEdgeT = Edge<Record<string, never>, 'branch'>
-export type TreeEdgeT = Edge<{ rtl: boolean }, 'tree'>
-export type StepEdgeT = Edge<Record<string, never>, 'step'>
+/** Tree lines take their section's color (never plain black) and end in an arrowhead. */
+type Tinted = { color?: string }
+export type BranchEdgeT = Edge<Tinted, 'branch'>
+export type TreeEdgeT = Edge<{ rtl: boolean } & Tinted, 'tree'>
+export type StepEdgeT = Edge<Tinted, 'step'>
+const treeStroke = (color: string | undefined) => ({
+  stroke: color ?? 'var(--line)',
+  strokeWidth: 2,
+  strokeLinecap: 'round' as const,
+})
 export type RelationEdgeT = Edge<
   {
     relation: RelationRow
@@ -65,7 +72,7 @@ export type RelationEdgeT = Edge<
 >
 
 /** Map title → section: a curve from the bottom centre to the top centre. */
-export function BranchEdge({ id, source, target }: EdgeProps<BranchEdgeT>) {
+export function BranchEdge({ id, source, target, data, markerEnd }: EdgeProps<BranchEdgeT>) {
   const s = rectOf(useInternalNode(source))
   const t = rectOf(useInternalNode(target))
   if (!s || !t) return null
@@ -77,14 +84,15 @@ export function BranchEdge({ id, source, target }: EdgeProps<BranchEdgeT>) {
   return (
     <BaseEdge
       id={id}
-      path={`M${sx},${sy} C${sx},${my} ${tx},${my} ${tx},${ty}`}
-      style={{ stroke: 'var(--line)', strokeWidth: 2 }}
+      path={`M${sx},${sy} C${sx},${my} ${tx},${my} ${tx},${ty - 2}`}
+      markerEnd={markerEnd}
+      style={treeStroke(data?.color)}
     />
   )
 }
 
 /** Parent → child in a stacked column: down the trunk, then across into the child. */
-export function TreeEdge({ id, source, target, data }: EdgeProps<TreeEdgeT>) {
+export function TreeEdge({ id, source, target, data, markerEnd }: EdgeProps<TreeEdgeT>) {
   const s = rectOf(useInternalNode(source))
   const t = rectOf(useInternalNode(target))
   if (!s || !t) return null
@@ -96,17 +104,17 @@ export function TreeEdge({ id, source, target, data }: EdgeProps<TreeEdgeT>) {
   const r = Math.min(8, Math.abs(ty - sy) / 2, Math.abs(tx - trunkX) / 2)
   const dir = tx > trunkX ? 1 : -1
   const path = `M${trunkX},${sy} L${trunkX},${ty - r} Q${trunkX},${ty} ${trunkX + dir * r},${ty} L${tx},${ty}`
-  return <BaseEdge id={id} path={path} style={{ stroke: 'var(--line)', strokeWidth: 1.6 }} />
+  return <BaseEdge id={id} path={path} markerEnd={markerEnd} style={treeStroke(data?.color)} />
 }
 
-export type RailEdgeT = Edge<{ rtl: boolean }, 'rail'>
+export type RailEdgeT = Edge<{ rtl: boolean } & Tinted, 'rail'>
 
 /**
  * Section → a top-level block in grouped columns (canvas step 3): down from the section card
  * to a rail just above the blocks, along it to the block's column, down beside the column and
  * into the block. Blocks of one column share the same rail and trunk.
  */
-export function RailEdge({ id, source, target, data }: EdgeProps<RailEdgeT>) {
+export function RailEdge({ id, source, target, data, markerEnd }: EdgeProps<RailEdgeT>) {
   const s = rectOf(useInternalNode(source))
   const t = rectOf(useInternalNode(target))
   if (!s || !t) return null
@@ -126,11 +134,11 @@ export function RailEdge({ id, source, target, data }: EdgeProps<RailEdgeT>) {
       : `M${sx},${sy} L${sx},${railY - r} Q${sx},${railY} ${sx + across * r},${railY} ` +
         `L${trunkX - across * r},${railY} Q${trunkX},${railY} ${trunkX},${railY + r} ` +
         `L${trunkX},${ty - r} Q${trunkX},${ty} ${trunkX + into * r},${ty} L${tx},${ty}`
-  return <BaseEdge id={id} path={path} style={{ stroke: 'var(--line)', strokeWidth: 1.6 }} />
+  return <BaseEdge id={id} path={path} markerEnd={markerEnd} style={treeStroke(data?.color)} />
 }
 
 /** Process sections: an arrow from one step down to the next. */
-export function StepEdge({ id, source, target, markerEnd }: EdgeProps<StepEdgeT>) {
+export function StepEdge({ id, source, target, data, markerEnd }: EdgeProps<StepEdgeT>) {
   const s = rectOf(useInternalNode(source))
   const t = rectOf(useInternalNode(target))
   if (!s || !t) return null
@@ -141,7 +149,7 @@ export function StepEdge({ id, source, target, markerEnd }: EdgeProps<StepEdgeT>
       id={id}
       path={`M${x1},${s.y + s.h} L${x2},${t.y - 2}`}
       markerEnd={markerEnd}
-      style={{ stroke: 'var(--line)', strokeWidth: 1.6 }}
+      style={treeStroke(data?.color)}
     />
   )
 }

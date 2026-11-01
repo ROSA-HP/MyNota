@@ -188,7 +188,9 @@ export function SearchPalette() {
                   }}
                   className={cn(
                     'min-h-9 cursor-pointer rounded-full border-2 border-line px-3 text-sm font-semibold disabled:cursor-default disabled:border-line-soft disabled:text-ink-faint pointer-coarse:min-h-11',
-                    tab === k ? 'bg-selected text-selected-ink' : 'bg-surface hover:bg-surface-muted',
+                    tab === k
+                      ? 'bg-selected text-selected-ink'
+                      : 'bg-surface hover:bg-surface-muted',
                   )}
                 >
                   {t(`search.tabs.${k}`, { count: counts[k] })}

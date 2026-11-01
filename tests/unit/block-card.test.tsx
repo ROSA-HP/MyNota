@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { cleanup, render } from '@testing-library/react'
 import { makeNode } from '@/ai/pipeline/convert'
-import { MathFormula } from '@/components/ui/MathFormula'
+import { MathFormula, standardLatex } from '@/components/ui/MathFormula'
 import { SIZES, blockCard } from '@/features/workspace/canvas/layout'
 
 afterEach(cleanup)
@@ -29,7 +29,7 @@ describe('block cards (canvas step 1)', () => {
       details: [{ kind: 'formula', latex: '\\sin\\theta = m\\frac{\\lambda}{a}' }],
     })
     expect(withFormula.formula).toBe('\\sin\\theta = m\\frac{\\lambda}{a}')
-    expect(withFormula.h).toBe(withSummary.h + 48)
+    expect(withFormula.h).toBe(withSummary.h + 60)
     const core = blockCard({ ...base, importance: 'core' })
     expect(core.h).toBe(withSummary.h + 26)
   })
@@ -59,6 +59,17 @@ describe('formulas', () => {
     expect(container.querySelector('a')).toBeNull()
     expect(container.querySelector('.evil')).toBeNull()
     expect(container.innerHTML).not.toContain('javascript:')
+  })
+
+  it('read like textbook equations: word subscripts upright, functions as functions', () => {
+    expect(standardLatex('\\sin\\theta_{dark} = m\\frac{\\lambda}{a}')).toBe(
+      '\\sin\\theta_{\\mathrm{dark}} = m\\frac{\\lambda}{a}',
+    )
+    expect(standardLatex('I = I_{max}')).toBe('I = I_{\\mathrm{max}}')
+    expect(standardLatex('x_{i} + y^{2} + E_k')).toBe('x_{i} + y^{2} + E_k') // variables stay
+    expect(standardLatex('d sin\\theta = m\\lambda')).toBe('d \\sin\\theta = m\\lambda')
+    expect(standardLatex('\\sin x + \\cos y + \\ln z')).toBe('\\sin x + \\cos y + \\ln z')
+    expect(standardLatex('\\arcsin x')).toBe('\\arcsin x') // never doubles a backslash command
   })
 
   it('show broken LaTeX as plain text', () => {

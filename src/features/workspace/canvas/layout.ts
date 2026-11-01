@@ -63,10 +63,11 @@ export function blockCard(
   const formula = f && f.kind === 'formula' && f.latex.trim() ? f.latex : null
   const badges = n.importance !== 'supporting' || n.ai_added
   const h =
-    10 + 4 + // padding, border
+    10 +
+    4 + // padding, border
     Math.max(28, titleLines * 18) +
     (summaryLines ? 6 + summaryLines * 16 : 0) +
-    (formula ? 8 + 40 : 0) +
+    (formula ? 8 + 52 : 0) +
     (badges ? 8 + 18 : 0) +
     10
   return { titleLines, summaryLines, formula, badges, h: Math.max(SIZES.blockH, h) }
@@ -106,7 +107,8 @@ export function expandedCard(
   const details = n.details.reduce((sum, d) => sum + detailHeight(d) + 6, 0)
   const badges = n.importance !== 'supporting' || n.ai_added
   const h =
-    10 + 4 + // padding, border
+    10 +
+    4 + // padding, border
     Math.max(28, titleLines * 18) +
     (summaryLines ? 6 + summaryLines * 16 : 0) +
     (details ? 10 + details : 0) +

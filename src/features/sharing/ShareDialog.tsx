@@ -384,7 +384,12 @@ function LinkSection({ mapId }: { mapId: string }) {
                 )}
               >
                 <span className="text-sm font-bold">{t(`share.link.${a}`)}</span>
-                <span className={cn('text-xs', access === a ? 'text-selected-ink/80' : 'text-ink-muted')}>
+                <span
+                  className={cn(
+                    'text-xs',
+                    access === a ? 'text-selected-ink/80' : 'text-ink-muted',
+                  )}
+                >
                   {t(`share.link.${a}Hint`)}
                 </span>
               </button>

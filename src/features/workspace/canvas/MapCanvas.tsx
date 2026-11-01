@@ -422,11 +422,25 @@ export function MapCanvas() {
               : e,
           )
         : edges
+    // Tree lines take the color of the section they belong to and end in an arrowhead.
+    const tint = (id: string) => {
+      const n = nodes[id]
+      if (!n) return 'var(--line)'
+      return chapterColor(colorOf(n, isSection(n) ? n : sectionOf(nodes, isSection, id))).strong
+    }
+    const arrow = (color: string) => ({
+      type: MarkerType.ArrowClosed,
+      color,
+      width: 14,
+      height: 14,
+    })
     const branch = (source: string, target: string): Edge => ({
       id: `h:${target}`,
       source,
       target,
       type: 'branch',
+      data: { color: tint(target) },
+      markerEnd: arrow(tint(target)),
       selectable: false,
       focusable: false,
     })
@@ -490,7 +504,8 @@ export function MapCanvas() {
             source: parent.id,
             target: n.id,
             type: 'tree',
-            data: { rtl },
+            data: { rtl, color: tint(n.id) },
+            markerEnd: arrow(tint(n.id)),
             selectable: false,
             focusable: false,
           })
@@ -500,12 +515,8 @@ export function MapCanvas() {
             source: prev.id,
             target: n.id,
             type: 'step',
-            markerEnd: {
-              type: MarkerType.ArrowClosed,
-              color: 'var(--line)',
-              width: 16,
-              height: 16,
-            },
+            data: { color: tint(n.id) },
+            markerEnd: arrow(tint(n.id)),
             selectable: false,
             focusable: false,
           })
@@ -516,7 +527,8 @@ export function MapCanvas() {
           target: n.id,
           // Grouped columns: top-level blocks hang from their section's rail.
           type: layout.railed.has(n.id) ? 'rail' : 'tree',
-          data: { rtl },
+          data: { rtl, color: tint(n.id) },
+          markerEnd: arrow(tint(n.id)),
           selectable: false,
           focusable: false,
         })
@@ -557,6 +569,7 @@ export function MapCanvas() {
     level,
     book,
     rootId,
+    colorOf,
     isSection,
     t,
   ])

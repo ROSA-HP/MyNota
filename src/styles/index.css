@@ -369,6 +369,16 @@
   }
 }
 
+/* Formulas: display style without KaTeX's page margins, in the ink color, slightly larger
+   than the text around them (textbook look). */
+.mynota-math .katex-display {
+  margin: 0;
+}
+.mynota-math .katex {
+  font-size: 1.12em;
+  color: var(--ink);
+}
+
 /* What an opened card adds fades in after it has grown. */
 .mynota-reveal {
   animation: mynota-reveal 220ms 90ms ease-out both;

@@ -14,6 +14,7 @@ export function CardText({ parts, reveal = false }: { parts: Part[]; reveal?: bo
             <MathFormula
               key={i}
               latex={p.latex}
+              display={false}
               className="inline-block max-w-full overflow-x-auto align-middle"
             />
           )
