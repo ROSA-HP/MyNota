@@ -83,11 +83,19 @@ function DropZone({
       onDragLeave={() => setOver(false)}
       onDrop={onDrop}
       className={cn(
-        'flex cursor-pointer flex-col items-center justify-center gap-2 rounded-neo-lg border-2 border-dashed px-6 py-10 text-center',
-        over ? 'border-brand bg-brand-soft' : 'border-line bg-surface hover:bg-surface-muted',
+        'group flex cursor-pointer flex-col items-center justify-center gap-2 rounded-neo-lg border-2 border-dashed px-6 py-10 text-center transition-[background-color,border-color,scale] duration-300 ease-spring',
+        over
+          ? 'scale-[1.02] border-brand bg-brand-soft'
+          : 'border-line bg-surface hover:bg-surface-muted',
       )}
     >
-      <span className="flex size-12 items-center justify-center rounded-neo border-2 border-line bg-ch-sky">
+      {/* The upload tile hops when a file is dragged over (and nods under the pointer). */}
+      <span
+        className={cn(
+          'flex size-12 items-center justify-center rounded-neo border-2 border-line bg-ch-sky transition-transform duration-300 ease-spring group-hover:-translate-y-1',
+          over && 'mynota-hop',
+        )}
+      >
         <Upload size={22} aria-hidden />
       </span>
       <span className="text-base font-bold">{title}</span>

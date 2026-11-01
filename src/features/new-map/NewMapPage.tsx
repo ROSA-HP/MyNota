@@ -78,14 +78,21 @@ function Steps({ step }: { step: 1 | 2 }) {
             aria-current={current ? 'step' : undefined}
           >
             {i > 0 && (
-              <span
-                aria-hidden
-                className={cn('h-0.5 w-8', n <= step ? 'bg-line' : 'bg-line-soft')}
-              />
+              // The line to a step fills in when you reach it.
+              <span aria-hidden className="relative h-0.5 w-8 overflow-hidden bg-line-soft">
+                <span
+                  className={cn(
+                    'absolute inset-0 origin-left bg-line transition-transform duration-500 ease-soft rtl:origin-right',
+                    n <= step ? 'scale-x-100' : 'scale-x-0',
+                  )}
+                />
+              </span>
             )}
             <span
+              key={current ? 'current' : done ? 'done' : 'todo'}
               className={cn(
                 'flex size-7 items-center justify-center rounded-full border-2 font-mono text-xs font-bold',
+                (current || done) && 'animate-pop',
                 done
                   ? 'border-line bg-brand text-brand-ink'
                   : current
@@ -121,14 +128,15 @@ function KindCard({
   return (
     <label
       className={cn(
-        'neo-btn flex cursor-pointer flex-col gap-2 rounded-neo-lg border-2 border-line bg-surface p-4',
+        'neo-btn group flex cursor-pointer flex-col gap-2 rounded-neo-lg border-2 border-line bg-surface p-4',
         checked ? 'neo-shadow outline-3 outline-offset-2 outline-brand' : 'hover:bg-surface-muted',
       )}
     >
       <span className="flex items-center justify-between">
         <span
           className={cn(
-            'flex size-10 items-center justify-center rounded-neo border-2 border-line text-ink',
+            'flex size-10 items-center justify-center rounded-neo border-2 border-line text-ink transition-transform duration-300 ease-spring group-hover:-rotate-6',
+            checked && 'scale-110 -rotate-6',
             tint,
           )}
         >
@@ -374,7 +382,8 @@ export function NewMapPage() {
         <Steps step={step === 'book' ? 2 : step} />
 
         {step === 1 && (
-          <>
+          // Each step slides in; its parts rise one after another.
+          <div key="step1" className="mynota-stagger flex flex-col gap-6">
             <h1 className="text-3xl font-bold tracking-tight">{t('newMap.title')}</h1>
             <fieldset className="flex flex-col gap-3">
               <legend className="mb-3 text-sm font-bold">{t('newMap.kindLegend')}</legend>
@@ -553,22 +562,24 @@ export function NewMapPage() {
                 </Button>
               )}
             </div>
-          </>
+          </div>
         )}
 
         {step === 'book' && extracted && bookFile && (
-          <BookReview
-            extracted={extracted}
-            title={title}
-            file={bookFile}
-            photos={photos}
-            onBack={() => setStep(1)}
-            subjectId={subjectId}
-          />
+          <div key="book" className="mynota-page">
+            <BookReview
+              extracted={extracted}
+              title={title}
+              file={bookFile}
+              photos={photos}
+              onBack={() => setStep(1)}
+              subjectId={subjectId}
+            />
+          </div>
         )}
 
         {step === 2 && (
-          <div className="flex flex-wrap items-start gap-6">
+          <div key="step2" className="mynota-page flex flex-wrap items-start gap-6">
             <section
               aria-labelledby="review-h"
               className="flex min-w-0 flex-[999_1_560px] flex-col gap-3"

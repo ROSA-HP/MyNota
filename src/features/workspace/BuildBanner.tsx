@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
 import type { ParseKeys } from 'i18next'
-import { Clock, RotateCcw, Sparkles, X } from 'lucide-react'
+import { CheckCircle2, Clock, RotateCcw, Sparkles, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 import { Button, Spinner } from '@/components/ui'
+import { cn } from '@/lib/cn'
 import { useKeyFor } from '@/features/settings/aiKeyStore'
 import { useBuild, type SectionStatus } from './buildStore'
 import { useWorkspace } from './workspaceStore'
@@ -63,10 +64,14 @@ export function BuildBanner() {
   return (
     <div
       role="status"
-      className="w-[min(620px,calc(100vw-2rem))] rounded-neo-lg border-2 border-line bg-surface p-3.5 neo-shadow"
+      className="w-[min(620px,calc(100vw-2rem))] animate-rise rounded-neo-lg border-2 border-line bg-surface p-3.5 neo-shadow"
     >
       <div className="flex items-center gap-2.5">
-        {busy ? <Sparkles size={18} aria-hidden className="text-brand" /> : null}
+        {busy ? (
+          <Sparkles size={18} aria-hidden className="mynota-twinkle text-brand" />
+        ) : phase === 'done' && failedChapters === 0 ? (
+          <CheckCircle2 size={18} aria-hidden className="animate-pop text-success" />
+        ) : null}
         <strong className="text-[15px]">
           {phase === 'done' && failedChapters === 0
             ? t('ws.build.done')
@@ -131,10 +136,31 @@ export function BuildBanner() {
             className="mt-2.5 h-2.5 overflow-hidden rounded-full border-2 border-line bg-paper-sunken"
           >
             <div
-              className="h-full bg-brand transition-[width] duration-500"
+              className="mynota-stripes h-full bg-brand transition-[width] duration-700 ease-spring"
               style={{ width: `${pct}%` }}
             />
           </div>
+          {total > 0 && (
+            // One square per section: it fills in with a pop when that section is ready.
+            <div aria-hidden className="mt-2 flex flex-wrap gap-1">
+              {order.slice(0, 40).map((id) => {
+                const state = sections[id]?.state ?? 'queued'
+                return (
+                  <span
+                    key={`${id}:${state}`}
+                    className={cn(
+                      'size-3 rounded-[3px] border-[1.5px] border-line',
+                      state === 'done' && 'animate-pop bg-brand',
+                      state === 'failed' && 'animate-pop bg-danger',
+                      state === 'running' && 'mynota-breathe bg-brand-soft',
+                      state === 'waiting' && 'bg-warning-soft',
+                      state === 'queued' && 'bg-paper-sunken',
+                    )}
+                  />
+                )
+              })}
+            </div>
+          )}
           {phase === 'outline' && !waiting && (
             <p className="mt-2 flex items-center gap-2 text-sm text-ink-muted">
               <Spinner size={13} /> {t('ws.build.outline')}

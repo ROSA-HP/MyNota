@@ -831,3 +831,63 @@ dialog:not([open])::backdrop {
     animation: none !important;
   }
 }
+
+/* AI building: the sparkle twinkles, the progress bar has moving stripes, a section that is
+   being written breathes, and the upload tile hops while a file is dragged over it. */
+.mynota-twinkle {
+  animation: mynota-twinkle 1.6s ease-in-out infinite;
+}
+@keyframes mynota-twinkle {
+  0%,
+  100% {
+    transform: scale(1) rotate(0);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.2) rotate(18deg);
+    opacity: 0.75;
+  }
+}
+.mynota-stripes {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    transparent 0 6px,
+    color-mix(in srgb, var(--brand-ink) 18%, transparent) 6px 12px
+  );
+  background-size: 17px 17px;
+  animation: mynota-stripes 700ms linear infinite;
+}
+@keyframes mynota-stripes {
+  to {
+    background-position: 17px 0;
+  }
+}
+.mynota-breathe {
+  animation: mynota-breathe 1.2s ease-in-out infinite;
+}
+@keyframes mynota-breathe {
+  50% {
+    transform: scale(0.8);
+    opacity: 0.6;
+  }
+}
+.mynota-hop {
+  animation: mynota-hop 700ms var(--ease-spring) infinite;
+}
+@keyframes mynota-hop {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-7px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mynota-twinkle,
+  .mynota-stripes,
+  .mynota-breathe,
+  .mynota-hop {
+    animation: none !important;
+  }
+}
