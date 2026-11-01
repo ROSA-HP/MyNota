@@ -45,6 +45,14 @@ abbreviations, fragments and no headings.
 - Group by topic, not by the order things were written; ranges stay consecutive, so a
   section may be broad when the notes jump around.`
 
+/** v2: notes often do have headings; keep them (outline.v2). */
+export const NOTES_OUTLINE_RULES_V2 = `NOTES MODE
+The material is a student's own notes: possibly out of order, repetitive, with abbreviations
+and fragments. They may or may not have headings.
+- Keep the student's headings as sections (see the headings rule above).
+- Without headings, create clear section titles and group by topic; ranges stay consecutive,
+  so a section may be broad when the notes jump around.`
+
 export const NOTES_DETAILS_RULES = `NOTES MODE
 The material is a student's own lecture notes: possibly out of order, repetitive, with
 abbreviations and gaps.

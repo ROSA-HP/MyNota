@@ -160,6 +160,28 @@ PARAGRAPHS
 {numbered_paragraphs}
 ```
 
+### Outline v2 and Details v2 (2026-11-01, in use)
+
+Written after the owner's notes ("Physical Optics", four headed parts) came back as one section
+with nine flat blocks. Files: `src/ai/prompts/outline.v2.ts`, `src/ai/prompts/details.v2.ts`;
+v1 stays for the record (every `ai_jobs` row names its prompt version).
+
+- **Outline v2**: headings in the material become sections, in order, with the heading as title
+  (merge only a heading with a single short point); a heading paragraph belongs to its section.
+  Notes mode no longer says notes have no headings (`NOTES_OUTLINE_RULES_V2`).
+- **Details v2** adds three blocks of rules:
+  - STRUCTURE: a small tree, not a flat list: 2-5 main ideas as top-level blocks, every other
+    block under the idea it explains; more than 5 top-level blocks is wrong except in process
+    and timeline sections.
+  - RELATIONS: 2-8 relations that say why blocks belong together (derived_from, example_of,
+    causes, prerequisite, contrasts_with), never repeating a parent-child link.
+  - FORMULAS: a formula block has type formula and the formula as its first detail, symbols
+    explained in `extra`, valid KaTeX LaTeX, one formula per detail. The canvas shows a block's
+    formula first (canvas step 2).
+- The prompt test set gained the owner's notes (`notes-optics-headings-en`), and the scoring
+  counts flat sections and links, so v1 and v2 can be compared with
+  `npm run eval:prompts`.
+
 ### Cross-links (v1)
 
 ```text

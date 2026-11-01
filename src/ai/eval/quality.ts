@@ -32,6 +32,10 @@ export interface QualityReport {
   /** Parents with more than 7 children. */
   crowded: number
   coreRatio: number
+  /** Sections whose blocks are a flat list (more than 5 top-level blocks; details v2 asks for a tree). */
+  flatSections: number
+  /** Relations between blocks, all sections together (details v2 asks for 2-8 per section). */
+  relations: number
   failedSections: number
   warnings: Record<RuleWarning['rule'], number>
   /** 0..100: coverage first, then faithfulness, then the visual rules. */
@@ -50,6 +54,8 @@ export function scoreRun(
   let outOfRange = 0
   let crowded = 0
   let core = 0
+  let flatSections = 0
+  let relations = 0
   const warnings: Record<RuleWarning['rule'], number> = {
     title_words: 0,
     summary_words: 0,
@@ -76,6 +82,8 @@ export function scoreRun(
       children.set(parent, (children.get(parent) ?? 0) + 1)
     }
     for (const n of children.values()) if (n > 7) crowded++
+    if ((children.get('') ?? 0) > 5) flatSections++
+    relations += d.relations.length
   }
 
   const missing: number[] = []
@@ -104,6 +112,8 @@ export function scoreRun(
     outOfRange,
     crowded,
     coreRatio: Math.round(coreRatio * 100) / 100,
+    flatSections,
+    relations,
     failedSections,
     warnings,
     score,

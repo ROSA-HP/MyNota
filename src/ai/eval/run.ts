@@ -1,8 +1,8 @@
 import { toProviderSchema } from '@/ai/jsonSchema'
 import { outlineText } from '@/ai/pipeline/convert'
 import { splitParagraphs } from '@/ai/pipeline/prepare'
-import { DETAILS_PROMPT_VERSION, detailsPrompt } from '@/ai/prompts/details.v1'
-import { OUTLINE_PROMPT_VERSION, outlinePrompt } from '@/ai/prompts/outline.v1'
+import { DETAILS_PROMPT_VERSION, detailsPrompt } from '@/ai/prompts/details.v2'
+import { OUTLINE_PROMPT_VERSION, outlinePrompt } from '@/ai/prompts/outline.v2'
 import { SYSTEM_PROMPT, versionFor, type SourceMode } from '@/ai/prompts/shared'
 import { DetailsResponseSchema, detailsSchemaFor } from '@/ai/schemas/details'
 import { OutlineResponseSchema, normalizeOutline, outlineSchemaFor } from '@/ai/schemas/outline'
@@ -123,7 +123,7 @@ export async function runSample(adapter: ProviderAdapter, sample: Sample): Promi
 export function resultsTable(model: string, results: SampleResult[]): string {
   const rows = results.map(
     (r) =>
-      `| ${r.id} | ${r.language} | ${r.report.score} | ${Math.round(r.report.coverage * 100)}% | ${r.report.unsourced} | ${r.report.outOfRange} | ${r.report.failedSections + (r.outlineError ? 1 : 0)} | ${r.seconds}s |`,
+      `| ${r.id} | ${r.language} | ${r.report.score} | ${Math.round(r.report.coverage * 100)}% | ${r.report.unsourced} | ${r.report.outOfRange} | ${r.report.flatSections} | ${r.report.relations} | ${r.report.failedSections + (r.outlineError ? 1 : 0)} | ${r.seconds}s |`,
   )
   const avg = results.length
     ? Math.round(results.reduce((n, r) => n + r.report.score, 0) / results.length)
@@ -131,8 +131,8 @@ export function resultsTable(model: string, results: SampleResult[]): string {
   return [
     `### ${model}: average score ${avg}`,
     '',
-    '| Sample | Lang | Score | Coverage | Unsourced | Out of range | Failed | Time |',
-    '|---|---|---|---|---|---|---|---|',
+    '| Sample | Lang | Score | Coverage | Unsourced | Out of range | Flat sections | Links | Failed | Time |',
+    '|---|---|---|---|---|---|---|---|---|---|',
     ...rows,
   ].join('\n')
 }
