@@ -24,7 +24,7 @@ import {
   Button,
   Dialog,
   Panel,
-  Spinner,
+  Skeleton,
   TextField,
   buttonClasses,
   toast,
@@ -61,16 +61,16 @@ function EmptyLibrary() {
           <Plus size={18} aria-hidden />
           {t('library.newMap')}
         </Link>
-        <ol className="mt-6 flex flex-col gap-3">
+        <ol className="mynota-stagger mt-6 flex flex-col gap-3">
           {steps.map(({ Icon, label, tint }) => (
-            <li key={label} className="flex items-center gap-3">
+            <li key={label} className="group flex items-center gap-3">
               <span
                 className={cn(
                   'flex size-10 shrink-0 items-center justify-center rounded-neo border-2 border-line text-ink',
                   tint,
                 )}
               >
-                <Icon size={19} aria-hidden />
+                <Icon size={19} aria-hidden className="group-hover:animate-wiggle" />
               </span>
               <span className="font-semibold">{label}</span>
             </li>
@@ -146,7 +146,7 @@ function MapCard({
     >
       <Panel
         shadow="md"
-        className="relative h-full overflow-hidden transition-transform group-hover:-translate-y-0.5"
+        className="relative h-full overflow-hidden transition-transform duration-300 ease-spring group-hover:-translate-y-1 group-hover:-rotate-[0.6deg] rtl:group-hover:rotate-[0.6deg]"
       >
         <div
           className={cn(
@@ -161,8 +161,8 @@ function MapCard({
                 <span
                   key={i}
                   aria-hidden
-                  className="h-14 flex-1 rounded-[6px] border-2 border-line"
-                  style={{ background: chapterColor(c).fill }}
+                  className="h-14 flex-1 rounded-[6px] border-2 border-line transition-transform duration-300 ease-spring group-hover:-translate-y-1.5"
+                  style={{ background: chapterColor(c).fill, transitionDelay: `${i * 35}ms` }}
                 />
               ))}
         </div>
@@ -186,7 +186,7 @@ function MapCard({
               className="mt-2.5 flex h-2.5 overflow-hidden rounded-full border-[1.5px] border-line bg-surface"
             >
               <span
-                className="bg-brand"
+                className="mynota-grow-x bg-brand"
                 style={{ width: `${(stats.chapters_built / stats.chapters) * 100}%` }}
               />
             </span>
@@ -208,7 +208,7 @@ function MapCard({
           {menu && (
             <div
               role="menu"
-              className="absolute end-0 top-11 w-56 rounded-neo-lg border-2 border-line bg-surface p-1.5 neo-shadow"
+              className="absolute end-0 top-11 w-56 origin-top-right animate-pop rounded-neo-lg border-2 border-line bg-surface p-1.5 neo-shadow [animation-duration:220ms] rtl:origin-top-left"
             >
               {!movable && (
                 <>
@@ -493,7 +493,7 @@ export function LibraryPage() {
             aria-pressed={!activeSubject}
             onClick={() => setFilter(null)}
             className={cn(
-              'h-10 cursor-pointer rounded-full border-2 border-line px-3.5 text-sm font-semibold',
+              'h-10 cursor-pointer rounded-full border-2 border-line px-3.5 text-sm font-semibold transition-[background-color,scale] duration-200 active:scale-95',
               !activeSubject
                 ? 'bg-selected text-selected-ink'
                 : 'bg-surface hover:bg-surface-muted',
@@ -509,7 +509,7 @@ export function LibraryPage() {
               onClick={() => setFilter(activeSubject?.id === s.id ? null : s.id)}
               {...dropZone(`chip:${s.id}`, s.id)}
               className={cn(
-                'inline-flex h-10 cursor-pointer items-center gap-2 rounded-full border-2 border-line px-3.5 text-sm font-semibold',
+                'inline-flex h-10 cursor-pointer items-center gap-2 rounded-full border-2 border-line px-3.5 text-sm font-semibold transition-[background-color,scale] duration-200 active:scale-95',
                 activeSubject?.id === s.id
                   ? 'bg-selected text-selected-ink'
                   : 'bg-surface hover:bg-surface-muted',
@@ -533,8 +533,11 @@ export function LibraryPage() {
 
       <div className="mt-6">
         {state.status === 'loading' && (
-          <div className="flex justify-center py-20">
-            <Spinner size={28} />
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3" role="status">
+            <span className="sr-only">{t('common.loading')}</span>
+            {Array.from({ length: 6 }, (_, i) => (
+              <Skeleton key={i} className="h-44 rounded-neo-lg" />
+            ))}
           </div>
         )}
         {state.status === 'error' && (
@@ -601,7 +604,7 @@ export function LibraryPage() {
                             <div
                               ref={subjectMenuRef}
                               role="menu"
-                              className="absolute end-0 top-10 z-10 w-48 rounded-neo-lg border-2 border-line bg-surface p-1.5 neo-shadow"
+                              className="absolute end-0 top-10 z-10 w-48 origin-top-right animate-pop rounded-neo-lg border-2 border-line bg-surface p-1.5 neo-shadow [animation-duration:220ms] rtl:origin-top-left"
                             >
                               <button
                                 type="button"
@@ -632,7 +635,7 @@ export function LibraryPage() {
                     </div>
                   )}
                   {g.maps.length ? (
-                    <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                    <div className="mynota-stagger grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
                       {g.maps.map((m) => (
                         <MapCard
                           key={m.id}

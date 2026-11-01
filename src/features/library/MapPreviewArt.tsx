@@ -3,6 +3,8 @@ import { useTranslation } from 'react-i18next'
 /**
  * Decorative mini mind map (landing + empty states). Drawn with SVG so it follows the
  * theme variables and mirrors in RTL. Labels are translated.
+ * It builds itself when it appears: the main idea pops in, links draw out, then the blocks pop
+ * in one by one (the animation sits on inner groups so the RTL mirror transforms stay intact).
  */
 export function MapPreviewArt({ className }: { className?: string }) {
   const { t, i18n } = useTranslation()
@@ -30,9 +32,18 @@ export function MapPreviewArt({ className }: { className?: string }) {
       </defs>
       <rect x="0" y="0" width="540" height="290" fill="url(#dots)" />
       {/* chapter region tint */}
-      <rect x="12" y="12" width="186" height="266" rx="18" fill="var(--ch-yellow)" opacity="0.45" />
+      <rect
+        x="12"
+        y="12"
+        width="186"
+        height="266"
+        rx="18"
+        fill="var(--ch-yellow)"
+        opacity="0.45"
+        className="mpa-fade"
+      />
 
-      {nodes.map((n) => {
+      {nodes.map((n, i) => {
         const fromX = root.x + root.w / 2
         const fromY = root.y + 32
         const toX = n.x + n.w / 2
@@ -44,6 +55,9 @@ export function MapPreviewArt({ className }: { className?: string }) {
             stroke="var(--line)"
             strokeWidth="2"
             fill="none"
+            pathLength={1}
+            className="mpa-link"
+            style={{ animationDelay: `${250 + i * 80}ms` }}
           />
         )
       })}
@@ -53,75 +67,81 @@ export function MapPreviewArt({ className }: { className?: string }) {
         strokeWidth="2"
         strokeDasharray="6 6"
         fill="none"
+        className="mpa-fade"
+        style={{ animationDelay: '1000ms' }}
       />
 
-      {nodes.map((n) => (
+      {nodes.map((n, i) => (
         <g key={n.label} transform={rtl ? `translate(${2 * n.x + n.w} 0) scale(-1 1)` : undefined}>
-          <rect x={n.x + 3} y={n.y + 3} width={n.w} height="50" rx="10" fill="var(--shadow)" />
-          <rect
-            x={n.x}
-            y={n.y}
-            width={n.w}
-            height="50"
-            rx="10"
-            fill="var(--surface)"
-            stroke="var(--line)"
-            strokeWidth="2"
-          />
-          <rect
-            x={n.x}
-            y={n.y}
-            width="10"
-            height="50"
-            rx="5"
-            fill={n.fill}
-            stroke="var(--line)"
-            strokeWidth="2"
-          />
-          <text
-            x={n.x + n.w / 2 + 5}
-            y={n.y + 31}
-            textAnchor="middle"
-            fontSize="16"
-            fontWeight="600"
-            fill="var(--ink)"
-            direction={rtl ? 'rtl' : 'ltr'}
-          >
-            {n.label}
-          </text>
+          <g className="mpa-pop" style={{ animationDelay: `${480 + i * 90}ms` }}>
+            <rect x={n.x + 3} y={n.y + 3} width={n.w} height="50" rx="10" fill="var(--shadow)" />
+            <rect
+              x={n.x}
+              y={n.y}
+              width={n.w}
+              height="50"
+              rx="10"
+              fill="var(--surface)"
+              stroke="var(--line)"
+              strokeWidth="2"
+            />
+            <rect
+              x={n.x}
+              y={n.y}
+              width="10"
+              height="50"
+              rx="5"
+              fill={n.fill}
+              stroke="var(--line)"
+              strokeWidth="2"
+            />
+            <text
+              x={n.x + n.w / 2 + 5}
+              y={n.y + 31}
+              textAnchor="middle"
+              fontSize="16"
+              fontWeight="600"
+              fill="var(--ink)"
+              direction={rtl ? 'rtl' : 'ltr'}
+            >
+              {n.label}
+            </text>
+          </g>
         </g>
       ))}
 
       <g transform={rtl ? `translate(${2 * root.x + root.w} 0) scale(-1 1)` : undefined}>
-        <rect
-          x={root.x + 5}
-          y={root.y + 5}
-          width={root.w}
-          height="64"
-          rx="12"
-          fill="var(--shadow)"
-        />
-        <rect
-          x={root.x}
-          y={root.y}
-          width={root.w}
-          height="64"
-          rx="12"
-          fill="var(--brand)"
-          stroke="var(--line)"
-          strokeWidth="2"
-        />
-        <text
-          x={root.x + root.w / 2}
-          y={root.y + 39}
-          textAnchor="middle"
-          fontSize="19"
-          fontWeight="700"
-          fill="var(--brand-ink)"
-          direction={rtl ? 'rtl' : 'ltr'}
-        >
-          {root.label}
-        </text>
+        <g className="mpa-pop">
+          <rect
+            x={root.x + 5}
+            y={root.y + 5}
+            width={root.w}
+            height="64"
+            rx="12"
+            fill="var(--shadow)"
+          />
+          <rect
+            x={root.x}
+            y={root.y}
+            width={root.w}
+            height="64"
+            rx="12"
+            fill="var(--brand)"
+            stroke="var(--line)"
+            strokeWidth="2"
+          />
+          <text
+            x={root.x + root.w / 2}
+            y={root.y + 39}
+            textAnchor="middle"
+            fontSize="19"
+            fontWeight="700"
+            fill="var(--brand-ink)"
+            direction={rtl ? 'rtl' : 'ltr'}
+          >
+            {root.label}
+          </text>
+        </g>
       </g>
     </svg>
   )

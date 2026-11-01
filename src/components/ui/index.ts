@@ -1,6 +1,7 @@
 export { Alert } from './Alert'
 export { Badge } from './Badge'
 export { Button, buttonClasses } from './Button'
+export { CountUp } from './CountUp'
 export { Dialog } from './Dialog'
 export { IconButton } from './IconButton'
 export { PasswordField, TextField } from './Input'

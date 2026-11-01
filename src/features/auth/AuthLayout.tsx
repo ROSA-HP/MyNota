@@ -33,11 +33,26 @@ export function AuthLayout({
         className="flex flex-1 items-start justify-center px-4 pt-4 pb-16 sm:items-center sm:pt-0"
       >
         <div className="w-full max-w-[26rem]">
-          <Panel shadow="lg" className="p-6 sm:p-8">
-            <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
-            {subtitle && <p className="mt-1.5 text-ink-muted">{subtitle}</p>}
-            <div className="mt-6">{children}</div>
-          </Panel>
+          <div className="relative">
+            {/* Colored notes peeking out from behind the card. */}
+            <span
+              aria-hidden
+              className="mynota-float absolute -start-8 -top-7 size-20 rounded-neo-lg border-2 border-line bg-ch-yellow [--tilt:-10deg] max-sm:hidden"
+            />
+            <span
+              aria-hidden
+              className="mynota-float absolute -end-9 top-1/3 size-14 rounded-full border-2 border-line bg-ch-sky [animation-delay:-2.5s] max-sm:hidden"
+            />
+            <span
+              aria-hidden
+              className="mynota-float absolute -end-6 -bottom-6 h-10 w-28 rounded-neo border-2 border-line bg-ch-pink [--tilt:7deg] [animation-delay:-5s] max-sm:hidden"
+            />
+            <Panel shadow="lg" className="relative animate-rise p-6 sm:p-8">
+              <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
+              {subtitle && <p className="mt-1.5 text-ink-muted">{subtitle}</p>}
+              <div className="mt-6">{children}</div>
+            </Panel>
+          </div>
           {footer && <div className="mt-5 text-center text-sm text-ink-muted">{footer}</div>}
           <p className="mt-4 text-center text-xs text-ink-muted">
             <Link to="/terms" className="underline underline-offset-2 hover:text-ink">

@@ -430,6 +430,85 @@ dialog:not([open])::backdrop {
   }
 }
 
+/* Bars and progress fills grow from their base. */
+@keyframes mynota-grow-y {
+  from {
+    transform: scaleY(0);
+  }
+}
+@keyframes mynota-grow-x {
+  from {
+    transform: scaleX(0);
+  }
+}
+.mynota-grow-y {
+  transform-origin: bottom;
+  animation: mynota-grow-y 620ms var(--ease-spring) backwards;
+}
+.mynota-grow-x {
+  transform-origin: left;
+  animation: mynota-grow-x 700ms var(--ease-soft) 200ms backwards;
+}
+[dir='rtl'] .mynota-grow-x {
+  transform-origin: right;
+}
+
+/* Decorative shapes drift gently (sign-in pages, the landing map). */
+.mynota-float {
+  animation: mynota-float 7s ease-in-out infinite;
+}
+@keyframes mynota-float {
+  0%,
+  100% {
+    transform: translateY(0) rotate(var(--tilt, 0deg));
+  }
+  50% {
+    transform: translateY(-8px) rotate(calc(var(--tilt, 0deg) + 2deg));
+  }
+}
+
+/* Cards that tip up under the pointer like a note being picked up. */
+@media (hover: hover) {
+  .mynota-lift {
+    transition: transform 280ms var(--ease-spring);
+  }
+  .mynota-lift:hover {
+    transform: translateY(-4px) rotate(-0.6deg);
+  }
+  [dir='rtl'] .mynota-lift:hover {
+    transform: translateY(-4px) rotate(0.6deg);
+  }
+}
+
+/* Long pages: sections rise in as they scroll into view (browsers with scroll-driven
+   animations; elsewhere they are simply there). */
+@supports (animation-timeline: view()) {
+  .mynota-scroll-in {
+    animation: mynota-rise linear backwards;
+    animation-timeline: view();
+    animation-range: entry 0% entry 70%;
+  }
+}
+
+/* The landing / empty-state mini map builds itself: links draw, then the blocks pop in. */
+.mpa-link {
+  stroke-dasharray: 1;
+  animation: mynota-draw-1 700ms var(--ease-soft) backwards;
+}
+@keyframes mynota-draw-1 {
+  from {
+    stroke-dashoffset: 1;
+  }
+}
+.mpa-pop {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: mynota-pop 420ms var(--ease-spring) backwards;
+}
+.mpa-fade {
+  animation: mynota-fade 500ms ease-out backwards;
+}
+
 /* Toasts: pop up from the bottom, drop away when they go; a bar shows the time left. */
 .mynota-toast {
   animation: mynota-toast-in 380ms var(--ease-spring) backwards;
@@ -719,5 +798,36 @@ dialog:not([open])::backdrop {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mynota-scroll-in,
+  .mynota-float,
+  .mynota-skeleton {
+    animation: none !important;
+  }
+}
+
+/* The study streak flame flickers while the streak is alive. */
+.mynota-flicker {
+  transform-origin: bottom;
+  animation: mynota-flicker 2.4s ease-in-out infinite;
+}
+@keyframes mynota-flicker {
+  0%,
+  100% {
+    transform: scale(1) rotate(0);
+  }
+  30% {
+    transform: scale(1.08, 0.94) rotate(-4deg);
+  }
+  60% {
+    transform: scale(0.96, 1.06) rotate(3deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mynota-flicker {
+    animation: none !important;
   }
 }

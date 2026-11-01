@@ -1,8 +1,8 @@
-import { ArrowRight, Plus } from 'lucide-react'
+import { ArrowRight, Flame, Plus } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
-import { Alert, Panel, Spinner, buttonClasses } from '@/components/ui'
+import { Alert, CountUp, Panel, Skeleton, buttonClasses } from '@/components/ui'
 import { useAuth } from '@/features/auth/authStore'
 import { COVER, SubjectDot, useUpdated } from '@/features/library/mapBits'
 import { InvitesPanel } from '@/features/sharing/InvitesPanel'
@@ -29,7 +29,7 @@ export function HomePage() {
   }, [userId])
 
   return (
-    <div className="mx-auto flex max-w-6xl flex-col gap-8 px-4 py-8 sm:px-8">
+    <div className="mynota-stagger mx-auto flex max-w-6xl flex-col gap-8 px-4 py-8 sm:px-8">
       <Greeting />
       <InvitesPanel onAccepted={() => userId && void useOverview.getState().load(userId)} />
       {status === 'error' && !data ? (
@@ -44,8 +44,10 @@ export function HomePage() {
           </button>
         </Alert>
       ) : !data ? (
-        <div className="flex items-center gap-3 text-ink-muted">
-          <Spinner /> {t('common.loading')}
+        <div className="grid gap-5 lg:grid-cols-[1.6fr_1fr]" role="status">
+          <span className="sr-only">{t('common.loading')}</span>
+          <Skeleton className="h-56 rounded-neo-lg" />
+          <Skeleton className="h-56 rounded-neo-lg" />
         </div>
       ) : data.maps.length === 0 ? (
         <FirstMap />
@@ -127,12 +129,14 @@ function DueToday({ data }: { data: Overview }) {
           {data.studyReady ? (
             <>
               <p className="mt-1 flex flex-wrap items-baseline gap-x-2">
-                <span className="text-4xl font-bold tabular-nums">{today.reviews}</span>
+                <span className="text-4xl font-bold tabular-nums">
+                  <CountUp value={today.reviews} />
+                </span>
                 <span className="text-ink-muted">
                   {t('home.due.reviews', { count: today.reviews })}
                 </span>
                 <span dir="ltr" className="text-2xl font-bold text-brand tabular-nums">
-                  +{today.fresh}
+                  +<CountUp value={today.fresh} />
                 </span>
                 <span className="text-ink-muted">{t('home.due.new', { count: today.fresh })}</span>
               </p>
@@ -160,7 +164,7 @@ function DueToday({ data }: { data: Overview }) {
         )}
       </div>
       {list.length > 0 && (
-        <ul className="flex flex-col divide-y-2 divide-line-soft border-t-2 border-line-soft">
+        <ul className="mynota-stagger flex flex-col divide-y-2 divide-line-soft border-t-2 border-line-soft">
           {list.slice(0, 5).map(({ map, deck }) => (
             <li key={map.id} className="flex items-center gap-3 py-2.5">
               <span
@@ -219,7 +223,17 @@ function ThisWeek({ data }: { data: Overview }) {
         {t('home.week.title')}
       </h2>
       <p className="flex items-baseline gap-2">
-        <span className="text-4xl font-bold tabular-nums">{days}</span>
+        <Flame
+          size={28}
+          aria-hidden
+          className={cn(
+            'self-center',
+            days > 0 ? 'mynota-flicker fill-ch-orange text-(--ch-orange-strong)' : 'text-ink-faint',
+          )}
+        />
+        <span className="text-4xl font-bold tabular-nums">
+          <CountUp value={days} />
+        </span>
         <span className="text-ink-muted">{t('home.week.streak', { count: days })}</span>
       </p>
       <div
@@ -229,14 +243,17 @@ function ThisWeek({ data }: { data: Overview }) {
         })}
         className="flex h-28 items-end gap-2"
       >
-        {week.map((w) => (
+        {week.map((w, i) => (
           <span key={w.key} className="flex h-full flex-1 flex-col items-center justify-end gap-1">
             <span
               className={cn(
-                'w-full rounded-t-md border-2 border-b-0 border-line',
+                'mynota-grow-y w-full rounded-t-md border-2 border-b-0 border-line',
                 w.reviews ? 'bg-brand' : 'bg-paper-sunken',
               )}
-              style={{ height: `${Math.max(6, (w.reviews / max) * 100)}%` }}
+              style={{
+                height: `${Math.max(6, (w.reviews / max) * 100)}%`,
+                animationDelay: `${150 + i * 60}ms`,
+              }}
             />
             <span className="text-xs text-ink-muted">{w.label}</span>
           </span>
@@ -263,18 +280,21 @@ function Continue({ data }: { data: Overview }) {
           {t('home.allMaps')}
         </Link>
       </div>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="mynota-stagger grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {recent.map((m) => {
           const d = data.decks[m.id]
           return (
             <Link
               key={m.id}
               to={`/maps/${m.id}`}
-              className="neo-btn flex overflow-hidden rounded-neo-lg border-2 border-line bg-surface text-ink neo-shadow"
+              className="neo-btn group flex overflow-hidden rounded-neo-lg border-2 border-line bg-surface text-ink neo-shadow"
             >
               <span
                 aria-hidden
-                className={cn('w-3 shrink-0 border-e-2 border-line', COVER[m.cover_color])}
+                className={cn(
+                  'w-3 shrink-0 border-e-2 border-line transition-[width] duration-300 ease-spring group-hover:w-6',
+                  COVER[m.cover_color],
+                )}
               />
               <span className="flex min-w-0 flex-col gap-1 p-4">
                 <span dir="auto" className="truncate font-bold">
@@ -321,7 +341,7 @@ function Subjects({ data }: { data: Overview }) {
       <h2 id="subj-h" className="text-lg font-bold">
         {t('home.subjects')}
       </h2>
-      <div className="flex flex-wrap gap-2.5">
+      <div className="mynota-stagger flex flex-wrap gap-2.5">
         {data.subjects.map((s) => {
           const maps = data.maps.filter((m) => m.subject_id === s.id)
           const due = maps.reduce((n, m) => n + (data.decks[m.id]?.due ?? 0), 0)
@@ -329,9 +349,11 @@ function Subjects({ data }: { data: Overview }) {
             <Link
               key={s.id}
               to={`/library?subject=${s.id}`}
-              className="inline-flex min-h-11 items-center gap-2 rounded-full border-2 border-line bg-surface px-4 font-semibold hover:bg-surface-muted"
+              className="neo-btn group inline-flex min-h-11 items-center gap-2 rounded-full border-2 border-line bg-surface px-4 font-semibold hover:bg-surface-muted"
             >
-              <SubjectDot color={s.color} />
+              <span className="inline-flex transition-transform duration-300 ease-spring group-hover:scale-130">
+                <SubjectDot color={s.color} />
+              </span>
               <span dir="auto">{s.name}</span>
               <span className="text-sm font-normal text-ink-muted tabular-nums">
                 {t('home.subjectCounts', { count: maps.length, due })}
