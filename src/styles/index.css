@@ -329,6 +329,46 @@
 .mynota-flow .react-flow__connection-path {
   transition: d 260ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
+/* Canvas step 6: cards rise into place when they appear (the map grows as the AI builds, and
+   when the zoom level changes), meaning links draw themselves, and cards lift under the
+   pointer. All of it is off with reduced motion (the global rule sets durations to 0). */
+.mynota-flow .react-flow__node-block > div,
+.mynota-flow .react-flow__node-section > div {
+  animation: mynota-card-in 320ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@keyframes mynota-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.97);
+  }
+}
+.mynota-flow .react-flow__edge-relation:not(.is-suggested) .react-flow__edge-path {
+  stroke-dasharray: 2400;
+  animation: mynota-draw 700ms 120ms ease-out both;
+}
+@keyframes mynota-draw {
+  from {
+    stroke-dashoffset: 2400;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@media (hover: hover) {
+  .mynota-flow .react-flow__node-block:not(.selected):not(.dragging) > div {
+    transition:
+      transform 160ms ease,
+      box-shadow 160ms ease;
+  }
+  .mynota-flow .react-flow__node-block:not(.selected):not(.dragging):hover > div {
+    transform: translateY(-2px);
+    box-shadow: 3px 3px 0 0 var(--shadow);
+  }
+  [dir='rtl'] .mynota-flow .react-flow__node-block:not(.selected):not(.dragging):hover > div {
+    box-shadow: -3px 3px 0 0 var(--shadow);
+  }
+}
+
 /* What an opened card adds fades in after it has grown. */
 .mynota-reveal {
   animation: mynota-reveal 220ms 90ms ease-out both;

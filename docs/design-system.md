@@ -116,3 +116,23 @@ The owner found the dark theme poor; it was an inverted light theme. Now (tokens
   and `--danger-ink` for text on danger buttons (dark: dark text on the light red, 7.4:1; it was
   white on light red, about 2.3:1).
 - Light theme values are unchanged. Exports and PDFs stay light on purpose.
+
+### Canvas redesign (2026-11-01, steps 1-6)
+
+Asked for by the owner after a real map came out as one long column of title-only cards.
+- **Cards** show the summary always and the block's first formula first (KaTeX, scaled to fit);
+  height follows the content (`layout.blockCard`).
+- **Opening in place**: a click opens the block on the map (formulas first, then summary and
+  details, Open / Edit); the cards around it slide (`expandedCard`, transitions on node
+  transform and size, link paths follow). Double-click, Enter or Open shows the side panel.
+- **Grouped columns**: a section's top-level blocks and their sub-blocks are split over up to 4
+  balanced columns (`balancedColumns`), the section card centred above with a rail
+  (`RailEdge`); process and timeline sections stay one ordered column.
+- **Links colored by meaning**: cause coral, structure blue, contrast pink, learning order
+  violet, loose teal (`visuals.relationColor`); the label always names the link.
+- **Side panel** opens blocks as a study card (`panels/BlockReader.tsx`): formulas first,
+  summary, details, sub-ideas and links as chips that fly to the block, flashcards, source text
+  folded; Edit switches to the form.
+- **Motion**: cards rise in, meaning links draw themselves, cards lift on hover; all off with
+  reduced motion.
+- `/dev/canvas` (development only) shows the real canvas with a sample map, no account.
