@@ -39,7 +39,7 @@ export function buttonClasses({
   className,
 }: Pick<ButtonProps, 'variant' | 'size' | 'fullWidth' | 'className'>): string {
   return cn(
-    'neo-btn inline-flex select-none items-center justify-center rounded-neo border-2 font-semibold',
+    'neo-btn group inline-flex select-none items-center justify-center rounded-neo border-2 font-semibold',
     // Disabled stays legible: a flat, sunken button instead of a faded one.
     'cursor-pointer disabled:cursor-not-allowed disabled:shadow-none disabled:hover:brightness-100',
     variants[variant],
@@ -72,7 +72,12 @@ export function Button({
     >
       {loading ? <Spinner size={16} /> : icon}
       {children}
-      {!loading && iconEnd}
+      {!loading && iconEnd && (
+        // The trailing icon (usually an arrow) leans forward on hover.
+        <span className="inline-flex transition-transform duration-300 ease-spring group-hover:translate-x-0.5 rtl:group-hover:-translate-x-0.5">
+          {iconEnd}
+        </span>
+      )}
     </button>
   )
 }

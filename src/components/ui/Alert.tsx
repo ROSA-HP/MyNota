@@ -26,12 +26,12 @@ export function Alert({
     <div
       role={tone === 'danger' || tone === 'warning' ? 'alert' : 'status'}
       className={cn(
-        'flex items-start gap-2.5 rounded-neo border-2 border-line p-3 text-sm font-medium text-ink',
+        'flex animate-rise items-start gap-2.5 rounded-neo border-2 border-line p-3 text-sm font-medium text-ink',
         cls,
         className,
       )}
     >
-      <Icon size={18} aria-hidden className="mt-0.5 shrink-0" />
+      <Icon size={18} aria-hidden className="mt-0.5 shrink-0 animate-pop [animation-delay:120ms]" />
       <div className="min-w-0">{children}</div>
     </div>
   )

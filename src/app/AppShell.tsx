@@ -25,11 +25,29 @@ import { useOnline } from './useOnline'
 
 const navLinkClass = ({ isActive }: { isActive: boolean }) =>
   cn(
-    'flex min-h-11 items-center gap-3 rounded-neo border-2 px-3 text-[15px] font-semibold transition-colors',
+    'group flex min-h-11 items-center gap-3 rounded-neo border-2 px-2 text-[15px] font-semibold transition-[background-color,border-color,box-shadow,transform] duration-200',
     isActive
-      ? 'border-line bg-surface font-bold text-ink'
-      : 'border-transparent text-ink hover:bg-paper-sunken',
+      ? 'border-line bg-surface font-bold text-ink neo-shadow-sm'
+      : 'border-transparent text-ink hover:translate-x-0.5 hover:bg-paper-sunken rtl:hover:-translate-x-0.5',
   )
+
+/**
+ * A nav icon on its own color tile (each place has a color, like a notebook tab). The tile fills
+ * in when the place is open and the icon wiggles under the pointer.
+ */
+function NavIcon({ Icon, tile }: { Icon: typeof House; tile: string }) {
+  return (
+    <span
+      className={cn(
+        'flex size-8 shrink-0 items-center justify-center rounded-lg border-2 border-transparent transition-colors duration-200',
+        'group-aria-[current=page]:border-line',
+        tile,
+      )}
+    >
+      <Icon size={19} aria-hidden className="group-hover:animate-wiggle" />
+    </span>
+  )
+}
 
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const { t } = useTranslation()
@@ -44,16 +62,17 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
     <div className="flex h-full flex-col gap-4 p-3">
       <nav aria-label={t('nav.main')} className="flex flex-col gap-1.5">
         <NavLink to="/home" className={navLinkClass} onClick={onNavigate}>
-          <House size={20} aria-hidden />
+          <NavIcon Icon={House} tile="group-aria-[current=page]:bg-ch-yellow" />
           {t('nav.home')}
         </NavLink>
         <NavLink to="/library" className={navLinkClass} onClick={onNavigate}>
-          <BookOpen size={20} aria-hidden />
+          <NavIcon Icon={BookOpen} tile="group-aria-[current=page]:bg-ch-sky" />
           {t('nav.library')}
           {invites > 0 && (
             <Badge
+              key={invites}
               tone="warning"
-              className="ms-auto"
+              className="ms-auto animate-pop"
               aria-label={t('invites.title', { count: invites })}
             >
               {invites}
@@ -61,21 +80,26 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           )}
         </NavLink>
         <NavLink to="/flashcards" className={navLinkClass} onClick={onNavigate}>
-          <Layers size={20} aria-hidden />
+          <NavIcon Icon={Layers} tile="group-aria-[current=page]:bg-ch-pink" />
           {t('nav.flashcards')}
           {due > 0 && (
-            <Badge tone="brand" className="ms-auto" aria-label={t('nav.due', { count: due })}>
+            <Badge
+              key={due}
+              tone="brand"
+              className="ms-auto animate-pop"
+              aria-label={t('nav.due', { count: due })}
+            >
               {due}
             </Badge>
           )}
         </NavLink>
         <NavLink to="/settings" className={navLinkClass} onClick={onNavigate}>
-          <Settings size={20} aria-hidden />
+          <NavIcon Icon={Settings} tile="group-aria-[current=page]:bg-ch-lavender" />
           {t('nav.settings')}
         </NavLink>
         {profile?.role === 'admin' && (
           <NavLink to="/admin" className={navLinkClass} onClick={onNavigate}>
-            <ShieldCheck size={20} aria-hidden />
+            <NavIcon Icon={ShieldCheck} tile="group-aria-[current=page]:bg-ch-coral" />
             {t('admin.title')}
           </NavLink>
         )}
@@ -189,7 +213,7 @@ export function AppShell() {
         {/* Drawer (tablet / phone) */}
         <div
           className={cn(
-            'fixed inset-0 z-40 bg-[#121c1b]/55 transition-opacity lg:hidden',
+            'fixed inset-0 z-40 bg-[#121c1b]/55 transition-opacity duration-300 lg:hidden',
             drawerOpen ? 'opacity-100' : 'pointer-events-none opacity-0',
           )}
           onClick={() => setDrawerOpen(false)}
@@ -200,7 +224,7 @@ export function AppShell() {
           aria-label={t('nav.main')}
           inert={!drawerOpen}
           className={cn(
-            'fixed inset-y-0 start-0 z-50 w-72 max-w-[85vw] border-e-2 border-line bg-surface-muted neo-shadow-lg transition-transform duration-200 lg:hidden',
+            'fixed inset-y-0 start-0 z-50 w-72 max-w-[85vw] border-e-2 border-line bg-surface-muted neo-shadow-lg transition-transform duration-300 ease-soft lg:hidden',
             drawerOpen ? 'translate-x-0' : 'ltr:-translate-x-full rtl:translate-x-full',
           )}
         >
@@ -216,7 +240,11 @@ export function AppShell() {
         </aside>
 
         <main id="main" className="min-w-0 flex-1">
-          <Outlet />
+          {/* Each part of the app rises in when you move to it (keyed by its first path segment,
+              so moving inside admin or settings does not replay it). */}
+          <div key={pathname.split('/')[1]} className="mynota-page">
+            <Outlet />
+          </div>
         </main>
         <SearchPalette />
       </div>

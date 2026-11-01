@@ -144,3 +144,21 @@ Asked for by the owner after a real map came out as one long column of title-onl
 - **Motion**: cards rise in, meaning links draw themselves, cards lift on hover; all off with
   reduced motion.
 - `/dev/canvas` (development only) shows the real canvas with a sample map, no account.
+
+### Motion system (2026-11-01, "lively")
+
+The owner asked for more animation across the whole app (lively, keeping the neo-brutalist
+style). Shared pieces live in `src/styles/index.css`:
+- **Tokens**: `ease-spring` (slight overshoot, for things the student touches) and `ease-soft`
+  (for things that appear); utilities `animate-rise`, `animate-pop`, `animate-fade`,
+  `animate-wiggle`. Durations stay between 150 and 450 ms so studying never waits.
+- **Patterns**: `.mynota-page` (a page rises in; the app shell keys it by the first path segment),
+  `.mynota-stagger` (children rise one after another, capped at 350 ms), `.mynota-skeleton` /
+  `<Skeleton>` (loading shimmer).
+- **Components**: buttons lift with a spring and press flat; trailing icons lean forward on hover;
+  every native `<dialog>` springs open and slips away on close (`@starting-style`, discrete
+  transitions); toasts pop up, show a time-left bar and drop away; alerts rise in; inputs turn
+  their border brand-colored on focus; nav items have colored icon tiles that wiggle on hover;
+  count badges pop when the number changes.
+- Animations fill **backwards only**, so no transform stays on an element after it ends.
+- **Reduced motion** turns all of it off (global rule at the end of the stylesheet).

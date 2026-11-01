@@ -43,7 +43,7 @@ export function Field({ label, hint, error, status, children, className }: Field
 export const controlClasses = (invalid = false) =>
   cn(
     'min-h-11 w-full rounded-neo border-2 bg-surface px-3 text-[15px] text-ink placeholder:text-ink-faint',
-    'transition-shadow focus:outline-none focus-visible:outline-none focus:neo-shadow-sm',
-    invalid ? 'border-danger' : 'border-line',
+    'transition-[box-shadow,border-color] duration-200 focus:outline-none focus-visible:outline-none focus:neo-shadow-sm',
+    invalid ? 'border-danger' : 'border-line focus:border-brand',
     'disabled:cursor-not-allowed disabled:opacity-60',
   )

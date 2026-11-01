@@ -50,9 +50,12 @@ export function Dialog({ open, onClose, title, children, footer, className }: Di
           type="button"
           onClick={onClose}
           aria-label={t('common.close')}
-          className="flex size-10 cursor-pointer items-center justify-center rounded-neo hover:bg-paper-sunken pointer-coarse:size-11"
+          className="group flex size-10 cursor-pointer items-center justify-center rounded-neo hover:bg-paper-sunken pointer-coarse:size-11"
         >
-          <X size={20} />
+          <X
+            size={20}
+            className="transition-transform duration-300 ease-spring group-hover:rotate-90"
+          />
         </button>
       </div>
       <div className="px-5 py-4">{children}</div>

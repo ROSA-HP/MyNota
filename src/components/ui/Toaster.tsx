@@ -25,11 +25,12 @@ export function Toaster() {
             key={toast.id}
             role={toast.tone === 'danger' ? 'alert' : 'status'}
             className={cn(
-              'pointer-events-auto flex w-full max-w-md items-center gap-3 rounded-neo border-2 border-line px-4 py-3 text-sm font-semibold text-ink neo-shadow',
+              'mynota-toast pointer-events-auto relative flex w-full max-w-md items-center gap-3 overflow-hidden rounded-neo border-2 border-line px-4 py-3 text-sm font-semibold text-ink neo-shadow',
               tones[toast.tone],
+              toast.leaving && 'is-leaving',
             )}
           >
-            <Icon size={18} aria-hidden className="shrink-0" />
+            <Icon size={18} aria-hidden className="shrink-0 animate-pop [animation-delay:120ms]" />
             <span className="flex-1">{toast.message}</span>
             <button
               type="button"
@@ -39,6 +40,10 @@ export function Toaster() {
             >
               <X size={16} />
             </button>
+            <span
+              aria-hidden
+              className="mynota-toast-timer absolute inset-x-0 bottom-0 h-1 bg-line-soft"
+            />
           </div>
         )
       })}

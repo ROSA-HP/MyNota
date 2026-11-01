@@ -50,7 +50,7 @@ export function ThemeToggle({
               showLabels && 'px-3',
             )}
           >
-            <Icon size={17} aria-hidden />
+            <Icon size={17} aria-hidden className={cn(selected && 'animate-pop')} />
             {showLabels && <span>{t(key)}</span>}
           </button>
         )

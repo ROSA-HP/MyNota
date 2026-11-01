@@ -247,20 +247,21 @@
   /* Perfusense tactile press. Shadows are mirrored in RTL so they keep pointing "away". */
   .neo-btn {
     transition:
-      transform 80ms ease,
-      box-shadow 80ms ease,
-      background-color 120ms ease;
+      transform 220ms var(--ease-spring),
+      box-shadow 120ms ease,
+      background-color 150ms ease;
   }
   @media (hover: hover) {
     .neo-btn:not(:disabled):hover {
-      transform: translate(-1px, -1px);
+      transform: translate(-2px, -2px);
     }
     [dir='rtl'] .neo-btn:not(:disabled):hover {
-      transform: translate(1px, -1px);
+      transform: translate(2px, -2px);
     }
   }
   .neo-btn:not(:disabled):active {
     transform: translate(2px, 2px);
+    transition-duration: 60ms;
     box-shadow: none !important; /* beats the neo-shadow utilities */
   }
   [dir='rtl'] .neo-btn:not(:disabled):active {
@@ -294,6 +295,170 @@
   box-shadow: 6px 6px 0 0 var(--shadow);
   [dir='rtl'] & {
     box-shadow: -6px 6px 0 0 var(--shadow);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * Motion system (2026-11-01, "lively"): quick (150-450 ms), springy on things the student
+ * touches, soft on things that appear. Every animation fills backwards only, so nothing keeps a
+ * transform after it ends (a lasting transform would break fixed children). Reduced motion turns
+ * all of it off (the rules at the end of this file).
+ * ------------------------------------------------------------------------- */
+@theme {
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-soft: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --animate-rise: mynota-rise 420ms cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+  --animate-pop: mynota-pop 380ms cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+  --animate-fade: mynota-fade 260ms ease-out backwards;
+  --animate-wiggle: mynota-wiggle 520ms ease-in-out;
+}
+@keyframes mynota-rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+@keyframes mynota-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.82);
+  }
+}
+@keyframes mynota-fade {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes mynota-wiggle {
+  0%,
+  100% {
+    transform: rotate(0);
+  }
+  25% {
+    transform: rotate(-10deg);
+  }
+  60% {
+    transform: rotate(7deg);
+  }
+}
+
+/* A page coming in: a short rise, so moving around the app feels connected. */
+.mynota-page {
+  animation: mynota-rise 360ms cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+}
+
+/* Lists and grids: children rise one after another (capped, so long lists never wait). */
+.mynota-stagger > * {
+  animation: mynota-rise 440ms cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+}
+.mynota-stagger > :nth-child(2) {
+  animation-delay: 50ms;
+}
+.mynota-stagger > :nth-child(3) {
+  animation-delay: 100ms;
+}
+.mynota-stagger > :nth-child(4) {
+  animation-delay: 150ms;
+}
+.mynota-stagger > :nth-child(5) {
+  animation-delay: 200ms;
+}
+.mynota-stagger > :nth-child(6) {
+  animation-delay: 250ms;
+}
+.mynota-stagger > :nth-child(7) {
+  animation-delay: 300ms;
+}
+.mynota-stagger > :nth-child(n + 8) {
+  animation-delay: 350ms;
+}
+
+/* Loading placeholders: a soft light sweeping across. */
+.mynota-skeleton {
+  border-radius: var(--radius-neo);
+  background: linear-gradient(
+    90deg,
+    var(--paper-sunken) 0%,
+    var(--surface-muted) 50%,
+    var(--paper-sunken) 100%
+  );
+  background-size: 200% 100%;
+  animation: mynota-shimmer 1.4s linear infinite;
+}
+@keyframes mynota-shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -100% 0;
+  }
+}
+
+/* Dialogs (every native <dialog>): spring open, slip away on close; the backdrop fades.
+   Browsers without discrete transitions simply close at once. */
+dialog {
+  transition:
+    opacity 180ms ease-out,
+    transform 300ms var(--ease-spring),
+    overlay 300ms allow-discrete,
+    display 300ms allow-discrete;
+}
+dialog:not([open]) {
+  opacity: 0;
+  transform: translateY(16px) scale(0.95);
+  transition-duration: 140ms;
+  transition-timing-function: ease-in;
+}
+@starting-style {
+  dialog[open] {
+    opacity: 0;
+    transform: translateY(16px) scale(0.95);
+  }
+}
+dialog::backdrop {
+  transition:
+    opacity 220ms ease-out,
+    overlay 220ms allow-discrete,
+    display 220ms allow-discrete;
+}
+dialog:not([open])::backdrop {
+  opacity: 0;
+}
+@starting-style {
+  dialog[open]::backdrop {
+    opacity: 0;
+  }
+}
+
+/* Toasts: pop up from the bottom, drop away when they go; a bar shows the time left. */
+.mynota-toast {
+  animation: mynota-toast-in 380ms var(--ease-spring) backwards;
+}
+.mynota-toast.is-leaving {
+  animation: mynota-toast-out 180ms ease-in forwards;
+}
+@keyframes mynota-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.92);
+  }
+}
+@keyframes mynota-toast-out {
+  to {
+    opacity: 0;
+    transform: translateY(10px) scale(0.96);
+  }
+}
+.mynota-toast-timer {
+  transform-origin: left;
+  animation: mynota-timer 4500ms linear forwards;
+}
+[dir='rtl'] .mynota-toast-timer {
+  transform-origin: right;
+}
+@keyframes mynota-timer {
+  to {
+    transform: scaleX(0);
   }
 }
 
