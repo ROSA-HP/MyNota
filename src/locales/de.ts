@@ -550,6 +550,14 @@ export const de: Messages = {
       example: 'Beispiel',
       showAnswer: 'Antwort zeigen',
     },
+    reader: {
+      block: 'Block',
+      path: 'Wo dieser Block steht',
+      formulas: 'Formeln',
+      inside: 'Darin enthalten',
+      links: 'Verbunden mit',
+      done: 'Fertig',
+    },
     card: {
       open: 'Öffnen',
       edit: 'Bearbeiten',

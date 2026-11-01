@@ -417,7 +417,7 @@ export function BlockNode({ data, selected }: NodeProps<BlockNodeT>) {
 function CardActions() {
   const { t } = useTranslation()
   const canEdit = useWorkspace((s) => s.role === 'owner' || s.role === 'editor')
-  const open = () => useCanvasUi.getState().setPanelOpen(true)
+  const open = (mode: 'read' | 'edit') => useCanvasUi.getState().setPanelOpen(true, mode)
   const btn =
     'nodrag inline-flex h-8 cursor-pointer items-center gap-1 rounded-md border-2 border-line px-2 text-xs font-bold'
   return (
@@ -427,7 +427,7 @@ function CardActions() {
         className={cn(btn, 'bg-surface hover:bg-surface-muted')}
         onClick={(e) => {
           e.stopPropagation()
-          open()
+          open('read')
         }}
       >
         <Maximize2 size={13} aria-hidden /> {t('ws.card.open')}
@@ -438,7 +438,7 @@ function CardActions() {
           className={cn(btn, 'bg-brand text-brand-ink hover:bg-brand-hover')}
           onClick={(e) => {
             e.stopPropagation()
-            open()
+            open('edit')
           }}
         >
           <Pencil size={13} aria-hidden /> {t('ws.card.edit')}

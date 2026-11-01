@@ -532,6 +532,14 @@ export const en = {
       example: 'Example',
       showAnswer: 'Show answer',
     },
+    reader: {
+      block: 'Block',
+      path: 'Where this block is',
+      formulas: 'Formulas',
+      inside: 'Inside this idea',
+      links: 'Connected to',
+      done: 'Done',
+    },
     card: {
       open: 'Open',
       edit: 'Edit',

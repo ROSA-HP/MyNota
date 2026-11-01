@@ -60,7 +60,9 @@ interface CanvasUiState {
    * step 2); the panel opens from the card's Open / Edit, a double-click or Enter.
    */
   panelOpen: boolean
-  setPanelOpen: (open: boolean) => void
+  /** Read (study card) or edit (the form). Sections and the map title always edit. */
+  panelMode: 'read' | 'edit'
+  setPanelOpen: (open: boolean, mode?: 'read' | 'edit') => void
 }
 
 const MASTERY_KEY = 'mynota.mastery'
@@ -135,5 +137,7 @@ export const useCanvasUi = create<CanvasUiState>((set, get) => ({
   filter: '',
   setFilter: (q) => set({ filter: q }),
   panelOpen: false,
-  setPanelOpen: (open) => set({ panelOpen: open }),
+  panelMode: 'read',
+  setPanelOpen: (open, mode) =>
+    set(mode ? { panelOpen: open, panelMode: mode } : { panelOpen: open }),
 }))

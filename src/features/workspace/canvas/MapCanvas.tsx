@@ -126,7 +126,7 @@ export function useAddChild() {
       if (parent.collapsed) ws.updateNode(parent.id, { collapsed: false })
       ws.select(node.id)
       // A new block needs a title: open it in the panel straight away.
-      useCanvasUi.getState().setPanelOpen(true)
+      useCanvasUi.getState().setPanelOpen(true, 'edit')
     },
     [t],
   )
@@ -343,7 +343,9 @@ export function MapCanvas() {
         const children = kids.get(n.id) ?? []
         const expanded = level === 'sections' && column
         // Zoomed out, the card grows to cover its whole column (same place, more to read).
-        const eb = expanded ? toScreen({ x: column.x, y: column.y, w: column.w, h: column.h }) : null
+        const eb = expanded
+          ? toScreen({ x: column.x, y: column.y, w: column.w, h: column.h })
+          : null
         out.push({
           ...common,
           ...(eb && { position: { x: eb.x, y: eb.y }, width: eb.w, height: eb.h }),
@@ -636,7 +638,7 @@ export function MapCanvas() {
       } else if (e.key === 'Enter' && ws.selectedId && ws.nodes[ws.selectedId]?.level === 'block') {
         // Enter opens the selected block in the details panel.
         e.preventDefault()
-        ui.setPanelOpen(true)
+        ui.setPanelOpen(true, 'read')
       } else if ((e.key === 'l' || e.key === 'L') && canEdit) {
         const sources = ui.multi.length ? ui.multi : ws.selectedId ? [ws.selectedId] : []
         e.preventDefault()
@@ -754,7 +756,7 @@ export function MapCanvas() {
           // Double-click: straight to the details panel.
           if (node.type !== 'block' || connecting) return
           select(node.id)
-          useCanvasUi.getState().setPanelOpen(true)
+          useCanvasUi.getState().setPanelOpen(true, 'read')
         }}
         onNodeContextMenu={(e, node) => {
           if (node.type === 'region' || node.type === 'chapterRegion') return

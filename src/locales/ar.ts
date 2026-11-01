@@ -584,6 +584,14 @@ export const ar: Messages = {
       example: 'مثال',
       showAnswer: 'إظهار الإجابة',
     },
+    reader: {
+      block: 'كتلة',
+      path: 'موقع هذه الكتلة',
+      formulas: 'الصيغ',
+      inside: 'ضمن هذه الفكرة',
+      links: 'مرتبطة بـ',
+      done: 'تم',
+    },
     card: {
       open: 'فتح',
       edit: 'تعديل',

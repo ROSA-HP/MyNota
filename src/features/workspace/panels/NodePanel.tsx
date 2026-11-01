@@ -1,4 +1,5 @@
-import { useMemo } from 'react'
+import { useNodeSource } from './useNodeSource'
+import { BlockReader } from './BlockReader'
 import { MathFormula } from '@/components/ui/MathFormula'
 import { Plus, Trash, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
@@ -16,7 +17,6 @@ import type {
 } from '@/lib/database.types'
 import { supabase } from '@/lib/supabase'
 import { useCanvasUi } from '../canvas/canvasUi'
-import { findRoot } from '../canvas/layout'
 import { TYPE_ICON } from '../canvas/visuals'
 import { PagePreview } from './PagePreview'
 import { useWorkspace } from '../workspaceStore'
@@ -178,7 +178,6 @@ export function NodePanel({ node, onClose }: { node: NodeRow; onClose: () => voi
   const canEdit = useWorkspace((s) => s.role === 'owner' || s.role === 'editor')
   const update = useWorkspace((s) => s.updateNode)
   const relations = useWorkspace((s) => s.relations)
-  const sources = useWorkspace((s) => s.sources)
   const map = useWorkspace((s) => s.map)
   const askDelete = useCanvasUi((s) => s.askDelete)
   const isRoot = node.parent_id === null
@@ -186,36 +185,14 @@ export function NodePanel({ node, onClose }: { node: NodeRow; onClose: () => voi
   const links = Object.values(relations).filter(
     (r) => r.status !== 'dismissed' && (r.from_node === node.id || r.to_node === node.id),
   )
-  const nodes = useWorkspace((s) => s.nodes)
-  // Paragraph numbers restart in every book chapter: read the sources of this node's chapter
-  // (or of the map, for notes maps). Merged notes are extra sources of the same chapter.
-  const chapterSources = useMemo(() => {
-    const root = findRoot(Object.values(nodes))
-    let cur: NodeRow | undefined = node
-    if (root?.level === 'book')
-      while (cur?.parent_id && cur.parent_id !== root.id) cur = nodes[cur.parent_id]
-    const chapterId = root?.level === 'book' ? cur?.id : root?.id
-    const mine = sources.filter((src) => src.chapter_node_id === chapterId)
-    return mine.length ? mine : sources.filter((src) => src.chapter_node_id === null)
-  }, [nodes, node, sources])
-  const paragraphs = chapterSources
-    .flatMap((src) => src.paragraphs ?? [])
-    .filter((p) => node.source.paragraphs.includes(p.n))
-  /** Sources with an original file (PDF or photos) and the pages this node cites in each. */
-  const pageSources = chapterSources.flatMap((src) => {
-    if (!src.file_hash) return []
-    const pages = [
-      ...new Set(
-        (src.paragraphs ?? [])
-          .filter((p) => node.source.paragraphs.includes(p.n) && typeof p.page === 'number')
-          .map((p) => p.page as number),
-      ),
-    ].sort((a, b) => a - b)
-    return pages.length ? [{ src, pages }] : []
-  })
+  const { paragraphs, pageSources } = useNodeSource(node)
   const Icon = node.type ? TYPE_ICON[node.type] : null
 
   const setDetails = (details: DetailBlock[]) => update(node.id, { details })
+  const mode = useCanvasUi((s) => s.panelMode)
+
+  // Blocks open as a study card; this form is their edit mode (canvas step 5).
+  if (isBlock && mode === 'read') return <BlockReader node={node} onClose={onClose} />
 
   return (
     <div className="flex h-full flex-col">
@@ -234,10 +211,20 @@ export function NodePanel({ node, onClose }: { node: NodeRow; onClose: () => voi
                 ? t(`library.types.${map.type}`)
                 : ''}
         </span>
+        {isBlock && (
+          <Button
+            size="sm"
+            variant="secondary"
+            className="ms-auto"
+            onClick={() => useCanvasUi.getState().setPanelOpen(true, 'read')}
+          >
+            {t('ws.reader.done')}
+          </Button>
+        )}
         <IconButton
           label={t('ws.panel.close')}
           bordered={false}
-          className="ms-auto size-9"
+          className={cn('size-9', !isBlock && 'ms-auto')}
           onClick={onClose}
         >
           <X size={18} />
