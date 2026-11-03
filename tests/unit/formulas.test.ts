@@ -259,6 +259,7 @@ describe('the owner’s physical optics notes (the map that repeated and lost fo
     ])
     // A parent and its child are joined by the tree already; copies on unrelated blocks
     // (the intensity equation on the grating and resolution blocks) are just removed.
-    expect(out.relations.every((r) => r.label === '')).toBe(true)
+    // Each arrow says what it carries: the formula itself, in plain symbols.
+    expect(out.relations.map((r) => r.label)).toEqual(['sin θdark = mλ/a', 'sin θdark = mλ/a'])
   })
 })

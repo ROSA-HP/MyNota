@@ -2,6 +2,7 @@ import type { NodeRow, RelationRow } from '@/lib/database.types'
 import type { CompactBlock } from '../prompts/links.v1'
 import type { LinksResponse } from '../schemas/links'
 import { makeRelation } from './convert'
+import { vagueLabel } from './relations'
 
 /**
  * Cross-links pass (docs/ai-pipeline.md › Passes 4): the model sees only a compact list of
@@ -118,10 +119,13 @@ export function linkCandidates(
   return { title, blocks, idMap, groupOf, groups }
 }
 
-/** How many links to ask for: a few per chapter, a few per chapter pair for a book. */
+/**
+ * How many links to ask for: few (owner, 2026-11-03: "use less arrows"): about one per ten
+ * blocks in a chapter (1 to 5), about one per chapter for a book (2 to 8).
+ */
 export function maxLinksFor(scope: LinkScope['kind'], blocks: number, groups: number): number {
   const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v))
-  return scope === 'chapter' ? clamp(Math.round(blocks / 6), 2, 10) : clamp(groups * 2, 3, 16)
+  return scope === 'chapter' ? clamp(Math.round(blocks / 10), 1, 5) : clamp(groups, 2, 8)
 }
 
 /** Whether a scope has anything to link across (at least two groups with blocks). */
@@ -153,6 +157,8 @@ export function toSuggestions(
     const to = ctx.candidates.idMap.get(link.to.toUpperCase())
     if (!from || !to || from === to) continue
     if (ctx.candidates.groupOf.get(from) === ctx.candidates.groupOf.get(to)) continue
+    // A link has to say why (no "related", no empty label).
+    if (vagueLabel(link.label)) continue
     const key = pairKey(from, to)
     if (taken.has(key)) continue
     taken.add(key)
@@ -162,7 +168,7 @@ export function toSuggestions(
         from_node: from,
         to_node: to,
         type: link.type,
-        label: link.label.split(/\s+/).slice(0, 3).join(' '),
+        label: link.label.split(/\s+/).slice(0, 4).join(' '),
         status: 'suggested',
         confidence: link.confidence,
         origin: 'ai',

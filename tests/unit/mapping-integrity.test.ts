@@ -3,6 +3,7 @@ import { blockNodes, makeNode, sectionNodes } from '@/ai/pipeline/convert'
 import { covered, ensureCoverage, keywords, sourceLines } from '@/ai/pipeline/coverage'
 import { ensureFormulas, findEquations, sameFormula } from '@/ai/pipeline/formulas'
 import { splitParagraphs } from '@/ai/pipeline/prepare'
+import { pruneRelations, relationBudget, vagueLabel } from '@/ai/pipeline/relations'
 import type { Paragraph } from '@/ai/prompts/shared'
 import { DetailsResponseSchema, detailsSchemaFor, type DetailsResponse } from '@/ai/schemas/details'
 import { normalizeOutline, type OutlineResponse } from '@/ai/schemas/outline'
@@ -172,6 +173,10 @@ for (const input of INPUTS) {
           }
           const check = detailsSchemaFor(paragraphs.length).safeParse(named)
           expect(check.success, JSON.stringify(check.error?.issues?.slice(0, 2))).toBe(true)
+          // Few arrows, each with something to say.
+          const arrows = pruneRelations(out).relations
+          expect(arrows.length).toBeLessThanOrEqual(relationBudget(out.blocks.length))
+          for (const r of arrows) expect(vagueLabel(r.label), r.label).toBe(false)
           // Every block cites paragraphs of its own section.
           for (const b of out.blocks)
             for (const n of b.source) expect(ps.some((p) => p.n === n)).toBe(true)

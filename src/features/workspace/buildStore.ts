@@ -3,13 +3,14 @@ import { AiError, isAbortError, type AiErrorKind } from '@/ai/errors'
 import { finishJob, startJob } from '@/ai/jobs'
 import { toProviderSchema } from '@/ai/jsonSchema'
 import { blockNodes, outlineText, sectionNodes } from '@/ai/pipeline/convert'
-import { DETAILS_PROMPT_VERSION, detailsPrompt } from '@/ai/prompts/details.v4'
+import { DETAILS_PROMPT_VERSION, detailsPrompt } from '@/ai/prompts/details.v5'
 import { OUTLINE_PROMPT_VERSION, outlinePrompt } from '@/ai/prompts/outline.v2'
 import { SYSTEM_PROMPT, versionFor, type Paragraph, type SourceMode } from '@/ai/prompts/shared'
 import { createAdapter } from '@/ai/providers'
 import { AiQueue } from '@/ai/queue'
 import { DetailsResponseSchema, detailsSchemaFor } from '@/ai/schemas/details'
 import { ensureCoverage } from '@/ai/pipeline/coverage'
+import { pruneRelations } from '@/ai/pipeline/relations'
 import { ensureFormulas } from '@/ai/pipeline/formulas'
 import { checkDetailsRules, checkOutlineRules } from '@/ai/schemas/rules'
 import {
@@ -278,8 +279,11 @@ export const useBuild = create<BuildState>((set, get) => {
         durationMs: performance.now() - startedAt,
       })
       // Nothing in the notes is lost: every equation ends up as a formula (models often drop
-      // them), and every line the reply left out is added to the block it fits best.
-      const data = ensureCoverage(ensureFormulas(result.data, paragraphs), paragraphs)
+      // them), and every line the reply left out is added to the block it fits best. Then only
+      // the links worth an arrow stay (few, each with a specific label).
+      const data = pruneRelations(
+        ensureCoverage(ensureFormulas(result.data, paragraphs), paragraphs),
+      )
       const warnings = checkDetailsRules(data)
       if (warnings.length)
         console.warn(

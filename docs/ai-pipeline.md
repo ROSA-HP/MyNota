@@ -244,6 +244,26 @@ The owner asked that mapping "gives the whole data in proper way".
   formula, every point on the map, nothing added twice, a valid reply, and a laid-out map where
   every card has a place and none overlap.
 
+### Prompt: details v5 and fewer, better arrows (2026-11-03)
+
+The owner asked for as few arrows as possible, and for every arrow to carry real detail.
+- **Trimming** (`pruneRelations` in `src/ai/pipeline/relations.ts`, last step of every build):
+  links the tree already shows (parent and child, ancestor and descendant), self links, unknown
+  blocks, repeated pairs and vague labels ("related", "see also", "linked", the type's own words,
+  in English, German and Arabic) are dropped; of the rest, the strongest stay (type weight:
+  causes and derived_from first, related last; then a fuller label), about one per four blocks
+  (1 to 4 per section) and at most two per card.
+- **Formula arrows** are labelled with the formula in plain symbols (`plainFormula`:
+  "sin θdark = mλ/a"), or the formula block's title when the formula is longer than 40 characters.
+- **Details v5** (`details.v5.ts`, now used): at most 3 relations, none when the tree says it all,
+  only when they teach something the tree does not show, never related, each with a specific
+  2-4 word label saying what flows along the arrow. v4 stays for the record.
+- **Suggested links between sections**: about one per ten blocks in a chapter (1 to 5), about one
+  per chapter in a book (2 to 8); suggestions with an empty or vague label are dropped; labels
+  keep up to 4 words.
+Tests: `tests/unit/relations.test.ts`, `links.test.ts`, `prompts-v2.test.ts`, and the
+mapping-integrity tests now also check the arrow budget and labels.
+
 ### Cross-links (v1)
 
 ```text

@@ -99,9 +99,10 @@ describe('cross-links candidates', () => {
   })
 
   it('asks for a sensible number of links', () => {
-    expect(maxLinksFor('chapter', 3, 2)).toBe(2)
-    expect(maxLinksFor('chapter', 300, 7)).toBe(10)
-    expect(maxLinksFor('book', 400, 12)).toBe(16)
+    // Few arrows (owner, 2026-11-03): about one per ten blocks, about one per chapter.
+    expect(maxLinksFor('chapter', 3, 2)).toBe(1)
+    expect(maxLinksFor('chapter', 300, 7)).toBe(5)
+    expect(maxLinksFor('book', 400, 12)).toBe(8)
   })
 })
 
@@ -136,7 +137,7 @@ describe('cross-links suggestions', () => {
     })
     const out = toSuggestions(links, { mapId: 'm', candidates, existing, max: 10 })
     expect(out.map((r) => [r.from_node, r.to_node, r.label, r.confidence])).toEqual([
-      [m.active.id, m.atp.id, 'powered by cell', 'high'],
+      [m.active.id, m.atp.id, 'powered by cell energy', 'high'],
       [m.pump.id, m.atp.id, 'uses energy', 'medium'],
     ])
     expect(out.every((r) => r.status === 'suggested' && r.origin === 'ai')).toBe(true)
@@ -149,13 +150,29 @@ describe('cross-links suggestions', () => {
     const out = toSuggestions(
       {
         links: [
-          { from: 'B1', to: 'B4', type: 'causes', label: '', confidence: 'medium' },
-          { from: 'B2', to: 'B4', type: 'causes', label: '', confidence: 'medium' },
+          { from: 'B1', to: 'B4', type: 'causes', label: 'drives transport', confidence: 'medium' },
+          { from: 'B2', to: 'B4', type: 'causes', label: 'fuels the pump', confidence: 'medium' },
         ],
       },
       { mapId: 'm', candidates, existing: [], max: 1 },
     )
     expect(out).toHaveLength(1)
+  })
+
+  it('never suggests an arrow that says nothing (empty or vague label)', () => {
+    const m = bookMap()
+    const candidates = linkCandidates(m.nodes, m.root.id, { kind: 'book' })
+    const out = toSuggestions(
+      {
+        links: [
+          { from: 'B1', to: 'B4', type: 'causes', label: '', confidence: 'high' },
+          { from: 'B2', to: 'B4', type: 'related', label: 'Related', confidence: 'high' },
+          { from: 'B1', to: 'B3', type: 'leads_to', label: 'see also', confidence: 'high' },
+        ],
+      },
+      { mapId: 'm', candidates, existing: [], max: 5 },
+    )
+    expect(out).toEqual([])
   })
 
   it('rejects confidences below medium', () => {

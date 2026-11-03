@@ -148,6 +148,63 @@ export function toLatex(plain: string): string {
     .trim()
 }
 
+const SYMBOL_OF: Record<string, string> = {
+  ...Object.fromEntries(Object.entries(GREEK).map(([c, n]) => [n, c])),
+  ...Object.fromEntries(
+    Object.entries(SYMBOLS)
+      .filter(([, l]) => /^\\[a-zA-Z]+ $/.test(l))
+      .map(([c, l]) => [l.trim().slice(1), c]),
+  ),
+  leq: '≤',
+  geq: '≥',
+  ne: '≠',
+  ldots: '…',
+  dots: '…',
+}
+const SUPER_OF = Object.fromEntries(Object.entries(SUPER).map(([s, d]) => [d, s]))
+
+/**
+ * A formula in plain symbols for a link label (labels are text, not typeset): \frac{λ}{a} → λ/a,
+ * \theta → θ, ^{2} → ², subscripts run on (θ_{dark} → θdark). "sin θdark = mλ/a".
+ */
+export function plainFormula(latex: string): string {
+  const wrap = (s: string) => (/[\s+\-−]/.test(s.trim()) ? `(${s.trim()})` : s.trim())
+  let s = latex
+  for (let i = 0; i < 4; i++)
+    s = s.replace(
+      /\\[dt]?frac\{([^{}]*)\}\{([^{}]*)\}/g,
+      (_m, a: string, b: string) => `${wrap(a)}/${wrap(b)}`,
+    )
+  s = s
+    .replace(/\\sqrt\{([^{}]*)\}/g, '√($1)')
+    .replace(/\\(left|right|displaystyle|mathrm|text|operatorname|,|;|!)/g, '')
+    // A function name stands apart (d sin θ, not dsinθ); symbols run on.
+    .replace(/\\([a-zA-Z]+)/g, (_m, name: string) =>
+      FUNCS.has(name) ? ` ${name} ` : (SYMBOL_OF[name] ?? name),
+    )
+    .replace(/\^\{?([0-9n+-]+)\}?/g, (_m, p: string) =>
+      [...p].every((c) => SUPER_OF[c]) ? [...p].map((c) => SUPER_OF[c]).join('') : `^${p}`,
+    )
+    .replace(/_\{([^{}]*)\}|_(\w)/g, (_m, a?: string, b?: string) => a ?? b ?? '')
+    .replace(/[{}]/g, '')
+    .replace(/\s+/g, ' ')
+    .replace(/(\p{Script=Greek}) (?=[\p{L}\d])/gu, '$1')
+  return s
+    .replace(/\b(sin|cos|tan|cot|log|ln|exp)(?=[\p{L}(])/gu, '$1 ')
+    .replace(/ ?([/·×]) ?/g, '$1')
+    .trim()
+}
+
+/** The label of a link from a formula's block: the formula itself when short, else its title. */
+export function formulaLabel(latex: string, title: string): string {
+  const plain = plainFormula(latex)
+  if (plain.length <= 40) return plain
+  const words = title.split(/\s+/)
+  let out = ''
+  for (const w of words) if (`${out} ${w}`.trim().length <= 40) out = `${out} ${w}`.trim()
+  return out || title.slice(0, 40)
+}
+
 // ---------------------------------------------------------------------------
 // Finding equations in text
 // ---------------------------------------------------------------------------
@@ -483,7 +540,12 @@ function oneHomePerFormula(res: DetailsResponse, sources: SourceFormula[]): Deta
         // an unrelated block was the model's mistake and is just removed.
         const uses = !src || other.source.includes(src.paragraph)
         if (uses && !family(home, other) && !linked(home.key, other.key) && relations.length < 30)
-          relations.push({ from: home.key, to: other.key, type: 'leads_to', label: '' })
+          relations.push({
+            from: home.key,
+            to: other.key,
+            type: 'leads_to',
+            label: formulaLabel(latex, home.title),
+          })
       }
     }
 
@@ -506,7 +568,8 @@ function oneHomePerFormula(res: DetailsResponse, sources: SourceFormula[]): Deta
  *   it best among those citing its paragraph, so nothing in the notes is lost;
  * - an equation copied onto several blocks stays on one, with links to the others;
  * - in each block, formulas come first, the one matching its title first of all.
- * Added links have an empty label: the map shows the link type in the student's language.
+ * Added links are labelled with the formula itself in plain symbols (or its block's title when
+ * the formula is long), so the arrow says what it carries.
  */
 export function ensureFormulas(
   res: DetailsResponse,
