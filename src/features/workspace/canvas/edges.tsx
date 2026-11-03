@@ -249,6 +249,92 @@ export function StepEdge({ id, source, target, data }: EdgeProps<StepEdgeT>) {
   return <OrganicBranch id={id} segs={segs} color={data?.color} from={3.5} />
 }
 
+export type BusEdgeT = Edge<Tinted & { top: number; y: number; spineX: number | null }, 'bus'>
+
+/** A line through `points` with rounded corners. */
+function roundedPath(points: Array<{ x: number; y: number }>, radius = 12): string {
+  const pts = points.filter(
+    (p, i) =>
+      i === 0 || Math.hypot(p.x - (points[i - 1]?.x ?? 0), p.y - (points[i - 1]?.y ?? 0)) > 0.5,
+  )
+  const first = pts[0]
+  if (!first) return ''
+  let d = `M${first.x},${first.y}`
+  for (let i = 1; i < pts.length; i++) {
+    const p = pts[i] as { x: number; y: number }
+    const prev = pts[i - 1] as { x: number; y: number }
+    const next = pts[i + 1]
+    if (!next) {
+      d += ` L${p.x},${p.y}`
+      break
+    }
+    const r = Math.min(
+      radius,
+      Math.hypot(p.x - prev.x, p.y - prev.y) / 2,
+      Math.hypot(next.x - p.x, next.y - p.y) / 2,
+    )
+    const inX = p.x - (Math.sign(p.x - prev.x) || 0) * r
+    const inY = p.y - (Math.sign(p.y - prev.y) || 0) * r
+    const outX = p.x + (Math.sign(next.x - p.x) || 0) * r
+    const outY = p.y + (Math.sign(next.y - p.y) || 0) * r
+    d += ` L${inX},${inY} Q${p.x},${p.y} ${outX},${outY}`
+  }
+  return d
+}
+
+/**
+ * Title (or chapter tab) → section, the neat way (2026-11-03): one neutral line down from the
+ * title to a gutter, along it (lower rows by a spine left of every box), and a short drop in the
+ * section's color into its heading. Lines to many sections share the same path, so they read as
+ * one bus, never crossing a section.
+ */
+export function BusEdge({ id, source, target, data }: EdgeProps<BusEdgeT>) {
+  const s = rectOf(useInternalNode(source))
+  const t = rectOf(useInternalNode(target))
+  if (!s || !t || !data) return null
+  const sx = s.x + s.w / 2
+  const tx = t.x + t.w / 2
+  const points = [
+    { x: sx, y: s.y + s.h },
+    { x: sx, y: data.top },
+  ]
+  if (data.spineX !== null)
+    points.push({ x: data.spineX, y: data.top }, { x: data.spineX, y: data.y })
+  points.push({ x: tx, y: data.y })
+  const drop: Cubic = [
+    { x: tx, y: data.y },
+    { x: tx, y: data.y + (t.y - data.y) / 3 },
+    { x: tx, y: t.y - (t.y - data.y) / 3 },
+    { x: tx, y: t.y },
+  ]
+  const color = data.color ?? 'var(--line)'
+  return (
+    <>
+      <BaseEdge
+        id={id}
+        path={roundedPath(points)}
+        style={{ stroke: 'var(--ink-faint)', strokeWidth: 2, fill: 'none', strokeLinecap: 'round' }}
+      />
+      <path
+        className="mynota-branch"
+        d={centrePath([drop])}
+        fill="none"
+        stroke={color}
+        strokeWidth={2.5}
+        strokeLinecap="round"
+      />
+      <path
+        className="mynota-branch"
+        d={arrowHead([drop], 10, 9)}
+        fill={color}
+        stroke={color}
+        strokeWidth={1}
+        strokeLinejoin="round"
+      />
+    </>
+  )
+}
+
 /** Picks the facing sides of two boxes and returns a smooth curve between them. */
 function floatingPath(a: Rect, b: Rect, rtl: boolean) {
   const ac = { x: a.x + a.w / 2, y: a.y + a.h / 2 }
@@ -701,6 +787,7 @@ export function BundleEdge({ id, source, target, data }: EdgeProps<BundleEdgeT>)
 
 export const edgeTypes = {
   branch: BranchEdge,
+  bus: BusEdge,
   tree: TreeEdge,
   rail: RailEdge,
   step: StepEdge,

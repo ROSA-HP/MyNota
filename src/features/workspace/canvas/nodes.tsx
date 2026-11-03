@@ -1,6 +1,8 @@
 import { useLayoutEffect, useRef, type PointerEvent } from 'react'
-import { Handle, Position, type Node, type NodeProps } from '@xyflow/react'
+import { Handle, Position, useReactFlow, type Node, type NodeProps } from '@xyflow/react'
 import {
+  ArrowLeft,
+  ArrowRight,
   ChevronDown,
   ChevronUp,
   CircleAlert,
@@ -18,6 +20,7 @@ import { useKeyFor } from '@/features/settings/aiKeyStore'
 import { useDeck } from '@/features/study/deckStore'
 import { masteryMapFor, type Mastery } from '@/features/study/mastery'
 import { cn } from '@/lib/cn'
+import { camera } from '@/lib/motion'
 import type { ChapterColor, MapRow, NodeRow } from '@/lib/database.types'
 import { useChapterBuilder } from '../bookBuild'
 import { EditingTag } from '../live/LivePresence'
@@ -25,6 +28,7 @@ import { useBuild } from '../buildStore'
 import { useWorkspace } from '../workspaceStore'
 import { useCanvasUi } from './canvasUi'
 import { DetailList } from './DetailList'
+import { FIT } from './fit'
 import { blockCard, expandedCard } from './layout'
 import { chapterColor, TYPE_ICON } from './visuals'
 import type { ChapterSummary, ZoomLevel } from './zoom'
@@ -57,6 +61,8 @@ export type BlockNodeT = Node<
     /** Its sub-cards, and whether they are folded under it. */
     childCount?: number
     folded?: boolean
+    /** Cards in other sections this one links to or from (their arrows show on demand). */
+    links?: Array<{ id: string; number: string; title: string; outgoing: boolean }>
   },
   'block'
 >
@@ -250,6 +256,59 @@ function FoldTab({
   )
 }
 
+/**
+ * Links to other sections, as chips on the card's top edge ("→ 4.1"); the arrow itself is drawn
+ * only while one of the two cards is selected. A chip takes you to the other card.
+ */
+function LinkChips({
+  links,
+  color,
+}: {
+  links: NonNullable<BlockNodeT['data']['links']>
+  color: string
+}) {
+  const { t } = useTranslation()
+  const { fitView } = useReactFlow()
+  const go = (id: string) => {
+    const ui = useCanvasUi.getState()
+    ui.lockView()
+    useWorkspace.getState().select(id)
+    ui.setPanelOpen(true, 'read')
+    void fitView({ nodes: [{ id }], ...FIT, maxZoom: 1.1, ...camera(450) })
+  }
+  const shown = links.slice(0, 2)
+  return (
+    <span className="nodrag absolute end-2 -top-2.5 z-[2] flex items-center gap-1">
+      {shown.map((l) => (
+        <button
+          key={`${l.id}:${l.outgoing ? 'o' : 'i'}`}
+          type="button"
+          title={t('ws.linkTo', { n: l.number, title: l.title })}
+          aria-label={t('ws.linkTo', { n: l.number, title: l.title })}
+          onClick={(e) => {
+            e.stopPropagation()
+            go(l.id)
+          }}
+          className="inline-flex h-[18px] cursor-pointer items-center gap-0.5 rounded-[5px] border-[1.5px] bg-surface px-1 font-mono text-[10px] leading-none font-bold text-ink transition-transform duration-200 ease-spring hover:scale-110"
+          style={{ borderColor: color }}
+        >
+          {l.outgoing ? (
+            <ArrowRight size={10} aria-hidden className="rtl:-scale-x-100" />
+          ) : (
+            <ArrowLeft size={10} aria-hidden className="rtl:-scale-x-100" />
+          )}
+          <span dir="ltr">{l.number}</span>
+        </button>
+      ))}
+      {links.length > shown.length && (
+        <span className="rounded-[5px] border-[1.5px] border-line-soft bg-surface px-1 text-[10px] leading-4 font-bold text-ink-muted">
+          +{links.length - shown.length}
+        </span>
+      )}
+    </span>
+  )
+}
+
 export function SectionNode({ data, selected }: NodeProps<SectionNodeT>) {
   const { t } = useTranslation()
   const { node, childCount, expanded } = data
@@ -302,16 +361,21 @@ export function SectionNode({ data, selected }: NodeProps<SectionNodeT>) {
     <div
       {...longPress}
       className={cn(
-        'relative flex h-[58px] w-[190px] flex-col items-center justify-center rounded-[11px] border-[2.5px] bg-surface px-2.5 text-center text-ink',
+        // The section's heading: a bar across the top of its box (tidy section boxes).
+        'relative flex size-full items-center gap-3 rounded-[11px] border-[2.5px] bg-surface px-3.5 text-ink',
         selected && 'neo-shadow outline-3 outline-offset-2',
       )}
-      style={{ borderColor: selected ? 'var(--line)' : c.strong, outlineColor: c.strong }}
+      style={{
+        borderColor: selected ? 'var(--line)' : c.strong,
+        outlineColor: c.strong,
+        boxShadow: selected ? undefined : `inset 0 -4px 0 0 ${c.fill}`,
+      }}
     >
       {data.number && <NumberTag n={data.number} color={c.strong} big />}
-      <span dir="auto" className="line-clamp-1 text-[15px] font-bold">
+      <span dir="auto" className="min-w-0 flex-1 truncate text-[16px] font-bold">
         {node.title}
       </span>
-      <span className="text-[11px] text-ink-muted">
+      <span className="shrink-0 text-[11.5px] font-semibold whitespace-nowrap text-ink-muted">
         {t(`ws.shapes.${node.branch_view}`)} · {t('ws.blocks', { count: childCount })}
       </span>
       <SectionStatusChip sectionId={node.id} />
@@ -484,6 +548,9 @@ export function BlockNode({ data, selected }: NodeProps<BlockNodeT>) {
       )}
       {open && <CardActions />}
       {data.number && step === null && <NumberTag n={data.number} color={c.strong} />}
+      {Boolean(data.links?.length) && !covered && (
+        <LinkChips links={data.links ?? []} color={c.strong} />
+      )}
       {Boolean(data.childCount) && !covered && (
         <FoldTab
           nodeId={node.id}

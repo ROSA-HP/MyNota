@@ -228,3 +228,26 @@ Asked for by the owner: a charcoal background instead of near-black, brighter co
 - **Reading order**: each section and card has a small number tag on its top edge ("2", "2.1",
   "2.1.1"; in a book, within the chapter) from `readingNumbers` in `canvas/layout.ts`. Process
   steps keep their step numbers instead.
+
+### A more organised map: rows, tidy boxes, a neat title line, links on demand (2026-11-03)
+
+Asked for by the owner ("we need more organization of the map").
+- **Sections in rows**: sections no longer sit in one endless row. Each is laid out on its own,
+  then they are placed in rows of the same count (a tidy grid) in reading order (left to right,
+  top to bottom; mirrored in RTL), choosing the count that makes the whole closest to a page
+  (`pageRatio` 1.6 wide to 1 tall). Book chapters do the same with their sections.
+- **Tidy section boxes**: a section's card is a heading bar across the top of its box (title on
+  one side, shape and card count on the other, a stripe of the section color along its bottom),
+  and the boxes in a row share the same bottom. The heading groups the section's cards, so there
+  are no lines from a section to its top-level cards any more (nor into a process's first step);
+  lines remain only inside a card's own sub-tree and between process steps.
+- **The title's line (bus)**: one neutral line down from the title to a gutter above the first
+  row, short drops in each section's color into its heading; lower rows are reached by a spine
+  left of every box (right in RTL), so the line never crosses a section (`Bus` in `layout.ts`,
+  `BusEdge` in `edges.tsx`). Chapter tabs reach their sections the same way.
+- **Links on demand**: a link between two sections is drawn only while one of its cards (or the
+  link) is selected; otherwise each card shows a chip on its top edge ("→ 4.1" out, "← 2.1" in,
+  two at most plus "+n"), and a chip selects the other card and moves the view to it. Links
+  inside one section are always drawn; suggested links stay visible for review. Zoomed out to
+  sections, bundled links show only for the selected section.
+Tests: `tests/unit/organised-layout.test.ts`.

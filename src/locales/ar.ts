@@ -527,6 +527,7 @@ export const ar: Messages = {
     moreActions: 'إجراءات أخرى',
     fold: { show: 'إظهار البطاقات الفرعية ({{count}})', hide: 'إخفاء البطاقات الفرعية' },
     readingOrder: 'ترتيب القراءة: {{n}}',
+    linkTo: 'انتقل إلى البطاقة المرتبطة {{n}}: {{title}}',
     studyView: {
       covered: 'كتلة مخفية',
       mastery: 'نقاط الإتقان',

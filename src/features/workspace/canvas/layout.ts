@@ -24,6 +24,12 @@ export const SIZES = {
   regionPad: 18,
   sectionTop: 128,
   blocksGap: 30,
+  /** Sections wrap into rows (2026-11-03); this much space between two rows of boxes. */
+  sectionRowGap: 84,
+  /** Rows aim for a page shape: about this many times wider than the sections are tall. */
+  pageRatio: 1.6,
+  /** The title's bus line runs this far left of the section boxes to reach lower rows. */
+  spineGap: 30,
   // Book maps: chapters are regions with a notebook tab on top, packed in rows.
   tabH: 44,
   chapterPad: 28,
@@ -135,7 +141,21 @@ export interface Region extends Box {
   built: boolean
 }
 
+/**
+ * The neat line from the title (or a chapter tab) to a section (2026-11-03): down from the
+ * parent to `top`, along a gutter, and a short drop into the section's heading. Sections of
+ * lower rows reach their gutter (`y`) by a spine at `spineX`, left of every box, so the line never
+ * crosses a section.
+ */
+export interface Bus {
+  top: number
+  y: number
+  spineX: number | null
+}
+
 export interface LayoutResult {
+  /** sectionId → how the line from the title reaches it. */
+  bus: Record<string, Bus>
   boxes: Record<string, Box>
   regions: Region[]
   /** A section's whole column (section card + its blocks), for the zoomed-out section view. */
@@ -186,7 +206,11 @@ export function computeLayout(
   const railed = new Set<string>()
   const regions: Region[] = []
   const chapterOf: Record<string, string> = {}
+  const bus: Record<string, Bus> = {}
+  /** sectionId → [parent id, row]: boxes in one row are made the same height. */
+  const rowOf: Record<string, string> = {}
   const empty: LayoutResult = {
+    bus,
     boxes,
     regions,
     columns,
@@ -221,29 +245,37 @@ export function computeLayout(
   }
 
   /**
-   * Lays sections out side by side from (x0, top); returns the used width and bottom.
-   * Inside a section (canvas step 3, "grouped columns"): each top-level block with its
-   * sub-blocks is a group; groups are spread over up to 4 columns under the section card,
-   * which sits centred above them and joins them with a rail (RailEdge). Process and timeline
-   * sections stay one column, because their order matters.
+   * Lays sections out from (x0, top) and returns the used width and bottom. Each section is a
+   * box: its heading across the top (the section card, full width), its blocks below. Inside a
+   * section (canvas step 3, "grouped columns"): each top-level block with its sub-blocks is a
+   * group; groups are spread over up to 4 columns. Process and timeline sections stay one column,
+   * because their order matters.
+   * Sections wrap into rows in reading order (2026-11-03: "more organization"), the rows about
+   * `pageRatio` times wider than the whole is tall; `busTop` and `spineX` place the line from the
+   * parent (see Bus).
    */
-  const placeColumns = (parentId: string, x0: number, top: number) => {
-    let x = x0
-    let bottom = top + S.sectionH
-    for (const section of kids.get(parentId) ?? []) {
-      const sx = x + S.regionPad
-      const blocksTop = top + S.sectionH + S.blocksGap
+  const placeColumns = (
+    parentId: string,
+    x0: number,
+    top: number,
+    lines: { busTop: number; spineX: number },
+  ) => {
+    // 1. Every section on its own, at (0, 0).
+    const laid = (kids.get(parentId) ?? []).map((section) => {
+      const ids: string[] = [section.id]
+      const sx = S.regionPad
+      const blocksTop = S.sectionH + S.blocksGap
       if (section.collapsed) hideSubtree(section.id)
       const groups = (section.collapsed ? [] : (kids.get(section.id) ?? [])).map((g) => {
         const items = subtreeOf(g)
         return {
           items,
-          h: items.reduce((s, [n]) => s + stableH(n) + S.rowGap, 0),
+          h: items.reduce((sum, [n]) => sum + stableH(n) + S.rowGap, 0),
           depth: Math.max(...items.map(([, d]) => d)),
         }
       })
       const ordered = section.branch_view === 'process' || section.branch_view === 'timeline'
-      const total = groups.reduce((s, g) => s + g.h, 0)
+      const total = groups.reduce((sum, g) => sum + g.h, 0)
       const nested = groups.filter((g) => g.items.length > 1).length
       const want = ordered
         ? 1
@@ -260,12 +292,11 @@ export function computeLayout(
       )
       const contentW = Math.max(
         S.sectionW,
-        widths.reduce((s, w) => s + w, 0) + S.subColGap * (widths.length - 1),
+        widths.reduce((sum, w) => sum + w, 0) + S.subColGap * (widths.length - 1),
       )
-      // One column: the section card stays at the top left, over its tree line.
-      const cardX = grouped && cols.length > 1 ? sx + (contentW - S.sectionW) / 2 : sx
-      boxes[section.id] = { x: cardX, y: top, w: S.sectionW, h: S.sectionH }
-      let colBottom = top + S.sectionH
+      // The heading runs across the whole box (tidy section boxes).
+      boxes[section.id] = { x: sx, y: 0, w: contentW, h: S.sectionH }
+      let colBottom: number = S.sectionH
       let cx = sx
       cols.forEach((col, i) => {
         let y = blocksTop
@@ -273,17 +304,65 @@ export function computeLayout(
           for (const [n, depth] of g.items) {
             const h = realH(n)
             boxes[n.id] = { x: cx + lead + S.indent * depth, y, w: S.blockW, h }
+            ids.push(n.id)
             if (grouped && depth === 0) railed.add(n.id)
             y += h + S.rowGap
           }
         colBottom = Math.max(colBottom, y - S.rowGap)
         cx += (widths[i] ?? 0) + S.subColGap
       })
-      columns[section.id] = { x: sx, y: top, w: contentW, h: colBottom - top }
-      bottom = Math.max(bottom, colBottom)
-      x += contentW + S.regionPad * 2 + S.colGap
+      columns[section.id] = { x: sx, y: 0, w: contentW, h: colBottom }
+      return { id: section.id, ids, w: contentW + S.regionPad * 2, h: colBottom }
+    })
+    if (!laid.length) return { width: 0, bottom: top + S.sectionH }
+
+    // 2. Rows in reading order, the same number of sections in each (a tidy grid), as many per
+    //    row as makes the whole closest to a page shape (pageRatio wide to 1 tall).
+    const rowsOf = (perRow: number) => {
+      const out: Array<typeof laid> = []
+      for (let i = 0; i < laid.length; i += perRow) out.push(laid.slice(i, i + perRow))
+      return out
     }
-    return { width: Math.max(0, x - S.colGap - x0), bottom }
+    const shapeOf = (rs: Array<typeof laid>) => {
+      const w = Math.max(
+        ...rs.map((row) => row.reduce((sum, l) => sum + l.w, 0) + S.colGap * (row.length - 1)),
+      )
+      const h =
+        S.sectionTop +
+        rs.reduce((sum, row) => sum + Math.max(...row.map((l) => l.h)), 0) +
+        S.sectionRowGap * (rs.length - 1)
+      return Math.abs(Math.log(w / h / S.pageRatio))
+    }
+    let rows = rowsOf(laid.length)
+    for (let perRow = laid.length - 1; perRow >= 1; perRow--) {
+      const candidate = rowsOf(perRow)
+      if (shapeOf(candidate) < shapeOf(rows)) rows = candidate
+    }
+
+    // 3. Move each section to its place; rows are as tall as their tallest box.
+    let y = top
+    let right = x0
+    rows.forEach((row, r) => {
+      let x = x0
+      const rowH = Math.max(...row.map((l) => l.h))
+      // The gutter the title's line runs along: above the first row, between the others.
+      const gutter =
+        r === 0 ? lines.busTop : y - S.regionPad - (S.sectionRowGap - S.regionPad * 2) / 2
+      for (const l of row) {
+        for (const id of l.ids) {
+          const b = boxes[id]
+          if (b) boxes[id] = { ...b, x: b.x + x, y: b.y + y }
+        }
+        const c = columns[l.id]
+        if (c) columns[l.id] = { ...c, x: c.x + x, y: c.y + y }
+        bus[l.id] = { top: lines.busTop, y: gutter, spineX: r === 0 ? null : lines.spineX }
+        rowOf[l.id] = `${parentId}:${r}`
+        x += l.w + S.colGap
+      }
+      right = Math.max(right, x - S.colGap)
+      y += rowH + S.sectionRowGap
+    })
+    return { width: Math.max(0, right - x0), bottom: y - S.sectionRowGap }
   }
 
   let width: number
@@ -293,7 +372,10 @@ export function computeLayout(
   if (!book) {
     const r = root.collapsed
       ? { width: 0, bottom: S.sectionTop }
-      : placeColumns(root.id, 0, S.sectionTop)
+      : placeColumns(root.id, 0, S.sectionTop, {
+          busTop: (S.rootH + S.sectionTop - S.regionPad) / 2,
+          spineX: -S.spineGap,
+        })
     width = Math.max(r.width, S.rootW)
     contentBottom = r.bottom
   } else {
@@ -322,7 +404,10 @@ export function computeLayout(
       let w = S.waitingW
       let h = S.waitingH
       if (built && !ch.collapsed) {
-        const r = placeColumns(ch.id, 0, 0)
+        const r = placeColumns(ch.id, 0, 0, {
+          busTop: -S.chapterPad / 2,
+          spineX: -S.chapterPad / 2,
+        })
         w = r.width + S.chapterPad * 2
         h = r.bottom + S.chapterPad * 2
       } else if (ch.collapsed) hideSubtree(ch.id)
@@ -339,6 +424,13 @@ export function computeLayout(
             if (b) boxes[id] = { ...b, x: b.x + dx, y: b.y + dy }
             const c = columns[id]
             if (c) columns[id] = { ...c, x: c.x + dx, y: c.y + dy }
+            const l = bus[id]
+            if (l)
+              bus[id] = {
+                top: l.top + dy,
+                y: l.y + dy,
+                spineX: l.spineX === null ? null : l.spineX + dx,
+              }
           }
         },
       })
@@ -426,6 +518,16 @@ export function computeLayout(
         built: true,
         ...wrap(visibleSubtree(section.id), S.regionPad),
       })
+    // Tidy boxes: every box in a row reaches the row's lowest bottom.
+    const bottoms = new Map<string, number>()
+    for (const r of regions) {
+      const row = rowOf[r.sectionId]
+      if (row) bottoms.set(row, Math.max(bottoms.get(row) ?? 0, r.y + r.h))
+    }
+    for (const r of regions) {
+      const bottom = bottoms.get(rowOf[r.sectionId] ?? '')
+      if (bottom !== undefined) r.h = bottom - r.y
+    }
   } else {
     // Built chapters' regions follow blocks the student dragged (never shrink below the tab).
     for (const r of regions) {
@@ -443,6 +545,7 @@ export function computeLayout(
   const regionRight = Math.max(0, ...regions.map((r) => r.x + r.w))
   const regionBottom = Math.max(0, ...regions.map((r) => r.y + r.h))
   return {
+    bus,
     boxes,
     regions,
     columns,

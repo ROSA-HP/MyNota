@@ -508,6 +508,7 @@ export const de: Messages = {
     moreActions: 'Weitere Aktionen',
     fold: { show: 'Unterkarten zeigen ({{count}})', hide: 'Unterkarten ausblenden' },
     readingOrder: 'Lesereihenfolge: {{n}}',
+    linkTo: 'Zur verknüpften Karte {{n}}: {{title}}',
     studyView: {
       covered: 'Verdeckter Block',
       mastery: 'Lernstand-Punkte',

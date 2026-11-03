@@ -488,6 +488,7 @@ export const en = {
     moreActions: 'More actions',
     fold: { show: 'Show sub-cards ({{count}})', hide: 'Hide sub-cards' },
     readingOrder: 'Reading order: {{n}}',
+    linkTo: 'Go to linked card {{n}}: {{title}}',
     studyView: {
       covered: 'Hidden block',
       mastery: 'Mastery dots',

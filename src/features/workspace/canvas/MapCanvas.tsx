@@ -183,6 +183,22 @@ export function MapCanvas() {
   const { book, rootId } = layout
   const isSection = useMemo(() => isSectionOf(nodes, rootId, book), [nodes, rootId, book])
 
+  /** Cards linked to a card in another section: shown as chips, the arrow only on demand. */
+  const crossLinks = useMemo(() => {
+    const out = new Map<string, Array<{ other: string; outgoing: boolean }>>()
+    const add = (id: string, link: { other: string; outgoing: boolean }) =>
+      out.set(id, [...(out.get(id) ?? []), link])
+    for (const r of Object.values(relations)) {
+      if (r.status !== 'accepted') continue
+      const a = sectionOf(nodes, isSection, r.from_node)?.id
+      const b = sectionOf(nodes, isSection, r.to_node)?.id
+      if (!a || !b || a === b) continue
+      add(r.from_node, { other: r.to_node, outgoing: true })
+      add(r.to_node, { other: r.from_node, outgoing: false })
+    }
+    return out
+  }, [relations, nodes, isSection])
+
   // Semantic zoom: re-render only when the level changes; the exact zoom goes to a CSS variable.
   const level = useStore((s) => levelFor(s.transform[2], book))
   const store = useStoreApi()
@@ -387,6 +403,12 @@ export function MapCanvas() {
             number: numbers[n.id] ?? null,
             childCount: (kids.get(n.id) ?? []).length,
             folded: n.collapsed,
+            links: (crossLinks.get(n.id) ?? []).map((l) => ({
+              id: l.other,
+              number: numbers[l.other] ?? '',
+              title: nodes[l.other]?.title ?? '',
+              outgoing: l.outgoing,
+            })),
           },
         })
       }
@@ -400,6 +422,7 @@ export function MapCanvas() {
     drag,
     selectedId,
     numbers,
+    crossLinks,
     canEdit,
     map,
     kids,
@@ -442,15 +465,34 @@ export function MapCanvas() {
       if (!n) return 'var(--line)'
       return chapterColor(colorOf(n, isSection(n) ? n : sectionOf(nodes, isSection, id))).strong
     }
-    const branch = (source: string, target: string): Edge => ({
-      id: `h:${target}`,
-      source,
-      target,
-      type: 'branch',
-      data: { color: tint(target) },
-      selectable: false,
-      focusable: false,
-    })
+    const branch = (source: string, target: string): Edge => {
+      const line = layout.bus[target]
+      // Sections get the neat bus line (2026-11-03); anything else a plain branch.
+      if (line)
+        return {
+          id: `h:${target}`,
+          source,
+          target,
+          type: 'bus',
+          data: {
+            color: tint(target),
+            top: line.top,
+            y: line.y,
+            spineX: line.spineX === null ? null : rtl ? layout.width - line.spineX : line.spineX,
+          },
+          selectable: false,
+          focusable: false,
+        }
+      return {
+        id: `h:${target}`,
+        source,
+        target,
+        type: 'branch',
+        data: { color: tint(target) },
+        selectable: false,
+        focusable: false,
+      }
+    }
     const relationsList = Object.values(relations).filter((r) => r.status !== 'dismissed')
 
     if (level !== 'blocks') {
@@ -472,6 +514,7 @@ export function MapCanvas() {
             }
       for (const bundle of bundleRelations(relationsList, visibleOf)) {
         if (!shown.has(bundle.from) || !shown.has(bundle.to)) continue
+        if (level === 'sections' && selectedId !== bundle.from && selectedId !== bundle.to) continue
         const only = bundle.relations.length === 1 ? bundle.relations[0] : undefined
         out.push({
           id: bundle.id,
@@ -505,17 +548,8 @@ export function MapCanvas() {
         const siblings = kids.get(parent.id) ?? []
         const i = siblings.findIndex((s) => s.id === n.id)
         const prev = siblings[i - 1]
-        if (i === 0)
-          out.push({
-            id: `h:${n.id}`,
-            source: parent.id,
-            target: n.id,
-            type: 'tree',
-            data: { rtl, color: tint(n.id) },
-            selectable: false,
-            focusable: false,
-          })
-        else if (prev)
+        // The first step hangs under the section's heading; steps after it get an arrow.
+        if (i > 0 && prev)
           out.push({
             id: `h:${n.id}`,
             source: prev.id,
@@ -525,13 +559,14 @@ export function MapCanvas() {
             selectable: false,
             focusable: false,
           })
-      } else {
+      } else if (!layout.railed.has(n.id)) {
+        // Top-level cards sit in their section's box under its heading: no line needed (tidy
+        // section boxes). Sub-cards hang from their card.
         out.push({
           id: `h:${n.id}`,
           source: n.parent_id,
           target: n.id,
-          // Grouped columns: top-level blocks hang from their section's rail.
-          type: layout.railed.has(n.id) ? 'rail' : 'tree',
+          type: 'tree',
           data: { rtl, color: tint(n.id) },
           selectable: false,
           focusable: false,
@@ -540,6 +575,18 @@ export function MapCanvas() {
     }
     for (const r of relationsList) {
       if (!visible(r.from_node) || !visible(r.to_node)) continue
+      // A link between two sections is drawn only while one of its cards (or the link) is
+      // selected; otherwise its cards carry a chip (links on demand, 2026-11-03).
+      if (
+        r.status === 'accepted' &&
+        crossLinks.has(r.from_node) &&
+        sectionOf(nodes, isSection, r.from_node)?.id !==
+          sectionOf(nodes, isSection, r.to_node)?.id &&
+        selectedId !== r.from_node &&
+        selectedId !== r.to_node &&
+        selectedRelationId !== r.id
+      )
+        continue
       const color = relationColor(r)
       out.push({
         id: `r:${r.id}`,
@@ -570,6 +617,8 @@ export function MapCanvas() {
     rtl,
     canEdit,
     selectedRelationId,
+    selectedId,
+    crossLinks,
     level,
     book,
     rootId,
