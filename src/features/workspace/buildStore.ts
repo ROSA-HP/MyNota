@@ -2,15 +2,17 @@ import { create } from 'zustand'
 import { AiError, isAbortError, type AiErrorKind } from '@/ai/errors'
 import { finishJob, startJob } from '@/ai/jobs'
 import { toProviderSchema } from '@/ai/jsonSchema'
-import { blockNodes, outlineText, sectionNodes } from '@/ai/pipeline/convert'
-import { DETAILS_PROMPT_VERSION, detailsPrompt } from '@/ai/prompts/details.v5'
+import { blockNodes, otherSectionsText, outlineText, sectionNodes } from '@/ai/pipeline/convert'
+import { DETAILS_PROMPT_VERSION, detailsPrompt } from '@/ai/prompts/details.v6'
 import { OUTLINE_PROMPT_VERSION, outlinePrompt } from '@/ai/prompts/outline.v2'
 import { SYSTEM_PROMPT, versionFor, type Paragraph, type SourceMode } from '@/ai/prompts/shared'
 import { createAdapter } from '@/ai/providers'
 import { AiQueue } from '@/ai/queue'
 import { DetailsResponseSchema, detailsSchemaFor } from '@/ai/schemas/details'
-import { ensureCoverage } from '@/ai/pipeline/coverage'
+import { ensureCoverage, measureCoverage } from '@/ai/pipeline/coverage'
 import { pruneRelations } from '@/ai/pipeline/relations'
+import { foldSmallBlocks } from '@/ai/pipeline/simplify'
+import type { SectionQuality } from './buildQuality'
 import { ensureFormulas } from '@/ai/pipeline/formulas'
 import { checkDetailsRules, checkOutlineRules } from '@/ai/schemas/rules'
 import {
@@ -73,6 +75,10 @@ interface BuildState {
   /** Continues a chapter from its saved outline (sections without blocks). */
   resume: (opts: BuildOptions, key: ActiveKey) => Promise<void>
   retrySection: (sectionId: string, key: ActiveKey) => Promise<void>
+  /** Builds a section again: its blocks go, and the AI writes it anew (quality report). */
+  redoSection: (sectionId: string, key: ActiveKey) => Promise<void>
+  /** sectionNodeId → how the AI did on it (for the quality report after a build). */
+  quality: Record<string, SectionQuality>
   retryOutline: (key: ActiveKey) => Promise<void>
   stop: () => void
   clear: () => void
@@ -258,6 +264,7 @@ export const useBuild = create<BuildState>((set, get) => {
               bookTitle: opts.bookTitle ?? opts.title,
               chapterTitle: opts.title,
               outline: outlineText(outline),
+              otherSections: otherSectionsText(outline, range.title),
               sectionTitle: range.title,
               shape: range.shape,
               sourceLanguage: opts.sourceLanguage,
@@ -279,10 +286,11 @@ export const useBuild = create<BuildState>((set, get) => {
         durationMs: performance.now() - startedAt,
       })
       // Nothing in the notes is lost: every equation ends up as a formula (models often drop
-      // them), and every line the reply left out is added to the block it fits best. Then only
-      // the links worth an arrow stay (few, each with a specific label).
+      // them), and every line the reply left out is added to the block it fits best. Then
+      // small points become bullets (a simpler map), and only the links worth an arrow stay
+      // (few, each with a specific label).
       const data = pruneRelations(
-        ensureCoverage(ensureFormulas(result.data, paragraphs), paragraphs),
+        foldSmallBlocks(ensureCoverage(ensureFormulas(result.data, paragraphs), paragraphs)),
       )
       const warnings = checkDetailsRules(data)
       if (warnings.length)
@@ -290,11 +298,29 @@ export const useBuild = create<BuildState>((set, get) => {
           'details style warnings',
           warnings.map((w) => w.rule),
         )
-      const { nodes, relations } = blockNodes(data, {
+      set({
+        quality: {
+          ...get().quality,
+          [sectionId]: {
+            title: range.title,
+            ...measureCoverage(result.data, paragraphs),
+            formulas: data.blocks.reduce(
+              (n, b) => n + b.details.filter((d) => d.kind === 'formula').length,
+              0,
+            ),
+            blocks: data.blocks.length,
+          },
+        },
+      })
+      const built = blockNodes(data, {
         mapId: opts.mapId,
         section,
         lang: opts.sourceLanguage,
       })
+      // Sub-cards start folded under their card: the map first shows only the main ideas.
+      const parents = new Set(built.nodes.map((n) => n.parent_id))
+      const nodes = built.nodes.map((n) => (parents.has(n.id) ? { ...n, collapsed: true } : n))
+      const relations = built.relations
       const ws = useWorkspace.getState()
       ws.addNodes(nodes, { saveNow: true, ai: true })
       ws.addRelations(relations, { saveNow: true, ai: true })
@@ -338,6 +364,7 @@ export const useBuild = create<BuildState>((set, get) => {
     phase: 'idle',
     outlineStatus: { state: 'queued' },
     sections: {},
+    quality: {},
     order: [],
     failure: null,
     chapters: {},
@@ -471,6 +498,7 @@ export const useBuild = create<BuildState>((set, get) => {
         phase: 'outline',
         outlineStatus: { state: 'queued' },
         sections: {},
+        quality: {},
         order: [],
         failure: null,
       })
@@ -495,6 +523,17 @@ export const useBuild = create<BuildState>((set, get) => {
       settle()
     },
 
+    redoSection: async (sectionId, key) => {
+      if (!ctx?.outline) return
+      const ws = useWorkspace.getState()
+      // Its blocks go first (with their links), so the new ones do not pile on top.
+      for (const n of Object.values(ws.nodes)) if (n.parent_id === sectionId) ws.deleteNode(n.id)
+      const { [sectionId]: _old, ...rest } = get().quality
+      void _old
+      set({ quality: rest })
+      await get().retrySection(sectionId, key)
+    },
+
     stop: () => {
       useLinks.getState().stop()
       bookStopped = true
@@ -513,6 +552,7 @@ export const useBuild = create<BuildState>((set, get) => {
         provider: null,
         phase: 'idle',
         sections: {},
+        quality: {},
         order: [],
         failure: null,
         chapters: {},

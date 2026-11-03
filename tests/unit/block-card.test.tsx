@@ -41,7 +41,7 @@ describe('block cards (canvas step 1)', () => {
       title: 'x '.repeat(80),
       summary: 'y '.repeat(300),
     })
-    expect(blockCard(n)).toMatchObject({ titleLines: 2, summaryLines: 3 })
+    expect(blockCard(n)).toMatchObject({ titleLines: 2, summaryLines: 2 }) // short cards
   })
 })
 

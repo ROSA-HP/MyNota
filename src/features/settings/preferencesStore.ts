@@ -4,6 +4,7 @@ import type { ProfileRow } from '@/lib/database.types'
 import {
   applyTheme,
   getStoredTheme,
+  resolveTheme,
   watchSystemTheme,
   type Language,
   type Theme,
@@ -14,6 +15,8 @@ interface PreferencesState {
   theme: Theme
   language: Language
   setTheme: (theme: Theme) => void
+  /** Light ↔ dark from whatever is showing now (also leaves "system"). */
+  toggleTheme: () => 'light' | 'dark'
   setLanguage: (language: Language) => void
   /** On sign-in the account's saved preferences win over this device's. */
   adoptFromProfile: (profile: Pick<ProfileRow, 'theme' | 'ui_language'>) => void
@@ -36,6 +39,12 @@ export const usePreferences = create<PreferencesState>((set, get) => ({
     applyTheme(theme)
     set({ theme })
     void syncToProfile({ theme })
+  },
+
+  toggleTheme: () => {
+    const next = resolveTheme(get().theme) === 'dark' ? 'light' : 'dark'
+    get().setTheme(next)
+    return next
   },
 
   setLanguage: (language) => {

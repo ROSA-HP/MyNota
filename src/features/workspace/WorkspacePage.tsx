@@ -7,9 +7,11 @@ import {
   Eye,
   GitMerge,
   Layers,
+  Moon,
   MoreHorizontal,
   PanelLeft,
   Sparkles,
+  Sun,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Link, useLocation, useNavigate, useParams } from 'react-router'
@@ -23,6 +25,9 @@ import { ShareControls } from '@/features/sharing/ShareControls'
 import { useDeckSync } from '@/features/study/useDeckSync'
 import type { BookBuildRequest, BuildRequest } from '@/features/new-map/buildRequest'
 import { useKeyFor } from '@/features/settings/aiKeyStore'
+import { usePreferences } from '@/features/settings/preferencesStore'
+import { ThemeButton } from '@/features/settings/ThemeToggle'
+import { resolveTheme } from '@/lib/preferences'
 import { cn } from '@/lib/cn'
 import type { SubjectRow } from '@/lib/database.types'
 import { supabase } from '@/lib/supabase'
@@ -184,6 +189,7 @@ function MoreActions({ onExport, onAddNotes }: { onExport: () => void; onAddNote
   const canEdit = useWorkspace((s) => s.role === 'owner' || s.role === 'editor')
   const fromCache = useWorkspace((s) => s.fromCache)
   const building = useBuild((s) => s.phase === 'outline' || s.phase === 'details')
+  const dark = resolveTheme(usePreferences((s) => s.theme)) === 'dark'
   const item =
     'flex min-h-11 w-full cursor-pointer items-center gap-2.5 rounded-lg px-2.5 text-sm font-semibold hover:bg-paper-sunken disabled:cursor-default disabled:opacity-40'
   const pick = (run: () => void) => () => {
@@ -215,6 +221,15 @@ function MoreActions({ onExport, onAddNotes }: { onExport: () => void; onAddNote
           >
             <button type="button" role="menuitem" className={item} onClick={pick(onExport)}>
               <Download size={17} aria-hidden /> {t('export.open')}
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              className={item}
+              onClick={pick(() => usePreferences.getState().toggleTheme())}
+            >
+              {dark ? <Sun size={17} aria-hidden /> : <Moon size={17} aria-hidden />}{' '}
+              {dark ? t('common.themeToLight') : t('common.themeToDark')}
             </button>
             {canEdit && !fromCache && (
               <button
@@ -358,13 +373,14 @@ function Workspace() {
     )
   }
 
-  // A selected block opens in place on the canvas; the panel only when asked (Open, double-click).
+  // A selected block's details open in the side panel (short cards); closing the panel keeps
+  // the block selected.
   const selected = selectedId ? nodes[selectedId] : undefined
   const selectedNode = selected && (selected.level !== 'block' || blockPanel) ? selected : undefined
   const selectedRelation = selectedRelationId ? relations[selectedRelationId] : undefined
   const panelOpen = Boolean(selectedNode || selectedRelation || linksTray)
   const closePanel = () => {
-    // Closing the panel of a block keeps the block open on the canvas.
+    // Closing the panel of a block keeps the block selected.
     if (selected?.level === 'block') return useCanvasUi.getState().setPanelOpen(false)
     select(null)
     selectRelation(null)
@@ -425,6 +441,7 @@ function Workspace() {
         {/* On phones the actions scroll sideways instead of widening the page. */}
         <div className="ms-auto flex min-w-0 shrink-0 items-center gap-2 max-sm:max-w-[60vw] max-sm:overflow-x-auto max-sm:[scrollbar-width:none]">
           <SearchButton compact />
+          <ThemeButton className="max-sm:hidden" />
           <IconButton
             label={t('export.open')}
             className="max-sm:hidden"

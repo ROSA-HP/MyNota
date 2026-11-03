@@ -178,9 +178,8 @@ export function ensureCoverage(
   for (const p of paragraphs)
     for (const line of sourceLines(p)) {
       // Equations are the formula net's job; what is left must still say something.
-      const words = line.replace(/\$[^$]*\$/g, ' ')
-      const rest = findEquations(words).reduce((s, eq) => s.replace(eq, ' '), words)
-      if (keywords(rest).length < 3 || covered(rest, stems)) continue
+      const rest = pointText(line)
+      if (!rest || covered(rest, stems)) continue
 
       const kws = keywords(line).map(stem)
       const fit = (b: AiBlock) =>
@@ -213,4 +212,32 @@ export function ensureCoverage(
     }
 
   return { ...res, blocks }
+}
+
+/** A point of the source the map should carry: a line or sentence with something to say. */
+function pointText(line: string): string | null {
+  const words = line.replace(/\$[^$]*\$/g, ' ')
+  const rest = findEquations(words).reduce((s, eq) => s.replace(eq, ' '), words)
+  return keywords(rest).length >= 3 ? rest : null
+}
+
+/**
+ * How much of a section's source the reply itself carries (before the safety nets fill the
+ * gaps): the number of points, and how many of them are missing. For the quality report.
+ */
+export function measureCoverage(
+  res: DetailsResponse,
+  paragraphs: readonly Paragraph[],
+): { points: number; missed: number } {
+  const stems = new Set(res.blocks.flatMap((b) => keywords(blockText(b)).map(stem)))
+  let points = 0
+  let missed = 0
+  for (const p of paragraphs)
+    for (const line of sourceLines(p)) {
+      const text = pointText(line)
+      if (!text) continue
+      points++
+      if (!covered(text, stems)) missed++
+    }
+  return { points, missed }
 }

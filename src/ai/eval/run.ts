@@ -1,7 +1,7 @@
 import { toProviderSchema } from '@/ai/jsonSchema'
-import { outlineText } from '@/ai/pipeline/convert'
+import { otherSectionsText, outlineText } from '@/ai/pipeline/convert'
 import { splitParagraphs } from '@/ai/pipeline/prepare'
-import { DETAILS_PROMPT_VERSION, detailsPrompt } from '@/ai/prompts/details.v5'
+import { DETAILS_PROMPT_VERSION, detailsPrompt } from '@/ai/prompts/details.v6'
 import { OUTLINE_PROMPT_VERSION, outlinePrompt } from '@/ai/prompts/outline.v2'
 import { SYSTEM_PROMPT, versionFor, type SourceMode } from '@/ai/prompts/shared'
 import { DetailsResponseSchema, detailsSchemaFor } from '@/ai/schemas/details'
@@ -93,6 +93,7 @@ export async function runSample(adapter: ProviderAdapter, sample: Sample): Promi
           bookTitle: sample.title,
           chapterTitle: sample.title,
           outline: outlineText(normalized),
+          otherSections: otherSectionsText(normalized, s.title),
           sectionTitle: s.title,
           shape: s.shape,
           sourceLanguage: sample.language,

@@ -42,6 +42,7 @@ import { SUBJECT_COLUMNS, supabase } from '@/lib/supabase'
 import type { BuildRequest } from './buildRequest'
 import type { Extracted, ExtractProgress } from '@/ai/pipeline/extract'
 import type { OcrLanguage } from '@/ai/pipeline/extract/ocr'
+import { ThemeButton } from '@/features/settings/ThemeToggle'
 import { BookReview, type BookFile } from './BookReview'
 import { DetailPicker, EstimateBox, LanguageFields, ModelSelect } from './options'
 import {
@@ -364,10 +365,8 @@ export function NewMapPage() {
         <Link to="/library" className="rounded-neo">
           <Logo />
         </Link>
-        <Link
-          to="/library"
-          className={buttonClasses({ variant: 'secondary', size: 'sm', className: 'ms-auto' })}
-        >
+        <ThemeButton className="ms-auto" />
+        <Link to="/library" className={buttonClasses({ variant: 'secondary', size: 'sm' })}>
           <X size={16} aria-hidden /> {t('newMap.cancel')}
         </Link>
       </header>

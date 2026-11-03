@@ -16,6 +16,7 @@ import { useWorkspace } from '@/features/workspace/workspaceStore'
 import { cn } from '@/lib/cn'
 import type { LinkView } from '@/lib/database.types'
 import { supabase } from '@/lib/supabase'
+import { ThemeButton } from '@/features/settings/ThemeToggle'
 import { ReportDialog } from './ReportDialog'
 import { shareError } from './shareApi'
 
@@ -168,6 +169,7 @@ function LinkMap({ token, view }: { token: string; view: LinkView }) {
           </p>
         </div>
         <div className="ms-auto flex flex-wrap items-center gap-2">
+          <ThemeButton />
           <IconButton label={t('export.open')} onClick={() => setExportOpen(true)}>
             <Download size={18} aria-hidden />
           </IconButton>

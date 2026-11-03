@@ -21,6 +21,9 @@ export const de: Messages = {
     themeLight: 'Hell',
     themeDark: 'Dunkel',
     themeSystem: 'System',
+    themeToDark: 'Zu Dunkel wechseln (Umschalt+D)',
+    themeToLight: 'Zu Hell wechseln (Umschalt+D)',
+    themeNow: 'Design: {{theme}}',
     openMenu: 'Menü öffnen',
     closeMenu: 'Menü schließen',
     skipToContent: 'Zum Inhalt springen',
@@ -503,6 +506,8 @@ export const de: Messages = {
   },
   ws: {
     moreActions: 'Weitere Aktionen',
+    fold: { show: 'Unterkarten zeigen ({{count}})', hide: 'Unterkarten ausblenden' },
+    readingOrder: 'Lesereihenfolge: {{n}}',
     studyView: {
       covered: 'Verdeckter Block',
       mastery: 'Lernstand-Punkte',
@@ -836,6 +841,18 @@ export const de: Messages = {
       running: 'Wird geschrieben …',
       resumesIn: 'Weiter in {{s}} s',
       needKey: 'Füge deinen KI-Schlüssel in den Einstellungen hinzu, um die Karte zu erstellen.',
+      quality: {
+        mapped: '{{pct}} % deiner Notizen von der KI erfasst',
+        formulas_one: '{{count}} Formel',
+        formulas_other: '{{count}} Formeln',
+        weak_one: 'Ein Abschnitt wirkt schwach:',
+        weak_other: '{{count}} Abschnitte wirken schwach:',
+        missed: '{{missed}} von {{points}} Punkten wurden ergänzt',
+        crowded: '{{blocks}} Karten: schwer zu lesen',
+        thin: 'Eine Karte für {{points}} Punkte',
+        redo: 'Neu erstellen',
+        allGood: 'Alle Abschnitte sehen gut aus.',
+      },
     },
   },
   study: {

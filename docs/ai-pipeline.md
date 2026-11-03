@@ -337,3 +337,29 @@ textbook, ar textbook, en messy notes; add real chapters to reach about 10). Run
 key: `MYNOTA_EVAL_PROVIDER=… MYNOTA_EVAL_MODEL=… MYNOTA_EVAL_KEY=… npm run eval:prompts`; it is
 skipped without a key and never runs in CI. Results go to `tests/prompt-set/results/`; chosen
 models go into `src/ai/recommended.ts`, which Settings shows under each provider.
+
+### Prompt: details v6, simpler maps and the quality report (2026-11-03)
+
+The owner asked for better results from the AI and simpler, well-organised maps.
+- **Details v6** (`details.v6.ts`, now used by builds and the eval) keeps every v5 rule and adds:
+  a **worked example** (a small, perfect answer on another topic, valid JSON, checked by a test);
+  the chapter's **other sections** (`otherSectionsText`: titles, summaries, parts) with the rule
+  not to map their ideas here; a **simpler shape** (3-6 main blocks, at most 4 sub-blocks each,
+  small points as bullets, about 6-14 blocks, titles 2-5 words, summaries up to 10 words, reading
+  order basics first); and a **self-check** list before answering.
+- **Folding small points** (`foldSmallBlocks` in `src/ai/pipeline/simplify.ts`, after the coverage
+  net and before the link trimming): a sub-block with no formula and nothing but a short summary,
+  a third-level block without a formula, and the smallest sub-blocks beyond four under one block
+  become a bullet of their parent ("Title: summary …"); their other details, paragraphs, links and
+  flashcards move to the parent. Main ideas are never folded.
+- **Quality report** (`buildQuality.ts`, shown in the build banner when a build ends): the share of
+  the notes' points the AI mapped by itself (`measureCoverage`, before the safety nets), the number
+  of formulas, and weak sections (more than a quarter of the points missed, more than 16 blocks, or
+  one block for four or more points), each with a Redo button (`redoSection`: the section's blocks
+  are deleted and the AI writes it again). A build without weak sections closes the banner by
+  itself after 8 seconds; otherwise it stays until closed.
+- New AI blocks with sub-blocks are saved folded (`collapsed`), so a new map first shows the main
+  ideas.
+Tests: `tests/unit/simpler-maps.test.ts` (folding, the report, reading numbers, prompt v6 with its
+example parsed as a valid reply); the mapping-integrity tests now fold too and check that no card
+keeps more than four sub-cards and that nothing is lost.

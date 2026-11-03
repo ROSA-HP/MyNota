@@ -63,6 +63,14 @@ interface CanvasUiState {
   /** Read (study card) or edit (the form). Sections and the map title always edit. */
   panelMode: 'read' | 'edit'
   setPanelOpen: (open: boolean, mode?: 'read' | 'edit') => void
+
+  /**
+   * Sub-cards opened or folded on this screen (owner, 2026-11-03: sub-cards start folded and
+   * open with a click). Kept here, not in the map, so viewers can fold too; it wins over the
+   * block's saved "collapsed".
+   */
+  folds: Record<string, boolean>
+  setFold: (nodeId: string, folded: boolean) => void
 }
 
 const MASTERY_KEY = 'mynota.mastery'
@@ -140,4 +148,7 @@ export const useCanvasUi = create<CanvasUiState>((set, get) => ({
   panelMode: 'read',
   setPanelOpen: (open, mode) =>
     set(mode ? { panelOpen: open, panelMode: mode } : { panelOpen: open }),
+
+  folds: {},
+  setFold: (nodeId, folded) => set((s) => ({ folds: { ...s.folds, [nodeId]: folded } })),
 }))

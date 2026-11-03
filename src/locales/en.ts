@@ -20,6 +20,9 @@ export const en = {
     themeLight: 'Light',
     themeDark: 'Dark',
     themeSystem: 'System',
+    themeToDark: 'Switch to dark (Shift+D)',
+    themeToLight: 'Switch to light (Shift+D)',
+    themeNow: '{{theme}} mode',
     openMenu: 'Open menu',
     closeMenu: 'Close menu',
     skipToContent: 'Skip to content',
@@ -483,6 +486,8 @@ export const en = {
   },
   ws: {
     moreActions: 'More actions',
+    fold: { show: 'Show sub-cards ({{count}})', hide: 'Hide sub-cards' },
+    readingOrder: 'Reading order: {{n}}',
     studyView: {
       covered: 'Hidden block',
       mastery: 'Mastery dots',
@@ -807,6 +812,18 @@ export const en = {
       running: 'Writing…',
       resumesIn: 'Resumes in {{s}}s',
       needKey: 'Add your AI key in Settings to build the map.',
+      quality: {
+        mapped: '{{pct}}% of your notes mapped by the AI',
+        formulas_one: '{{count}} formula',
+        formulas_other: '{{count}} formulas',
+        weak_one: 'One section looks weak:',
+        weak_other: '{{count}} sections look weak:',
+        missed: '{{missed}} of {{points}} points were added back',
+        crowded: '{{blocks}} cards: hard to read',
+        thin: 'One card for {{points}} points',
+        redo: 'Redo',
+        allGood: 'Every section looks good.',
+      },
     },
   },
   study: {

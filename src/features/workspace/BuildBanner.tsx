@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
 import type { ParseKeys } from 'i18next'
-import { CheckCircle2, Clock, RotateCcw, Sparkles, X } from 'lucide-react'
+import { CheckCircle2, Clock, Gauge, RotateCcw, Sparkles, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 import { Button, Spinner } from '@/components/ui'
 import { cn } from '@/lib/cn'
 import { useKeyFor } from '@/features/settings/aiKeyStore'
+import { overallCoverage, weakSections } from './buildQuality'
 import { useBuild, type SectionStatus } from './buildStore'
 import { useWorkspace } from './workspaceStore'
 
@@ -48,11 +49,14 @@ export function BuildBanner() {
   )
   const now = useNow(Boolean(waiting))
 
+  const quality = useBuild((s) => s.quality)
+  const weak = weakSections(quality)
+  // A good build closes by itself; one with weak sections waits for the student.
   useEffect(() => {
-    if (phase !== 'done') return
-    const id = setTimeout(clear, 4000)
+    if (phase !== 'done' || weak.length) return
+    const id = setTimeout(clear, 8000)
     return () => clearTimeout(id)
-  }, [phase, clear])
+  }, [phase, clear, weak.length])
 
   if (phase === 'idle') return null
   const done = order.filter((id) => sections[id]?.state === 'done').length
@@ -174,12 +178,97 @@ export function BuildBanner() {
           {t('ws.build.waiting', { s: Math.max(0, Math.ceil((waiting.until - now) / 1000)) })}
         </p>
       )}
+      {!busy && <QualityReport />}
       {!key && busy && (
         <p className="mt-2 text-sm">
           <Link to="/settings" className="font-semibold underline">
             {t('ws.build.needKey')}
           </Link>
         </p>
+      )}
+    </div>
+  )
+}
+
+/**
+ * After a build: how much of the notes the AI mapped by itself, how many formulas it found, and
+ * the sections that look weak, each with a Redo button (owner, 2026-11-03).
+ */
+function QualityReport() {
+  const { t } = useTranslation()
+  const quality = useBuild((s) => s.quality)
+  const key = useKeyFor(useBuild((s) => s.provider))
+  const redo = useBuild((s) => s.redoSection)
+  const share = overallCoverage(quality)
+  if (share === null) return null
+  const pct = Math.round(share * 100)
+  const formulas = Object.values(quality).reduce((n, q) => n + q.formulas, 0)
+  const weak = weakSections(quality)
+  return (
+    <div className="mt-2.5 flex animate-rise flex-col gap-2">
+      <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+        <span className="inline-flex items-center gap-1.5 font-semibold">
+          <Gauge size={15} aria-hidden /> {t('ws.build.quality.mapped', { pct })}
+        </span>
+        <span className="text-ink-muted">
+          {t('ws.build.quality.formulas', { count: formulas })}
+        </span>
+      </p>
+      <div
+        role="meter"
+        aria-label={t('ws.build.quality.mapped', { pct })}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={pct}
+        className="h-2 overflow-hidden rounded-full border-2 border-line bg-paper-sunken"
+      >
+        <div
+          className={cn('mynota-grow-x h-full', pct >= 80 ? 'bg-success' : 'bg-warning')}
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      {weak.length ? (
+        <div className="flex flex-col gap-1.5">
+          <p className="text-sm font-semibold">
+            {t('ws.build.quality.weak', { count: weak.length })}
+          </p>
+          <ul className="mynota-stagger flex flex-col gap-1.5">
+            {weak.map((id) => {
+              const q = quality[id]
+              if (!q) return null
+              const why =
+                q.blocks > 16
+                  ? t('ws.build.quality.crowded', { blocks: q.blocks })
+                  : q.blocks <= 1 && q.points >= 4
+                    ? t('ws.build.quality.thin', { points: q.points })
+                    : t('ws.build.quality.missed', { missed: q.missed, points: q.points })
+              return (
+                <li
+                  key={id}
+                  className="flex items-center gap-2.5 rounded-neo border-2 border-line bg-warning-soft px-2.5 py-1.5"
+                >
+                  <span className="flex min-w-0 flex-1 flex-col">
+                    <span dir="auto" className="truncate text-sm font-bold">
+                      {q.title}
+                    </span>
+                    <span className="text-xs text-ink-muted">{why}</span>
+                  </span>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    disabled={!key}
+                    icon={<RotateCcw size={14} aria-hidden />}
+                    onClick={() => key && void redo(id, key)}
+                  >
+                    {t('ws.build.quality.redo')}
+                  </Button>
+                </li>
+              )
+            })}
+          </ul>
+        </div>
+      ) : (
+        <p className="text-sm text-ink-muted">{t('ws.build.quality.allGood')}</p>
       )}
     </div>
   )

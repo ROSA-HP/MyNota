@@ -58,7 +58,8 @@ export function blockCard(
   n: Pick<NodeRow, 'title' | 'summary' | 'details' | 'importance' | 'ai_added'>,
 ): BlockCardShape {
   const titleLines = Math.max(1, linesFor(n.title, 22, 2))
-  const summaryLines = linesFor(n.summary, 36, 3)
+  // Short cards: the summary shows at most two lines (the rest is in the side panel).
+  const summaryLines = linesFor(n.summary, 36, 2)
   const f = n.details.find((d) => d.kind === 'formula')
   const formula = f && f.kind === 'formula' && f.latex.trim() ? f.latex : null
   const badges = n.importance !== 'supporting' || n.ai_added
@@ -491,3 +492,25 @@ export function balancedColumns<T extends { h: number }>(groups: T[], k: number)
 
 /** Mirrors a logical box for right-to-left display around the layout width. */
 export const mirrorBox = (b: Box, width: number): Box => ({ ...b, x: width - b.x - b.w })
+
+/**
+ * Reading order (owner, 2026-11-03: "numbered reading order"): sections 1, 2, 3 (in a book,
+ * within their chapter), their blocks 1.1, 1.2, sub-blocks 1.2.1, in the order the map shows
+ * them. Folded or hidden blocks keep their number.
+ */
+export function readingNumbers(nodes: NodeRow[]): Record<string, string> {
+  const kids = childrenIndex(nodes)
+  const root = findRoot(nodes)
+  const out: Record<string, string> = {}
+  if (!root) return out
+  const walk = (id: string, prefix: string) => {
+    ;(kids.get(id) ?? []).forEach((c, i) => {
+      const n = prefix ? `${prefix}.${i + 1}` : `${i + 1}`
+      out[c.id] = n
+      walk(c.id, n)
+    })
+  }
+  if (root.level === 'book') for (const chapter of kids.get(root.id) ?? []) walk(chapter.id, '')
+  else walk(root.id, '')
+  return out
+}

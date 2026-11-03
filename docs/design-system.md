@@ -211,3 +211,20 @@ Asked for by the owner: a charcoal background instead of near-black, brighter co
   a variant (`max-sm:hidden`), never a plain `hidden` next to a component's own `inline-flex`.
   The map header moves Export and Add notes into a "More actions" menu below 640px; auth
   links have 44px tap areas.
+
+### Theme switch everywhere, short cards, folded sub-cards, reading order (2026-11-03)
+
+- **Theme switch on every screen**: the map, a study session, a new map and a shared map have a
+  one-tap light/dark button (`ThemeButton`: a moon in light mode, a sun in dark; on phones the
+  map's More menu has it). **Shift+D** switches anywhere except while typing, with a short note
+  (`useThemeShortcut`, mounted in `App`). Switching from "system" picks the opposite of what shows.
+- **Short cards**: a card shows its title, its formula and at most two lines of summary. A click
+  selects it and opens its details in the side panel; cards no longer grow in place, so the map
+  keeps still.
+- **Folded sub-cards**: a card with sub-cards has a tab in the bottom corner (clear of the link
+  dot in the middle of the edge): "▾ 3" when folded, "▴" when open. Folding is kept per screen
+  (`canvasUi.folds`, over the saved `collapsed`), so viewers can fold too. New AI maps start with
+  sub-cards folded.
+- **Reading order**: each section and card has a small number tag on its top edge ("2", "2.1",
+  "2.1.1"; in a book, within the chapter) from `readingNumbers` in `canvas/layout.ts`. Process
+  steps keep their step numbers instead.

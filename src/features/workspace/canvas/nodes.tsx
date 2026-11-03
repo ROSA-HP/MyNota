@@ -1,6 +1,15 @@
 import { useLayoutEffect, useRef, type PointerEvent } from 'react'
 import { Handle, Position, type Node, type NodeProps } from '@xyflow/react'
-import { CircleAlert, Clock, Maximize2, Pencil, RotateCcw, Sparkles } from 'lucide-react'
+import {
+  ChevronDown,
+  ChevronUp,
+  CircleAlert,
+  Clock,
+  Maximize2,
+  Pencil,
+  RotateCcw,
+  Sparkles,
+} from 'lucide-react'
 import { Link } from 'react-router'
 import { useTranslation } from 'react-i18next'
 import { Spinner } from '@/components/ui'
@@ -29,6 +38,8 @@ export type SectionNodeT = Node<
     color?: ChapterColor | null
     /** Zoomed out to sections: a bigger card with the summary and first blocks. */
     expanded?: { blockTitles: string[] } | null
+    /** Reading order ("2"). */
+    number?: string | null
   },
   'section'
 >
@@ -41,6 +52,11 @@ export type BlockNodeT = Node<
     rtl: boolean
     /** Selected at the blocks level: the card opens in place with all its details. */
     expanded?: boolean
+    /** Reading order ("2.1"). */
+    number?: string | null
+    /** Its sub-cards, and whether they are folded under it. */
+    childCount?: number
+    folded?: boolean
   },
   'block'
 >
@@ -175,6 +191,65 @@ function SectionStatusChip({ sectionId }: { sectionId: string }) {
   )
 }
 
+/** A small reading-order tag on a card's top edge ("2.1"). */
+function NumberTag({ n, color, big }: { n: string; color: string; big?: boolean }) {
+  const { t } = useTranslation()
+  return (
+    <span
+      title={t('ws.readingOrder', { n })}
+      className={cn(
+        'absolute -top-2.5 start-2 z-[1] rounded-[5px] border-[1.5px] bg-surface px-1 font-mono leading-4 font-bold text-ink',
+        big ? 'text-[11px]' : 'text-[10px]',
+      )}
+      style={{ borderColor: color }}
+      dir="ltr"
+    >
+      {n}
+    </span>
+  )
+}
+
+/**
+ * The tab on a card's bottom edge that folds or opens its sub-cards (they start folded). It sits
+ * in the corner, clear of the link dot in the middle of the edge.
+ */
+function FoldTab({
+  nodeId,
+  count,
+  folded,
+  color,
+}: {
+  nodeId: string
+  count: number
+  folded: boolean
+  color: string
+}) {
+  const { t } = useTranslation()
+  return (
+    <button
+      type="button"
+      aria-expanded={!folded}
+      aria-label={folded ? t('ws.fold.show', { count }) : t('ws.fold.hide')}
+      title={folded ? t('ws.fold.show', { count }) : t('ws.fold.hide')}
+      onClick={(e) => {
+        e.stopPropagation()
+        useCanvasUi.getState().setFold(nodeId, !folded)
+      }}
+      className="nodrag absolute end-3 -bottom-3 z-[2] inline-flex h-6 cursor-pointer items-center gap-0.5 rounded-full border-2 bg-surface px-2 text-[11px] font-bold text-ink transition-transform duration-200 ease-spring hover:scale-110"
+      style={{ borderColor: color }}
+    >
+      {folded ? (
+        <>
+          <ChevronDown size={12} aria-hidden />
+          {count}
+        </>
+      ) : (
+        <ChevronUp size={12} aria-hidden />
+      )}
+    </button>
+  )
+}
+
 export function SectionNode({ data, selected }: NodeProps<SectionNodeT>) {
   const { t } = useTranslation()
   const { node, childCount, expanded } = data
@@ -232,6 +307,7 @@ export function SectionNode({ data, selected }: NodeProps<SectionNodeT>) {
       )}
       style={{ borderColor: selected ? 'var(--line)' : c.strong, outlineColor: c.strong }}
     >
+      {data.number && <NumberTag n={data.number} color={c.strong} big />}
       <span dir="auto" className="line-clamp-1 text-[15px] font-bold">
         {node.title}
       </span>
@@ -407,6 +483,15 @@ export function BlockNode({ data, selected }: NodeProps<BlockNodeT>) {
         </span>
       )}
       {open && <CardActions />}
+      {data.number && step === null && <NumberTag n={data.number} color={c.strong} />}
+      {Boolean(data.childCount) && !covered && (
+        <FoldTab
+          nodeId={node.id}
+          count={data.childCount ?? 0}
+          folded={Boolean(data.folded)}
+          color={c.strong}
+        />
+      )}
       <MasteryDot nodeId={node.id} />
       <EditingTag nodeId={node.id} />
       <Handles />

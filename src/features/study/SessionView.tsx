@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 import { IconButton } from '@/components/ui'
 import { cn } from '@/lib/cn'
+import { ThemeButton } from '@/features/settings/ThemeToggle'
 import { cardFaces } from './cardFace'
 import { CardText } from './CardText'
 import { useDeck } from './deckStore'
@@ -77,6 +78,7 @@ export function SessionHeader({
           </span>
         </>
       )}
+      <ThemeButton className={counts ? 'ms-2' : 'ms-auto'} />
     </header>
   )
 }

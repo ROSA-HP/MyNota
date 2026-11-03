@@ -3,6 +3,7 @@ import { blockNodes, makeNode, sectionNodes } from '@/ai/pipeline/convert'
 import { covered, ensureCoverage, keywords, sourceLines } from '@/ai/pipeline/coverage'
 import { ensureFormulas, findEquations, sameFormula } from '@/ai/pipeline/formulas'
 import { splitParagraphs } from '@/ai/pipeline/prepare'
+import { MAX_SUB_BLOCKS, foldSmallBlocks } from '@/ai/pipeline/simplify'
 import { pruneRelations, relationBudget, vagueLabel } from '@/ai/pipeline/relations'
 import type { Paragraph } from '@/ai/prompts/shared'
 import { DetailsResponseSchema, detailsSchemaFor, type DetailsResponse } from '@/ai/schemas/details'
@@ -123,13 +124,16 @@ for (const input of INPUTS) {
         const results = outline.sections.map((s) => {
           const ps = rangeOf(s)
           const raw = fakeReply(ps, mode)
-          return { ps, raw, out: ensureCoverage(ensureFormulas(raw, ps), ps) }
+          // As in a build: formulas, coverage, then small points folded into bullets.
+          const covered = ensureCoverage(ensureFormulas(raw, ps), ps)
+          return { ps, raw, covered, out: foldSmallBlocks(covered) }
         })
 
         // The forgetful AI dropped every third line: the net must have put them back.
         const restored = results.reduce(
           (n, r) =>
-            n + r.out.blocks.flatMap((b) => b.details.filter((d) => d.kind === 'bullet')).length,
+            n +
+            r.covered.blocks.flatMap((b) => b.details.filter((d) => d.kind === 'bullet')).length,
           0,
         )
         if (mode === 'forgetful') expect(restored).toBeGreaterThan(0)
@@ -146,7 +150,12 @@ for (const input of INPUTS) {
           ).toHaveLength(1)
         expect(all).toHaveLength(input.equations)
 
-        for (const { ps, raw, out } of results) {
+        for (const { ps, raw, covered: beforeFold, out } of results) {
+          // Simple maps: no card keeps more than four sub-cards.
+          for (const b of out.blocks)
+            expect(out.blocks.filter((x) => x.parent === b.key).length).toBeLessThanOrEqual(
+              MAX_SUB_BLOCKS,
+            )
           // Every line with something to say is on the map.
           const stems = new Set(
             out.blocks
@@ -163,7 +172,7 @@ for (const input of INPUTS) {
           // Paraphrased replies already cover everything: nothing is added twice.
           if (mode === 'paraphrase')
             expect(
-              out.blocks.flatMap((b) => b.details.filter((d) => d.kind === 'bullet')),
+              beforeFold.blocks.flatMap((b) => b.details.filter((d) => d.kind === 'bullet')),
             ).toHaveLength(0)
 
           // Still a valid reply (empty link labels are filled in by the map's language).
@@ -180,7 +189,9 @@ for (const input of INPUTS) {
           // Every block cites paragraphs of its own section.
           for (const b of out.blocks)
             for (const n of b.source) expect(ps.some((p) => p.n === n)).toBe(true)
-          expect(out.blocks.length).toBeGreaterThanOrEqual(raw.blocks.length)
+          // Small sub-blocks may become bullets; the main ideas always stay cards.
+          for (const main of raw.blocks.filter((b) => !b.parent))
+            expect(out.blocks.some((b) => b.key === main.key)).toBe(true)
         }
       })
     }
@@ -191,7 +202,9 @@ for (const input of INPUTS) {
       const nodes: NodeRow[] = [root, ...sections]
       outline.sections.forEach((s, i) => {
         const ps = rangeOf(s)
-        const out = ensureCoverage(ensureFormulas(fakeReply(ps, 'forgetful'), ps), ps)
+        const out = foldSmallBlocks(
+          ensureCoverage(ensureFormulas(fakeReply(ps, 'forgetful'), ps), ps),
+        )
         const section = sections[i] as NodeRow
         const made = blockNodes(out, { mapId: MAP, section, lang: input.lang })
         // Formulas come first on every card that has one.

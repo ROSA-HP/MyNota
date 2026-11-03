@@ -1,7 +1,9 @@
+import { useEffect } from 'react'
 import { Monitor, Moon, Sun } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { IconButton, toast } from '@/components/ui'
 import { cn } from '@/lib/cn'
-import type { Theme } from '@/lib/preferences'
+import { resolveTheme, type Theme } from '@/lib/preferences'
 import { usePreferences } from './preferencesStore'
 
 const OPTIONS: Array<{
@@ -57,4 +59,49 @@ export function ThemeToggle({
       })}
     </div>
   )
+}
+
+/**
+ * One-tap light ↔ dark switch for screens without the full header (the map, a study session,
+ * a new map, a shared map). The icon shows where it goes: a moon in light mode, a sun in dark.
+ */
+export function ThemeButton({ className }: { className?: string }) {
+  const { t } = useTranslation()
+  const theme = usePreferences((s) => s.theme)
+  const dark = resolveTheme(theme) === 'dark'
+  return (
+    <IconButton
+      label={dark ? t('common.themeToLight') : t('common.themeToDark')}
+      className={className}
+      onClick={() => usePreferences.getState().toggleTheme()}
+    >
+      {/* Keyed, so the new icon pops in when the theme flips. */}
+      {dark ? (
+        <Sun key="sun" size={18} aria-hidden className="animate-pop" />
+      ) : (
+        <Moon key="moon" size={18} aria-hidden className="animate-pop" />
+      )}
+    </IconButton>
+  )
+}
+
+/** Shift+D anywhere (except while typing) switches light and dark, with a short note. */
+export function useThemeShortcut() {
+  const { t } = useTranslation()
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!e.shiftKey || e.ctrlKey || e.metaKey || e.altKey || e.key.toLowerCase() !== 'd') return
+      const el = e.target instanceof Element ? e.target : null
+      if (el?.closest('input, textarea, select, [contenteditable="true"]')) return
+      e.preventDefault()
+      const next = usePreferences.getState().toggleTheme()
+      toast(
+        t('common.themeNow', {
+          theme: next === 'dark' ? t('common.themeDark') : t('common.themeLight'),
+        }),
+      )
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [t])
 }

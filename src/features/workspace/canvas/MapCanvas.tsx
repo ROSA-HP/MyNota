@@ -28,7 +28,7 @@ import { useCanvasUi } from './canvasUi'
 import { focusGroupOf } from './focus'
 import { OUTLINE_DRAG_TYPE, anchorBeside, createLinkedBlock, linkNodes, nodeIdAt } from './linking'
 import { edgeTypes } from './edges'
-import { childrenIndex, computeLayout, mirrorBox, type Box } from './layout'
+import { childrenIndex, computeLayout, mirrorBox, readingNumbers, type Box } from './layout'
 import { nodeTypes } from './nodes'
 import {
   bundleRelations,
@@ -124,6 +124,7 @@ export function useAddChild() {
       })
       ws.addNodes([node])
       if (parent.collapsed) ws.updateNode(parent.id, { collapsed: false })
+      useCanvasUi.getState().setFold(parent.id, false)
       ws.select(node.id)
       // A new block needs a title: open it in the panel straight away.
       useCanvasUi.getState().setPanelOpen(true, 'edit')
@@ -164,10 +165,20 @@ export function MapCanvas() {
   const [linkTarget, setLinkTarget] = useState<string | null>(null)
 
   const sources = useWorkspace((s) => s.sources)
-  const list = useMemo(() => Object.values(nodes), [nodes])
-  // The selected block opens in place (canvas step 2); the layout makes room for it.
-  const expandedId = selectedId && nodes[selectedId]?.level === 'block' ? selectedId : null
-  const layout = useMemo(() => computeLayout(list, { expandedId }), [list, expandedId])
+  // Sub-cards folded or opened on this screen win over the saved "collapsed".
+  const folds = useCanvasUi((s) => s.folds)
+  const list = useMemo(
+    () =>
+      Object.values(nodes).map((n) => {
+        const folded = folds[n.id]
+        return folded === undefined || folded === n.collapsed ? n : { ...n, collapsed: folded }
+      }),
+    [nodes, folds],
+  )
+  // Short cards (owner, 2026-11-03): a card never grows in place; its details open in the
+  // side panel, so the map keeps still.
+  const layout = useMemo(() => computeLayout(list), [list])
+  const numbers = useMemo(() => readingNumbers(list), [list])
   const kids = useMemo(() => childrenIndex(list), [list])
   const { book, rootId } = layout
   const isSection = useMemo(() => isSectionOf(nodes, rootId, book), [nodes, rootId, book])
@@ -355,6 +366,7 @@ export function MapCanvas() {
             childCount: book ? countDescendants(kids, n.id) : children.length,
             color: book ? colorOf(n, section) : undefined,
             expanded: expanded ? { blockTitles: children.slice(0, 12).map((c) => c.title) } : null,
+            number: numbers[n.id] ?? null,
           },
         })
       } else {
@@ -372,7 +384,9 @@ export function MapCanvas() {
             step,
             connectFrom: connectFrom === n.id,
             rtl,
-            expanded: n.id === expandedId && level === 'blocks',
+            number: numbers[n.id] ?? null,
+            childCount: (kids.get(n.id) ?? []).length,
+            folded: n.collapsed,
           },
         })
       }
@@ -385,7 +399,7 @@ export function MapCanvas() {
     toScreen,
     drag,
     selectedId,
-    expandedId,
+    numbers,
     canEdit,
     map,
     kids,
@@ -753,6 +767,8 @@ export function MapCanvas() {
             ui.clearMulti()
             if (ui.cover) ui.reveal(node.id)
             select(node.id)
+            // A card's details open in the side panel (short cards).
+            if (node.type === 'block') ui.setPanelOpen(true, 'read')
           }
         }}
         onNodeDoubleClick={(_, node) => {

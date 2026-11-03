@@ -109,6 +109,20 @@ export function outlineText(outline: OutlineResponse): string {
 }
 
 /**
+ * The chapter's other sections, for the details prompt (v6): their ideas belong there, so the
+ * section being written does not map them a second time.
+ */
+export function otherSectionsText(outline: OutlineResponse, current: string): string {
+  const lines = outline.sections
+    .filter((s) => s.title !== current)
+    .map((s) => {
+      const subs = s.subsections.map((x) => x.title).join('; ')
+      return `- ${s.title}${s.summary ? `: ${s.summary}` : ''}${subs ? ` (${subs})` : ''}`
+    })
+  return lines.join('\n') || '- (none: this is the only section)'
+}
+
+/**
  * Turns one details reply into nodes under `section`. Block keys become UUIDs; flashcard
  * candidates are kept on their block as `question` details (cards arrive in Phase 4);
  * in-section relations are accepted links.
