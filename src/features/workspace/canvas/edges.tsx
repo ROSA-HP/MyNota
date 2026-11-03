@@ -33,9 +33,11 @@ import { bezierAt, labelSize, pickLabelPoint } from './labelPlacement'
 import { existingLink, nodeIdAt } from './linking'
 import {
   arrowHead,
+  bracket,
   centrePath,
   downThenAcross,
   nearestSides,
+  oneBend,
   sideCurve,
   split,
   taperedPath,
@@ -97,7 +99,9 @@ function OrganicBranch({
   to?: number
 }) {
   const stroke = color ?? 'var(--line)'
-  const two = segs.length === 1 && segs[0] ? split(segs[0]) : segs
+  // Every line bends one way only (no S), then splits into two curves so it can morph.
+  const one = segs.map(oneBend)
+  const two = one.length === 1 && one[0] ? split(one[0]) : one
   return (
     <>
       <path className="mynota-branch" d={taperedPath(two, from, to)} fill={stroke} />
@@ -224,18 +228,13 @@ export function RailEdge({ id, source, target, data }: EdgeProps<RailEdgeT>) {
         from={4.5}
       />
     )
-  const rtl = data?.rtl ?? false
-  const start = { x: s.x + s.w / 2, y: s.y + s.h }
-  const trunkX = rtl ? t.x + t.w + 12 : t.x - 12
-  const end = { x: rtl ? t.x + t.w : t.x, y: t.y + Math.min(t.h / 2, 24) }
-  // The sideways sweep stays in the gap above the blocks (SIZES.blocksGap is 30); then the limb
-  // runs down the gap beside the column and into the block.
-  const limb = { x: trunkX, y: Math.min(start.y + 22, end.y) }
-  const segs: Cubic[] = [
-    [start, { x: start.x, y: start.y + 16 }, { x: trunkX, y: start.y + 6 }, limb],
-    downThenAcross(limb, end),
-  ]
-  return <OrganicBranch id={id} segs={segs} color={data?.color} from={4.5} />
+  // Blocked: a bracket that turns one way only, out of the section's side towards the block's
+  // column, down the gap beside the column (12px from the block) and into the block's side.
+  const toLeft = t.x + t.w / 2 < s.x + s.w / 2
+  const from = { x: toLeft ? s.x : s.x + s.w, y: s.y + s.h / 2 }
+  const gapX = toLeft ? t.x - 12 : t.x + t.w + 12
+  const end = { x: toLeft ? t.x : t.x + t.w, y: t.y + Math.min(t.h / 2, 24) }
+  return <OrganicBranch id={id} segs={bracket(from, gapX, end)} color={data?.color} from={4.5} />
 }
 
 /** Process sections: from one step to the next, at the nearest sides. */
@@ -288,6 +287,8 @@ function floatingPath(a: Rect, b: Rect, rtl: boolean) {
     c1 = { x: p1.x, y: p1.y + sa * k }
     c2 = { x: p2.x, y: p2.y - sa * k }
   }
+  // One bend, no S (it still arrives squarely, where the arrowhead is).
+  ;[, c1, c2] = oneBend([p1, c1, c2, p2])
   const path = `M${p1.x},${p1.y} C${c1.x},${c1.y} ${c2.x},${c2.y} ${p2.x},${p2.y}`
   const at = bezierAt(p1, c1, c2, p2)
   // Point on the cubic at t = 0.5 for the label (useLabelPoint moves it off other cards).

@@ -195,6 +195,14 @@ Asked for by the owner: a charcoal background instead of near-black, brighter co
   are drawn by the line itself (a filled, slightly notched triangle, tip on the card's edge),
   not React Flow markers. The side choice is cached per node list and card positions, so
   panning never recomputes it.
+- **One bend, no S** (2026-11-03, asked for by the owner): every map line bends one way only.
+  A curve whose two handles turn opposite ways is an S; then its first handle moves onto the
+  line from the second handle to the start (`oneBend` in `canvas/organic.ts`), so it leans out
+  of its parent and still arrives squarely, arrowhead straight into the card. Applied to tree
+  lines, their fallbacks and the labelled links; a blocked section line is a bracket that turns
+  one way (out of the section's side, down the gap, into the card). Tested on 8,000 random
+  side-to-side curves (`tests/unit/organic-edges.test.ts`). Tree-line outlines are sampled at
+  20 points per curve for a smoother taper.
 - **Smoother motion**: one ease-out curve (`--ease-soft`, quint) and a softer spring; cards glide
   480 ms and their lines morph in step (not while dragging); map camera moves use
   `camera(ms)` from `lib/motion.ts` (eased out, a little longer); no double-tap delay on

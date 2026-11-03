@@ -104,3 +104,54 @@ describe('arrowheads', () => {
     expect(notch?.x).toBeCloseTo(50, 0)
   })
 })
+
+describe('one smooth bend, never an S (owner, 2026-11-03)', async () => {
+  const o = await import('@/features/workspace/canvas/organic')
+  // A small fixed-seed generator, so the test is the same on every run.
+  let seed = 7
+  const rnd = (lo: number, hi: number) => {
+    seed = (seed * 16807) % 2147483647
+    return lo + ((seed - 1) / 2147483646) * (hi - lo)
+  }
+  const box = () => ({ x: rnd(-600, 600), y: rnd(-600, 600), w: rnd(60, 260), h: rnd(40, 200) })
+
+  it('turns an S into one bend that still arrives the same way', () => {
+    const s = [
+      { x: 0, y: 0 },
+      { x: 0, y: 40 },
+      { x: 60, y: 40 },
+      { x: 60, y: 80 },
+    ] as const
+    expect(o.inflects(s)).toBe(true)
+    const fixed = o.oneBend(s)
+    expect(o.inflects(fixed)).toBe(false)
+    expect(fixed[2]).toEqual(s[2]) // the arrival handle is kept: the arrow still points down
+    expect(fixed[3]).toEqual(s[3])
+  })
+
+  it('draws every side-to-side line without an S, in 500 random layouts', () => {
+    let checked = 0
+    for (let i = 0; i < 500; i++) {
+      const a = box()
+      const b = box()
+      for (const sa of o.SIDES)
+        for (const sb of o.SIDES) {
+          const c = o.sideCurve(a, sa, b, sb)
+          expect(o.inflects(c), `${sa}→${sb} #${i}`).toBe(false)
+          checked++
+        }
+    }
+    expect(checked).toBe(8000)
+  })
+
+  it('draws the fallback routes without an S too', () => {
+    for (let i = 0; i < 300; i++) {
+      const a = { x: rnd(-300, 300), y: rnd(-300, 0) }
+      const b = { x: rnd(-300, 300), y: rnd(10, 600) }
+      expect(o.inflects(o.verticalS(a, b))).toBe(false)
+      expect(o.inflects(o.downThenAcross(a, b))).toBe(false)
+      const gap = b.x - 12
+      for (const seg of o.bracket(a, gap, b)) expect(o.inflects(seg)).toBe(false)
+    }
+  })
+})

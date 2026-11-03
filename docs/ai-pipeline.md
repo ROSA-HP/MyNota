@@ -225,6 +225,25 @@ paragraph, and since a card shows its first formula, the right one sat hidden be
 - Regression test: `tests/unit/formulas.test.ts` with the owner's exact notes
   (`tests/fixtures/optics-notes.ts`) and a reply shaped like the map that came back.
 
+### Coverage safety net and mapping-integrity tests (2026-11-03)
+
+The owner asked that mapping "gives the whole data in proper way".
+- **Coverage net** (`ensureCoverage` in `src/ai/pipeline/coverage.ts`, run in builds after the
+  formula net): every point of the section's source (a line without its bullet marker; long pasted
+  prose split into sentences) is checked against all the blocks' text. A point whose key words are
+  mostly absent (under a third, by 5-letter stems) is added as a bullet to the block it fits best
+  (shared key words, citing its paragraph), and its paragraph is cited; when that block is full, a
+  new block is made under it. Headings and equation-only lines are left to the section titles and
+  the formula net. Not applied in the AI eval, which measures the model itself.
+- **Mapping-integrity tests** (`tests/unit/mapping-integrity.test.ts`, inputs in
+  `tests/fixtures/mapping-inputs.ts`): six inputs (the owner's optics notes, chemistry with Unicode
+  formulas and no blank lines, a history timeline whose dates are not formulas, Arabic biology,
+  German physics, one long pasted block) go through the app's whole path around the AI with
+  replies that forget lines and formulas, copy a formula onto every block, or paraphrase. Checked:
+  no word lost when splitting, every paragraph in exactly one section, every equation once as a
+  formula, every point on the map, nothing added twice, a valid reply, and a laid-out map where
+  every card has a place and none overlap.
+
 ### Cross-links (v1)
 
 ```text

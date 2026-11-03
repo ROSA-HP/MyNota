@@ -14,8 +14,8 @@ export interface Pt {
 }
 export type Cubic = readonly [Pt, Pt, Pt, Pt]
 
-/** Points sampled per cubic curve. */
-const STEPS = 14
+/** Points sampled per cubic curve (enough for a smooth outline at any zoom). */
+const STEPS = 20
 
 function point([a, b, c, d]: Cubic, t: number): Pt {
   const u = 1 - t
@@ -27,6 +27,47 @@ function point([a, b, c, d]: Cubic, t: number): Pt {
     x: k0 * a.x + k1 * b.x + k2 * c.x + k3 * d.x,
     y: k0 * a.y + k1 * b.y + k2 * c.y + k3 * d.y,
   }
+}
+
+const sub = (a: Pt, b: Pt): Pt => ({ x: a.x - b.x, y: a.y - b.y })
+const cross = (a: Pt, b: Pt) => a.x * b.y - a.y * b.x
+
+/**
+ * One smooth bend, no inflection (owner, 2026-11-03: "don't make inflections"): a curve whose two
+ * handles turn opposite ways is an S. Then the first handle is moved onto the line from the
+ * second handle to the start, so the curve leans out of its parent and still arrives squarely
+ * (the arrowhead keeps pointing straight into the card).
+ */
+export function oneBend(c: Cubic): Cubic {
+  const [p1, c1, c2, p2] = c
+  const t1 = cross(sub(c1, p1), sub(c2, c1))
+  const t2 = cross(sub(c2, c1), sub(p2, c2))
+  if (t1 * t2 >= 0) return c
+  return [p1, { x: c2.x + (p1.x - c2.x) * 0.5, y: c2.y + (p1.y - c2.y) * 0.5 }, c2, p2]
+}
+
+/** Whether a curve changes the way it bends somewhere (an S). For tests and checks. */
+export function inflects([p0, p1, p2, p3]: Cubic): boolean {
+  const d1 = (t: number) => {
+    const u = 1 - t
+    return {
+      x: u * u * (p1.x - p0.x) + 2 * u * t * (p2.x - p1.x) + t * t * (p3.x - p2.x),
+      y: u * u * (p1.y - p0.y) + 2 * u * t * (p2.y - p1.y) + t * t * (p3.y - p2.y),
+    }
+  }
+  const d2 = (t: number) => ({
+    x: (1 - t) * (p2.x - 2 * p1.x + p0.x) + t * (p3.x - 2 * p2.x + p1.x),
+    y: (1 - t) * (p2.y - 2 * p1.y + p0.y) + t * (p3.y - 2 * p2.y + p1.y),
+  })
+  let sign = 0
+  for (let i = 1; i < 50; i++) {
+    const k = cross(d1(i / 50), d2(i / 50))
+    if (Math.abs(k) < 1e-6) continue
+    const s = Math.sign(k)
+    if (sign && s !== sign) return true
+    sign = s
+  }
+  return false
 }
 
 const r1 = (n: number) => Math.round(n * 10) / 10
@@ -73,10 +114,10 @@ export function taperedPath(segs: readonly Cubic[], from: number, to: number): s
   return `M${left.map(fmt).join(' L')} L${right.reverse().map(fmt).join(' L')} Z`
 }
 
-/** A smooth S-curve between two points that leaves and arrives vertically. */
+/** A smooth curve down from `a` into `b`, arriving vertically, with a single bend. */
 export function verticalS(a: Pt, b: Pt): Cubic {
   const k = Math.max(24, Math.abs(b.y - a.y) / 2)
-  return [a, { x: a.x, y: a.y + k }, { x: b.x, y: b.y - k }, b]
+  return oneBend([a, { x: a.x, y: a.y + k }, { x: b.x, y: b.y - k }, b])
 }
 
 /** Leaves `a` downwards and sweeps into `b` horizontally (a branch into a card's side). */
@@ -86,7 +127,23 @@ export function downThenAcross(a: Pt, b: Pt): Cubic {
   // The last stretch runs straight into the card for at least an arrowhead's length, so the
   // line never kinks right at the card.
   const lead = Math.sign(dx || 1) * Math.max(Math.abs(dx) * 0.55, 16)
-  return [a, { x: a.x, y: a.y + dy * 0.6 }, { x: b.x - lead, y: b.y }, b]
+  return oneBend([a, { x: a.x, y: a.y + dy * 0.6 }, { x: b.x - lead, y: b.y }, b])
+}
+
+/**
+ * A bracket that turns one way only: out of `from` sideways to the gap at `gapX`, down the gap,
+ * and into `to` (both turns bend the same way, so there is no S). Two curves, each a rounded
+ * corner.
+ */
+export function bracket(from: Pt, gapX: number, to: Pt): [Cubic, Cubic] {
+  const drop = Math.max(0, to.y - from.y)
+  const mid = { x: gapX, y: from.y + Math.min(40, drop / 2) }
+  const top = { x: gapX, y: from.y }
+  const bottom = { x: gapX, y: to.y }
+  return [
+    [from, top, top, mid],
+    [mid, bottom, bottom, to],
+  ]
 }
 
 // ---------------------------------------------------------------------------
@@ -149,12 +206,12 @@ export function sideCurve(a: Box, sa: Side, b: Box, sb: Side): Cubic {
   const v = { x: p2.x - p1.x, y: p2.y - p1.y }
   const k1 = clamp(Math.min(d * 0.45, dot(n1, v) * 0.85), 6, 120)
   const k2 = clamp(Math.min(d * 0.45, -dot(n2, v) * 0.85), 6, 120)
-  return [
+  return oneBend([
     p1,
     { x: p1.x + n1.x * k1, y: p1.y + n1.y * k1 },
     { x: p2.x + n2.x * k2, y: p2.y + n2.y * k2 },
     p2,
-  ]
+  ])
 }
 
 /** Whether side `sa` of `a` and side `sb` of `b` can face each other. */

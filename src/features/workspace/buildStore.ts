@@ -9,6 +9,7 @@ import { SYSTEM_PROMPT, versionFor, type Paragraph, type SourceMode } from '@/ai
 import { createAdapter } from '@/ai/providers'
 import { AiQueue } from '@/ai/queue'
 import { DetailsResponseSchema, detailsSchemaFor } from '@/ai/schemas/details'
+import { ensureCoverage } from '@/ai/pipeline/coverage'
 import { ensureFormulas } from '@/ai/pipeline/formulas'
 import { checkDetailsRules, checkOutlineRules } from '@/ai/schemas/rules'
 import {
@@ -276,8 +277,9 @@ export const useBuild = create<BuildState>((set, get) => {
         tokensOut: result.tokensOut,
         durationMs: performance.now() - startedAt,
       })
-      // Every equation in the section's source ends up as a formula (models often drop them).
-      const data = ensureFormulas(result.data, paragraphs)
+      // Nothing in the notes is lost: every equation ends up as a formula (models often drop
+      // them), and every line the reply left out is added to the block it fits best.
+      const data = ensureCoverage(ensureFormulas(result.data, paragraphs), paragraphs)
       const warnings = checkDetailsRules(data)
       if (warnings.length)
         console.warn(
