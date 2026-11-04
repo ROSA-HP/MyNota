@@ -1,0 +1,20 @@
+{
+  "name": "mynota-mcp",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Admin-only MCP server: lets Claude or Gemini build MyNota maps through a normal plan, without an API key.",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "node run.mjs",
+    "login": "node run.mjs login",
+    "setup": "node setup.mjs",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.2",
+    "tsx": "^4.23.15"
+  }
+}

@@ -10,3 +10,7 @@ supabase/.temp
 supabase/.branches
 *.bundle
 .taste-skill
+# Admin MCP server: drafts hold source text and stay on this computer.
+mcp/.data
+# A copy made by `npm run mcp:setup`; the skill lives in .claude/skills/mynota-mapper.
+.gemini/skills

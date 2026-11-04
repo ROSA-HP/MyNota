@@ -17,7 +17,9 @@
     "test:watch": "vitest",
     "test:rls": "vitest run --config vitest.rls.config.ts",
     "eval:prompts": "vitest run --config vitest.eval.config.ts",
-    "db:test": "tests/rls/scripts/start-db.sh"
+    "db:test": "tests/rls/scripts/start-db.sh",
+    "mcp:setup": "npm install --prefix mcp && node mcp/setup.mjs",
+    "mcp:login": "node mcp/run.mjs login"
   },
   "dependencies": {
     "@fontsource/ibm-plex-sans-arabic": "^5.3.0",

@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "mynota": {
+      "command": "node",
+      "args": ["mcp/run.mjs"],
+      "timeout": 120000
+    }
+  }
+}

@@ -4,7 +4,7 @@ import reactHooks from 'eslint-plugin-react-hooks'
 import tseslint from 'typescript-eslint'
 
 export default tseslint.config(
-  { ignores: ['dist', 'node_modules', 'supabase/functions', '.claude'] },
+  { ignores: ['dist', 'node_modules', 'supabase/functions', '.claude', 'mcp/.data'] },
   {
     extends: [js.configs.recommended, ...tseslint.configs.strict],
     files: ['**/*.{ts,tsx}'],
@@ -18,7 +18,7 @@ export default tseslint.config(
   },
   {
     // Tests index into fixtures they just built; `!` there is clearer than guards.
-    files: ['tests/**/*.{ts,tsx}'],
+    files: ['tests/**/*.{ts,tsx}', 'mcp/tests/**/*.ts'],
     rules: { '@typescript-eslint/no-non-null-assertion': 'off' },
   },
 )

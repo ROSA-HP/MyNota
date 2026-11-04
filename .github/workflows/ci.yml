@@ -28,7 +28,10 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci --no-audit --no-fund
+      # The admin MCP server is its own package; its tests start it for real.
+      - run: npm ci --prefix mcp --no-audit --no-fund
       - run: npm run typecheck
+      - run: npm run typecheck --prefix mcp
       - run: npm run lint
       - run: npm test
       - run: npm run build

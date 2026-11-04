@@ -8,7 +8,9 @@ folder here as a skill. Both are MIT-licensed (their `LICENSE` files are kept be
 | `ui-ux-pro-max` | https://github.com/nextlevelbuilder/ui-ux-pro-max-skill (`.claude/skills/ui-ux-pro-max`) | 9a3f14f |
 | `taste-skill` (`design-taste-frontend`) | https://github.com/Leonxlnx/taste-skill (`skills/taste-skill`, without `evals/`) | 12af471 |
 
-How MyNota uses them (see `docs/design-system.md` › "Design review rules"):
+`mynota-mapper` is MyNota's own skill, not installed from anywhere: it builds maps for admins through the local MCP server (`docs/ai-pipeline.md` › Admin mapping with MCP).
+
+How MyNota uses the two above (see `docs/design-system.md` › "Design review rules"):
 - MyNota is an app, so taste-skill's **app-screen** rules (`references/app-screens.md`) apply, not
   its landing-page run.
 - ui-ux-pro-max: its accessibility, touch, typography and forms rules, and

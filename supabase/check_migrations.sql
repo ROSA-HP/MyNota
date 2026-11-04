@@ -20,6 +20,7 @@ from (values
   (11, '20261031190000_live_docs.sql',             to_regclass('public.map_docs') is not null),
   (12, '20261101090000_admin.sql',                 to_regclass('public.audit_log') is not null),
   (13, '20261101100000_limits_and_logins.sql',     to_regclass('public.rate_limits') is not null),
-  (14, '20261101110000_client_errors.sql',         to_regclass('public.client_errors') is not null)
+  (14, '20261101110000_client_errors.sql',         to_regclass('public.client_errors') is not null),
+  (15, '20261104090000_admin_import_map.sql',      to_regprocedure('public.admin_import_map(uuid, text, text, text[], jsonb, jsonb, jsonb, jsonb)') is not null)
 ) as m (step, file, applied)
 order by step;
