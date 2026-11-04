@@ -130,7 +130,7 @@ export function otherSectionsText(outline: OutlineResponse, current: string): st
 export function blockNodes(
   res: DetailsResponse,
   ctx: Ctx & { section: NodeRow },
-): { nodes: NodeRow[]; relations: RelationRow[] } {
+): { nodes: NodeRow[]; relations: RelationRow[]; ids: Map<string, string> } {
   const ids = new Map(res.blocks.map((b) => [b.key, newId()]))
   const cards = new Map<string, DetailBlock[]>()
   for (const f of res.flashcards) {
@@ -192,5 +192,5 @@ export function blockNodes(
       : []
   })
 
-  return { nodes, relations }
+  return { nodes, relations, ids }
 }

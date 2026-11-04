@@ -139,6 +139,20 @@ export function sourceLines(p: Paragraph): string[] {
     .filter(Boolean)
 }
 
+/**
+ * Whether a line of the source is only a heading the map already has as a title. Short is not
+ * enough: lecture notes are full of short lines without a full stop that are real points, so a
+ * line counts only if it is neither a bullet nor a sentence and most of its words are in a title.
+ */
+export function isHeadingLine(line: string, titles: readonly string[]): boolean {
+  const text = line.trim()
+  if (!text || text.length > 60 || /^(?:[*•\-–]|\d+[.)])\s/.test(text)) return false
+  if (/[.!?؟:;،,]$/.test(text)) return false
+  const known = new Set(titles.flatMap(keywords).map(stem))
+  const kws = keywords(text)
+  return kws.length > 0 && kws.filter((k) => known.has(stem(k))).length / kws.length >= 0.6
+}
+
 /** Whether a line is mostly present in the blocks (its key words appear in them). */
 export function covered(line: string, stems: Set<string>): boolean {
   const kws = keywords(line)
@@ -222,6 +236,28 @@ function pointText(line: string): string | null {
 }
 
 /**
+ * The points of a section's source that the reply itself leaves out (before the safety nets fill
+ * the gaps), and how many points there are in all. The admin MCP mapper shows these to the model
+ * so it can place them itself, instead of leaving them to the net.
+ */
+export function missedPoints(
+  res: DetailsResponse,
+  paragraphs: readonly Paragraph[],
+): { points: number; missed: Array<{ paragraph: number; text: string }> } {
+  const stems = new Set(res.blocks.flatMap((b) => keywords(blockText(b)).map(stem)))
+  let points = 0
+  const missed: Array<{ paragraph: number; text: string }> = []
+  for (const p of paragraphs)
+    for (const line of sourceLines(p)) {
+      const text = pointText(line)
+      if (!text) continue
+      points++
+      if (!covered(text, stems)) missed.push({ paragraph: p.n, text: line })
+    }
+  return { points, missed }
+}
+
+/**
  * How much of a section's source the reply itself carries (before the safety nets fill the
  * gaps): the number of points, and how many of them are missing. For the quality report.
  */
@@ -229,15 +265,6 @@ export function measureCoverage(
   res: DetailsResponse,
   paragraphs: readonly Paragraph[],
 ): { points: number; missed: number } {
-  const stems = new Set(res.blocks.flatMap((b) => keywords(blockText(b)).map(stem)))
-  let points = 0
-  let missed = 0
-  for (const p of paragraphs)
-    for (const line of sourceLines(p)) {
-      const text = pointText(line)
-      if (!text) continue
-      points++
-      if (!covered(text, stems)) missed++
-    }
-  return { points, missed }
+  const { points, missed } = missedPoints(res, paragraphs)
+  return { points, missed: missed.length }
 }
