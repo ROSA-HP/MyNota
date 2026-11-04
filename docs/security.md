@@ -44,6 +44,30 @@ Permissions are enforced in the database, not the UI, and the user's API key nev
 - PDFs and photos are parsed in the browser. pdf.js and the OCR engine come from our own origin; the CSP adds only `'wasm-unsafe-eval'` (WebAssembly for OCR), never JS `eval`.
 - Original files stay on the device (IndexedDB) and are parsed in the browser (pdf.js, Tesseract). Only extracted text and page numbers reach Postgres (decided 2026-10-30). If Storage is ever used: private buckets and short-lived signed URLs.
 
+## Admin mapping through MCP
+
+Admins can build maps with Claude or Gemini through the local server in `mcp/` (decided
+2026-11-05; `docs/ai-pipeline.md`). The local server is not a security boundary: it runs on the
+admin's computer and anyone could change it.
+
+- **Admins only, in the database.** `admin_import_map()` is the only way in, and it starts with
+  `admin_require()`: an active admin with a two-factor (`aal2`) session. It sets the owner,
+  `created_by` and `map_id` itself and never takes them from the caller. It writes only to the
+  caller's own maps, and only to maps never opened. Every call goes to `audit_log` as
+  `map_imported`, with counts and never content. Normal limits apply.
+- **No secret key.** It signs in as the admin, with the public key. The server refuses a Supabase
+  secret key, which would skip every check.
+- **Passwords and two-factor codes never reach the AI.** Only `npm run mcp:login`, in the admin's
+  own terminal, sees them. The session is kept in `~/.mynota-mcp/session.json`, readable only by
+  that user where the system supports it. `-- --logout` deletes it.
+- **The AI is treated as untrusted.** It reads source text that may try to steer it, so
+  `load_source` opens only `.pdf`, `.txt` and `.md` files within the upload limits, draft ids must
+  match an exact format before becoming file names, and every read is marked as data. The skill
+  tells it to publish only after the admin says yes, and hosts ask before running a tool.
+- **It never reads anyone's maps.** No tool can read a student's map or the database's content.
+- **Source text goes to the admin's AI provider** under the terms of their plan, as it would in
+  any chat with that AI. Use it for material the admin may share there, not for students' content.
+
 ## Rate limiting
 
 Sharing limits are counted from `share_events` inside the sharing functions (Phase 5): link created 20/hour, link reset 10/hour, invites 30/hour, copies 20/hour, reports 5/day (error `MN429`). Other limits: Supabase's built-in auth limits, and Edge Functions with a `rate_limits` counters table later (Phase 7). Public link views are not limited yet (no IP in the database).

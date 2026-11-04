@@ -26,6 +26,7 @@ This file holds the rules that apply to every task. Detailed specs live in `docs
 
 - **Bring-your-own-key only.** API keys are stored only on the device (IndexedDB) and sent only to the chosen AI provider. Never to Supabase, never to logs, analytics, or error reports.
 - **Providers**: Gemini (recommended; free key from Google AI Studio), Claude, and any OpenAI-compatible endpoint with a custom base URL.
+- **Admin mapping through MCP** (decided 2026-11-05): admins, and only admins, can build a map with Claude or Gemini on their normal plan, with no API key, through the local server in `mcp/` and the `mynota-mapper` skill. Students stay on their own keys. Details in `docs/ai-pipeline.md`.
 - **AI output is structured JSON only**, validated with Zod, with one repair retry that includes the validation error.
 - **One big map per book**: chapters are colored zoomable regions with semantic zoom. Map types: book, notes, blank. Maps are grouped into Subjects.
 - **Backend is Supabase** (Auth, Postgres + Row Level Security, Storage, Realtime, Edge Functions). No custom Express server.
@@ -50,7 +51,7 @@ React + TypeScript (strict) + Vite · Tailwind CSS v4 · React Flow (`@xyflow/re
 - **Realtime**: one Yjs document per chapter + one book-level document, synced over Supabase Realtime private Broadcast channels (`map:<id>` for changes, `map:<id>:people` for presence and cursors), each change also saved in Postgres (`map_doc_updates`, merged into `map_docs`). No separate sync server (decided 2026-10-31). Postgres keeps a readable snapshot (`nodes`, `relations`) for search, flashcards, admin, and export.
 - **Map layout** is MyNota's own small top-down layout (`src/features/workspace/canvas/layout.ts`), not ELK.js (decided 2026-10-30).
 - **Uploaded PDFs and photos stay on the device** (IndexedDB). Only the extracted paragraphs and page numbers are saved to Postgres, so maps work everywhere; page previews work on the device that has the file (decided 2026-10-30).
-- **AI calls go directly from the browser to the provider.** No pass-through server for now; if an endpoint blocks browser calls (CORS), show a clear message. A pass-through Edge Function (never storing or logging the key or content) is only reconsidered if users need it (decided 2026-10-30).
+- **AI calls go directly from the browser to the provider.** No pass-through server for now; if an endpoint blocks browser calls (CORS), show a clear message. A pass-through Edge Function (never storing or logging the key or content) is only reconsidered if users need it (decided 2026-10-30). The one exception is admin mapping through MCP, where no key exists at all and the admin's own Claude or Gemini app does the work (decided 2026-11-05).
 
 ## Security essentials (full list in `docs/security.md`)
 
@@ -74,6 +75,7 @@ src/
   lib/              supabase client, indexeddb, i18n, arabic normalization, fsrs
   components/ui/    design-system components
   styles/
+mcp/                local MCP server for admin mapping (its own package, never in the browser bundle)
 supabase/
   migrations/       SQL schema + RLS policies
   functions/        Edge Functions

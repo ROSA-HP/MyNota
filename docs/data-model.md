@@ -129,6 +129,7 @@ Outline subsections are orientation for the details pass only; they are not stor
 **audit_log**: actor_id, action, target_type, target_id, reason, at — includes every admin view of map content
 
 As built in Phase 7.1 (`20261101090000_admin.sql`): `audit_log` (also `details` jsonb with before/after), `login_events` (also `method`; users read their own; written only by the auth-events Edge Function), `user_flags` (accounts marked from Login activity), `app_settings` (`limits.*` numbers and `features.*` switches; everyone signed in reads). Profile status gains `banned`. Admins work only through `admin_*` functions that require `admin_ok()`: an active admin whose JWT has `aal = 'aal2'` (signed in with a second factor); reading all profiles needs it too. Actions on other people need a reason (≥ 3 characters), and viewing map content (`admin_map_content`) is always audited.
+**Admin mapping** (`20261104090000_admin_import_map.sql`): `admin_import_map(map, title, type, languages, nodes, relations, sources, details)` (`SECURITY DEFINER`, needs `admin_ok()`) adds rows to a new map of the caller; it can be called again for the same map (a book goes up in parts), and rows that are already there are skipped, so a repeat adds nothing. At most 2,000 rows and 50 sources per call. Refuses a map someone else owns (`42501`) and a map that has been opened, which has a live document (`MN409`). Each call writes `map_imported` to `audit_log`.
 **rate_limits** (counters): key, window_start, count
 
 ## RLS summary

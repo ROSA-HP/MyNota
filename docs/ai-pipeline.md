@@ -363,3 +363,84 @@ The owner asked for better results from the AI and simpler, well-organised maps.
 Tests: `tests/unit/simpler-maps.test.ts` (folding, the report, reading numbers, prompt v6 with its
 example parsed as a valid reply); the mapping-integrity tests now fold too and check that no card
 keeps more than four sub-cards and that nothing is lost.
+
+## Admin mapping with MCP (2026-11-05)
+
+The owner asked for a way for admins to map with Claude or Gemini without an API and its limits.
+An admin works in Claude (Code or Desktop) or Gemini CLI on their normal plan, with no API key.
+The model does the thinking there, and a small server on the admin's computer gives it tools.
+Students are not affected and stay on their own keys.
+
+**Why it can do better than an API build.** The model reads a whole chapter before structuring
+it, and it can check and fix a section as often as it needs, where a build gets one repair retry.
+The rules do not change: "the AI classifies, the app draws" still holds, and a map made this way
+is stored exactly like one built in the browser.
+
+**The parts**
+- `.claude/skills/mynota-mapper/`: the skill. `SKILL.md` is the workflow; `references/rules.md`
+  holds the rules of `outline.v2` and `details.v6`; `references/examples.md` has complete answers
+  in English, Arabic and German. `mcp/tests/skill.test.ts` fails if the skill and the code drift
+  apart (types, tools, or an example that stops being valid).
+- `mcp/`: the local server (its own package, so nothing reaches the student app). It reuses
+  `src/ai` for schemas, safety nets, paragraph splitting, PDF text and chapter detection.
+- `admin_import_map()` in Postgres: the only way in. See `docs/security.md`.
+
+**The flow**: `map_status` → `load_source` (the server reads the file, so the words are not
+retyped) → per chapter `read_source`, `save_outline`, then per section `save_section` until clean
+→ `list_blocks`, `save_links` → `publish_map`, after the admin says yes.
+
+**`save_section`** runs `detailsSchemaFor` and then the steps a build runs (`ensureFormulas`,
+`ensureCoverage`, `foldSmallBlocks`, `pruneRelations`) and reports what each would change: points
+not on the map, formulas missing, copied or badly escaped, citations outside the section, uncited
+paragraphs, blocks too small, arrows that would be dropped. The model fixes these itself, which is
+better than a net adding a stray bullet. The nets still run on the final answer at publish, so
+nothing is lost if it stops early. Headings that are already a title (`isHeadingLine`) do not
+count as missing points: only short lines that are neither bullets nor sentences and whose words
+are mostly in a title, because short lecture-note lines are often real points.
+
+**Drafts** are JSON files in `mcp/.data/drafts` (ignored by git; `MYNOTA_MCP_DATA` moves them).
+Each saved section is written at once, so a plan limit or a closed chat loses nothing: a new chat
+continues with `map_status`.
+
+**Publishing** goes up in parts (the book and chapters, then one part per chapter, then links
+between chapters), because API requests have a statement time limit. Ids are fixed in a saved plan
+(`<draft>.publish.json`), so `publish_map` can be called again after a lost connection and nothing
+is added twice. Links between sections and chapters arrive as dashed suggestions, as in the app.
+Flashcards are made when the map is opened, also as in the app. Nothing is written to `ai_jobs`
+(it records provider jobs and has no provider for this); `audit_log` has `mapper.v1` instead.
+
+**What it does not do yet**
+- It only creates new maps. Once a map is open the app works from its live Yjs document and no
+  longer reads `nodes`, so writing to an opened map would silently vanish (`liveMap.ts`);
+  `admin_import_map` refuses with `MN409`.
+- Scanned pages: OCR runs only in the browser, so pages without a text layer are listed and left
+  out. Text PDFs, `.txt` and `.md` work.
+
+**The limits it removes and keeps.** Gone: API keys, per-token cost, free-key rate limits, the
+one-retry cap. Still there: the plan's own usage limits (Claude's plans have usage windows; Gemini
+CLI with a Google login lists 1,000 requests a day, against 250 for a free key, checked
+2026-11-04), the model's context size (hence one chapter at a time), and MyNota's own limits (30
+maps a day, 5,000 blocks per map, changeable in Admin). It is meant for an admin at the
+keyboard, not as an unattended service for students: plans are not sold for that.
+
+### Setup
+
+1. Apply the migration (`docs/migrations.md`, number 15).
+2. In the project folder: `npm run mcp:setup`.
+3. Sign in, in your own terminal: `npm run mcp:login` (`-- --google` for Google accounts, `--
+   --logout` to sign out). It asks for your password and your authenticator code; neither passes
+   through the AI, and only the session is kept, in `~/.mynota-mcp/session.json`.
+   For `--google`, first add `http://127.0.0.1:54399/callback` under Supabase › Authentication ›
+   URL Configuration › Redirect URLs.
+4. Use it:
+   - **Claude Code**, in this folder: approve the `mynota` server when asked (`.mcp.json`). The
+     skill is found by itself.
+   - **Gemini CLI**, in this folder: `.gemini/settings.json` adds the server, and `mcp:setup`
+     copied the skill to `.gemini/skills/`. The `/map_source` prompt holds the same guide.
+   - **Claude Desktop**: paste the block `mcp:setup` prints into `claude_desktop_config.json`,
+     restart it, then zip the folder `.claude/skills/mynota-mapper` and upload it under Settings ›
+     Capabilities.
+5. Say "map this PDF for MyNota: D:\Books\physics.pdf".
+
+Optional environment for the server: `MYNOTA_APP_URL` (so the result is a full link),
+`MYNOTA_MCP_DATA` and `MYNOTA_MCP_SESSION` (other folders).
