@@ -1,4 +1,12 @@
-import type { CardRow, DetailBlock, NodeRow, RelationRow } from '@/lib/database.types'
+import type {
+  CardRow,
+  ChapterColor,
+  DetailBlock,
+  Importance,
+  NodeRow,
+  NodeType,
+  RelationRow,
+} from '@/lib/database.types'
 
 /** One line of the exported outline (PDF pages and Markdown share it). */
 export interface OutlineItem {
@@ -11,6 +19,13 @@ export interface OutlineItem {
   /** "→ label: Other block" lines (both directions). */
   links: Array<{ label: string; other: string; outgoing: boolean }>
   cards: Array<{ front: string; back: string }>
+  type: NodeType | null
+  importance: Importance
+  color: ChapterColor
+  dir: 'ltr' | 'rtl'
+  aiAdded: boolean
+  page: number | null
+  detailBlocks: DetailBlock[]
 }
 
 export interface OutlineOptions {
@@ -72,7 +87,8 @@ export function outlineItems(input: {
   }
 
   const out: OutlineItem[] = []
-  const walk = (n: NodeRow, depth: number) => {
+  const walk = (n: NodeRow, depth: number, inherited: ChapterColor | null) => {
+    const color = n.color ?? inherited ?? 'yellow'
     out.push({
       id: n.id,
       depth,
@@ -110,11 +126,18 @@ export function outlineItems(input: {
                 : c.back,
           }))
         : [],
+      type: n.type,
+      importance: n.importance,
+      color,
+      dir: n.dir,
+      aiAdded: n.ai_added,
+      page: n.source?.page ?? null,
+      detailBlocks: options.details ? n.details : [],
     })
-    for (const k of kids.get(n.id) ?? []) walk(k, depth + 1)
+    for (const k of kids.get(n.id) ?? []) walk(k, depth + 1, color)
   }
   const root = nodes[input.rootId]
-  if (root) walk(root, 0)
+  if (root) walk(root, 0, null)
   return out
 }
 

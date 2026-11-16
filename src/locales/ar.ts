@@ -1337,7 +1337,7 @@ export const ar: Messages = {
     formats: {
       pdf: {
         name: 'PDF',
-        hint: 'الخريطة كصورة، ثم المخطط مع الملخصات والتفاصيل.',
+        hint: 'غلاف وفهرس وصفحات الخريطة وملاحظات دراسية أو بطاقات مصممة.',
       },
       png: {
         name: 'صورة PNG',
@@ -1346,6 +1346,25 @@ export const ar: Messages = {
       md: {
         name: 'Markdown',
         hint: 'المخطط كنص، لتطبيقات الملاحظات مثل Obsidian.',
+      },
+    },
+    preset: 'أسلوب المذاكرة',
+    presets: {
+      notes: {
+        name: 'ملاحظات دراسية',
+        hint: 'غلاف وفهرس وخرائط وكتل وتفاصيل.',
+      },
+      summary: {
+        name: 'ملخص مركز',
+        hint: 'الأفكار الأساسية والمعادلات فقط.',
+      },
+      cards: {
+        name: 'البطاقات',
+        hint: 'شبكة بطاقات من عمودين جاهزة للطباعة.',
+      },
+      maps: {
+        name: 'الخريطة فقط',
+        hint: 'الغلاف وصور الخرائط.',
       },
     },
     include: 'ما الذي يُصدَّر',
@@ -1358,14 +1377,25 @@ export const ar: Messages = {
     },
     paper: 'الورق',
     papers: {
-      'a4-landscape': 'A4 أفقي',
+      'a4-mixed': 'A4 مختلط (الخرائط بالعرض)',
       'a4-portrait': 'A4 عمودي',
+      'a4-landscape': 'A4 أفقي',
+      'letter-mixed': 'Letter مختلط (الخرائط بالعرض)',
+      'letter-portrait': 'Letter عمودي',
       'letter-landscape': 'Letter أفقي',
+    },
+    tone: 'لون الصفحات',
+    tones: {
+      mint: 'ورق نعناعي',
+      white: 'أبيض (يوفّر الحبر)',
     },
     opts: {
       details: 'تفاصيل الكتل',
       links: 'الروابط بين الكتل',
       cards: 'البطاقات',
+      sources: 'أرقام الصفحات',
+      aiTags: 'شارات الذكاء الاصطناعي',
+      answersAtEnd: 'الإجابات في صفحات منفصلة',
       light: 'ألوان فاتحة (توفّر الحبر)',
     },
     download: {
@@ -1373,10 +1403,38 @@ export const ar: Messages = {
       png: 'نزّل PNG',
       md: 'نزّل Markdown',
     },
+    preparing: 'جارٍ تجهيز التنسيق…',
+    progress: 'جارٍ إنشاء الصفحة {{done}} من {{total}}…',
     local: 'يُصنع على هذا الجهاز. لا يُرفع أي شيء.',
     done: 'التصدير جاهز',
     failed: 'لم ينجح التصدير: {{error}}',
     madeWith: 'صُدّر من MyNota في {{date}}',
+    study: {
+      contents: 'المحتويات',
+      chapter: 'الفصل',
+      chapterShort: 'فصل {{n}}',
+      continued: 'تابع',
+      addedByAi: 'أضيف بالذكاء',
+      flashcards: 'البطاقات',
+      answers: 'الإجابات',
+      q: 'س',
+      a: 'ج',
+      page: 'ص {{n}}',
+      more: '+{{count}} أخرى',
+      empty: 'لا يوجد محتوى للتصدير ضمن هذا الاختيار.',
+      kind: {
+        book: 'كتاب',
+        notes: 'ملاحظات',
+        blank: 'لوحة',
+      },
+      stats: {
+        chapters: 'فصول',
+        sections: 'أقسام',
+        blocks: 'كتل',
+        formulas: 'معادلات',
+        cards: 'بطاقات',
+      },
+    },
   },
   share: {
     title: 'مشاركة «{{title}}»',

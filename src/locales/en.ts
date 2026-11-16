@@ -1105,7 +1105,7 @@ export const en = {
     formats: {
       pdf: {
         name: 'PDF',
-        hint: 'The map as a picture, then the outline with summaries and details.',
+        hint: 'Cover, contents, map pages and designed study notes or flashcards.',
       },
       png: {
         name: 'PNG image',
@@ -1114,6 +1114,25 @@ export const en = {
       md: {
         name: 'Markdown',
         hint: 'The outline as text, for notes apps like Obsidian.',
+      },
+    },
+    preset: 'Study style',
+    presets: {
+      notes: {
+        name: 'Study notes',
+        hint: 'Cover, contents, maps, blocks and details.',
+      },
+      summary: {
+        name: 'Summary',
+        hint: 'Core ideas and formulas only.',
+      },
+      cards: {
+        name: 'Flashcards',
+        hint: 'Printable two-column card grid.',
+      },
+      maps: {
+        name: 'Map only',
+        hint: 'Cover and map pictures.',
       },
     },
     include: 'What to include',
@@ -1126,14 +1145,25 @@ export const en = {
     },
     paper: 'Paper',
     papers: {
-      'a4-landscape': 'A4 landscape',
+      'a4-mixed': 'A4 mixed (maps wide)',
       'a4-portrait': 'A4 portrait',
+      'a4-landscape': 'A4 landscape',
+      'letter-mixed': 'Letter mixed (maps wide)',
+      'letter-portrait': 'Letter portrait',
       'letter-landscape': 'Letter landscape',
+    },
+    tone: 'Page tone',
+    tones: {
+      mint: 'Mint paper',
+      white: 'White (saves ink)',
     },
     opts: {
       details: 'Block details',
       links: 'Links between blocks',
       cards: 'Flashcards',
+      sources: 'Page numbers',
+      aiTags: 'AI badges',
+      answersAtEnd: 'Answers on separate pages',
       light: 'Light colors (saves ink)',
     },
     download: {
@@ -1141,10 +1171,38 @@ export const en = {
       png: 'Download PNG',
       md: 'Download Markdown',
     },
+    preparing: 'Preparing layout…',
+    progress: 'Building page {{done}} of {{total}}…',
     local: 'Made on this device. Nothing is uploaded.',
     done: 'Export ready',
     failed: 'The export did not work: {{error}}',
     madeWith: 'Exported from MyNota on {{date}}',
+    study: {
+      contents: 'Contents',
+      chapter: 'Chapter',
+      chapterShort: 'Ch. {{n}}',
+      continued: 'Continued',
+      addedByAi: 'AI Added',
+      flashcards: 'Flashcards',
+      answers: 'Answers',
+      q: 'Q',
+      a: 'A',
+      page: 'p. {{n}}',
+      more: '+{{count}} more',
+      empty: 'Nothing to export for this selection.',
+      kind: {
+        book: 'Book',
+        notes: 'Notes',
+        blank: 'Canvas',
+      },
+      stats: {
+        chapters: 'Chapters',
+        sections: 'Sections',
+        blocks: 'Blocks',
+        formulas: 'Formulas',
+        cards: 'Cards',
+      },
+    },
   },
   share: {
     title: 'Share “{{title}}”',
