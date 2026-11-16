@@ -251,3 +251,9 @@ Asked for by the owner ("we need more organization of the map").
   inside one section are always drawn; suggested links stay visible for review. Zoomed out to
   sections, bundled links show only for the selected section.
 Tests: `tests/unit/organised-layout.test.ts`.
+
+### Study PDF (Perfusense design, `src/features/export/studypdf/tokens.ts`)
+
+- **Palette**: Perfusense page chrome (`mintFrost #F1FCF9` default or `white #FFFFFF`, `bioSlate #EBF6F4` formula boxes, `parchment #EDE8DC` AI tags and inline cards, `surgicalTeal #1D635D`, `cyanGlow #ADEFE7`, `ink #121C1B`, `charcoal #3F4947`, `softPeach #FE9572`) paired with MyNota's 8 light-mode chapter fills (`CHAPTER_FILL`), never dark theme values.
+- **Isolation**: PDF page components use inline React styles from `tokens.ts` only — no app CSS variables, no Tailwind classes, and no HTML strings.
+- **Typography & RTL**: `Space Grotesk` (Latin/German), `IBM Plex Sans Arabic` (RTL, +3 px line-height, no uppercase or letter-spacing), `Space Mono` (badges/numbers/footers in LTR). Hard ink shadows always fall bottom-right in both LTR and RTL.

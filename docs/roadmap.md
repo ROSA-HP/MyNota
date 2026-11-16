@@ -45,7 +45,7 @@ Each phase ends with something a student can actually use. Before starting a pha
 - FSRS scheduling; deck overview; study session; card browser
 - Mastery dots; hide-details mode; focus mode
 - Global search with Arabic normalization
-- Export: PNG, PDF, Markdown
+- Export: PNG, Study PDF (Perfusense design: cover, TOC, maps, notes/summary/cards presets), Markdown
 
 **Done when**: a student can study a chapter end to end.
 

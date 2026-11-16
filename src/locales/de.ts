@@ -1138,7 +1138,7 @@ export const de: Messages = {
     formats: {
       pdf: {
         name: 'PDF',
-        hint: 'Die Map als Bild, danach die Gliederung mit Zusammenfassungen und Details.',
+        hint: 'Deckblatt, Inhalt, Map-Seiten und gestaltete Lernnotizen oder Karteikarten.',
       },
       png: {
         name: 'PNG-Bild',
@@ -1147,6 +1147,25 @@ export const de: Messages = {
       md: {
         name: 'Markdown',
         hint: 'Die Gliederung als Text, für Notiz-Apps wie Obsidian.',
+      },
+    },
+    preset: 'Lernstil',
+    presets: {
+      notes: {
+        name: 'Lernnotizen',
+        hint: 'Deckblatt, Inhalt, Maps, Blöcke und Details.',
+      },
+      summary: {
+        name: 'Kurzfassung',
+        hint: 'Nur Kernideen und Formeln.',
+      },
+      cards: {
+        name: 'Karteikarten',
+        hint: 'Druckbares zweispaltiges Kartenraster.',
+      },
+      maps: {
+        name: 'Nur Map',
+        hint: 'Deckblatt und Map-Bilder.',
       },
     },
     include: 'Was exportieren',
@@ -1159,14 +1178,25 @@ export const de: Messages = {
     },
     paper: 'Papier',
     papers: {
-      'a4-landscape': 'A4 quer',
+      'a4-mixed': 'A4 gemischt (Maps quer)',
       'a4-portrait': 'A4 hoch',
+      'a4-landscape': 'A4 quer',
+      'letter-mixed': 'Letter gemischt (Maps quer)',
+      'letter-portrait': 'Letter hoch',
       'letter-landscape': 'Letter quer',
+    },
+    tone: 'Seitenfarbe',
+    tones: {
+      mint: 'Mint-Papier',
+      white: 'Weiß (spart Tinte)',
     },
     opts: {
       details: 'Block-Details',
       links: 'Verbindungen zwischen Blöcken',
       cards: 'Karteikarten',
+      sources: 'Seitenzahlen',
+      aiTags: 'KI-Hinweise',
+      answersAtEnd: 'Antworten auf eigenen Seiten',
       light: 'Helle Farben (spart Tinte)',
     },
     download: {
@@ -1174,10 +1204,38 @@ export const de: Messages = {
       png: 'PNG herunterladen',
       md: 'Markdown herunterladen',
     },
+    preparing: 'Layout wird vorbereitet…',
+    progress: 'Erstelle Seite {{done}} von {{total}}…',
     local: 'Wird auf diesem Gerät erstellt. Nichts wird hochgeladen.',
     done: 'Export fertig',
     failed: 'Der Export hat nicht geklappt: {{error}}',
     madeWith: 'Aus MyNota exportiert am {{date}}',
+    study: {
+      contents: 'Inhalt',
+      chapter: 'Kapitel',
+      chapterShort: 'Kap. {{n}}',
+      continued: 'Fortsetzung',
+      addedByAi: 'Von KI ergänzt',
+      flashcards: 'Karteikarten',
+      answers: 'Antworten',
+      q: 'F',
+      a: 'A',
+      page: 'S. {{n}}',
+      more: '+{{count}} weitere',
+      empty: 'Für diese Auswahl gibt es nichts zu exportieren.',
+      kind: {
+        book: 'Buch',
+        notes: 'Notizen',
+        blank: 'Leinwand',
+      },
+      stats: {
+        chapters: 'Kapitel',
+        sections: 'Abschnitte',
+        blocks: 'Blöcke',
+        formulas: 'Formeln',
+        cards: 'Karten',
+      },
+    },
   },
   share: {
     title: '„{{title}}“ teilen',

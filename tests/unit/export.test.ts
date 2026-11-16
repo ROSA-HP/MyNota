@@ -110,4 +110,68 @@ describe('export', () => {
     expect(fileName('علم الأحياء', 'md')).toBe('علم الأحياء.md')
     expect(fileName('  ', 'png')).toBe('MyNota.png')
   })
+
+  it('gives each outline item what the PDF needs', () => {
+    const formulaDetail = { kind: 'formula' as const, latex: 'E=mc^2' }
+    const c = makeNode({
+      id: 'C',
+      map_id: 'm',
+      parent_id: null,
+      level: 'chapter',
+      title: 'C',
+      color: 'sky',
+    })
+    const s = makeNode({
+      id: 'S',
+      map_id: 'm',
+      parent_id: 'C',
+      level: 'section',
+      title: 'S',
+      color: null,
+    })
+    const b = makeNode({
+      id: 'B',
+      map_id: 'm',
+      parent_id: 'S',
+      level: 'block',
+      title: 'B',
+      type: 'definition',
+      importance: 'core',
+      dir: 'rtl',
+      ai_added: true,
+      source: { paragraphs: [1], page: 7 },
+      details: [formulaDetail],
+    })
+
+    const testNodes: Record<string, NodeRow> = { C: c, S: s, B: b }
+    const items = outlineItems({
+      nodes: testNodes,
+      relations: {},
+      cards: [],
+      rootId: 'C',
+      options: { details: true, links: false, cards: false },
+      relationLabel: () => '',
+    })
+
+    const itemB = items.find((i) => i.id === 'B')!
+    expect(itemB).toBeDefined()
+    expect(itemB.color).toBe('sky')
+    expect(itemB.type).toBe('definition')
+    expect(itemB.importance).toBe('core')
+    expect(itemB.dir).toBe('rtl')
+    expect(itemB.aiAdded).toBe(true)
+    expect(itemB.page).toBe(7)
+    expect(itemB.detailBlocks).toEqual([formulaDetail])
+
+    const itemsNoDetails = outlineItems({
+      nodes: testNodes,
+      relations: {},
+      cards: [],
+      rootId: 'C',
+      options: { details: false, links: false, cards: false },
+      relationLabel: () => '',
+    })
+    const itemBNoDetails = itemsNoDetails.find((i) => i.id === 'B')!
+    expect(itemBNoDetails.detailBlocks).toEqual([])
+  })
 })
