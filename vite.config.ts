@@ -106,12 +106,17 @@ function documentAssets(): Plugin {
 }
 
 export default defineConfig(({ mode }) => ({
+  server: {
+    host: '0.0.0.0',
+    port: 3000,
+    allowedHosts: true,
+  },
   plugins: [
     react(),
     tailwindcss(),
     documentAssets(),
     contentSecurityPolicy(
-      loadEnv(mode, process.cwd(), 'VITE_').VITE_SUPABASE_URL ?? 'https://invalid.supabase.co',
+      loadEnv(mode, process.cwd(), 'VITE_').VITE_SUPABASE_URL || 'https://invalid.supabase.co',
     ),
   ],
   resolve: {

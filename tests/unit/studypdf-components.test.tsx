@@ -371,6 +371,89 @@ describe('studypdf components', () => {
     expect(cTwo.textContent).toContain('Chapter 2')
   })
 
+  it('renders CoverPage chapter and section outline even for a single-chapter map', () => {
+    const { container } = render(
+      <CoverPage
+        size={{ w: 794, h: 1123 }}
+        tone="mint"
+        dir="ltr"
+        title="Polarization"
+        kindLabel="Notes"
+        stickerLabel="Study notes"
+        stats={[
+          { n: 1, label: 'Chapters' },
+          { n: 3, label: 'Sections' },
+        ]}
+        tabs={[{ number: 1, title: 'Wave Optics', color: 'yellow' }]}
+        outline={[
+          {
+            number: 1,
+            title: 'Wave Optics',
+            color: 'yellow',
+            dir: 'ltr',
+            sections: [
+              { label: '1.1', title: 'Electromagnetic Waves', dir: 'ltr' },
+              { label: '1.2', title: 'Energy Transport', dir: 'ltr' },
+            ],
+          },
+        ]}
+        outlineLabel="Contents"
+        moreLabel={null}
+        madeWith="Made with MyNota"
+      />,
+    )
+
+    expect(container.textContent).toContain('Wave Optics')
+    expect(container.textContent).toContain('Electromagnetic Waves')
+    expect(container.textContent).toContain('Energy Transport')
+  })
+
+  it('aligns nested blocks flush with zero start indent and justifies prose with inline KaTeX', () => {
+    const nestedBlock: BlockUnit = {
+      kind: 'block',
+      id: 'b_nested',
+      relDepth: 2,
+      title: 'Poynting Vector',
+      type: 'formula',
+      importance: 'core',
+      color: 'coral',
+      dir: 'ltr',
+      aiAdded: false,
+      rows: [
+        { kind: 'summary', text: 'Quantifies energy transport with \\vec{S}.' },
+        {
+          kind: 'detail',
+          detail: {
+            kind: 'formula',
+            latex: '\\vec{S} = \\frac{1}{\\mu_0} \\vec{E} \\times \\vec{B}',
+            variables: '\\vec{S} = Poynting vector; \\mu_0 = permeability constant',
+          },
+        },
+        {
+          kind: 'detail',
+          detail: {
+            kind: 'question',
+            front: 'What is \\vec{E} \\times \\vec{B}?',
+            back: 'Propagation direction using \\omega = \\frac{1}{\\sqrt{LC}}',
+          },
+        },
+      ],
+    }
+
+    const { container } = render(
+      <FlowUnitView unit={nestedBlock} dir="ltr" labels={testLabels} aiTags={false} atTop />,
+    )
+
+    const outer = container.firstElementChild as HTMLElement
+    expect(outer.style.paddingInlineStart).toBe('0px')
+
+    const rows = container.querySelectorAll('[data-row]')
+    expect((rows[0]?.firstElementChild as HTMLElement).style.textAlign).toBe('justify')
+    // Display formula + inline \vec{S}, \vec{S}, \mu_0, \vec{E} \times \vec{B}, \omega = \frac{1}{\sqrt{LC}}
+    expect(container.querySelectorAll('.katex').length).toBeGreaterThanOrEqual(5)
+    expect(container.textContent).not.toContain('\\mu_0')
+  })
+
   it('contains exactly one data-slot element in MapSlot and it has no children', () => {
     const { container } = render(
       <MapSlot size={{ x: 53, y: 83, w: 1017, h: 628 }} caption="Whole Map" />,

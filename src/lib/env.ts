@@ -12,13 +12,18 @@ const EnvSchema = z.object({
 
 const parsed = EnvSchema.safeParse(import.meta.env)
 
+export const isSupabaseConfigured = parsed.success
+
 if (!parsed.success) {
-  throw new Error(
-    `Invalid environment: ${parsed.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; ')}. See .env.example.`,
+  console.warn(
+    '[AI Studio] Supabase env vars not configured — running with local browser storage.',
   )
 }
 
 export const env = {
-  supabaseUrl: parsed.data.VITE_SUPABASE_URL,
-  supabasePublishableKey: parsed.data.VITE_SUPABASE_PUBLISHABLE_KEY,
+  supabaseUrl: parsed.success ? parsed.data.VITE_SUPABASE_URL : 'http://localhost:54321',
+  supabasePublishableKey: parsed.success
+    ? parsed.data.VITE_SUPABASE_PUBLISHABLE_KEY
+    : 'local-demo-key',
 }
+

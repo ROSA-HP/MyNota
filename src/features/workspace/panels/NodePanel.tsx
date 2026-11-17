@@ -1,6 +1,6 @@
 import { useNodeSource } from './useNodeSource'
 import { BlockReader } from './BlockReader'
-import { MathFormula } from '@/components/ui/MathFormula'
+import { MathFormula, RichMathText } from '@/components/ui/MathFormula'
 import { Plus, Trash, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { BlockCards } from '@/features/study/BlockCards'
@@ -69,9 +69,15 @@ function DetailRow({
     case 'example':
       return (
         <li className="flex items-start gap-1 rounded-neo bg-surface-muted p-2 text-sm">
-          <span className="min-w-0 flex-1" dir="auto">
-            <span className="italic">{d.text}</span>
-            {d.translation && <span className="block text-ink-muted">{d.translation}</span>}
+          <span className="min-w-0 flex-1 text-justify" dir="auto">
+            <span className="italic">
+              <RichMathText text={d.text} />
+            </span>
+            {d.translation && (
+              <span className="block text-ink-muted">
+                <RichMathText text={d.translation} />
+              </span>
+            )}
           </span>
           {remove}
         </li>
@@ -79,13 +85,17 @@ function DetailRow({
     case 'vocab':
       return (
         <li className="flex items-start gap-1 rounded-neo bg-surface-muted p-2 text-sm">
-          <span className="min-w-0 flex-1" dir="auto">
+          <span className="min-w-0 flex-1 text-justify" dir="auto">
             <strong>
               {d.article ? `${d.article} ` : ''}
               {d.term}
             </strong>
             {d.plural && <span className="text-ink-muted"> ({d.plural})</span>}
-            {d.meaning && <span className="block">{d.meaning}</span>}
+            {d.meaning && (
+              <span className="block">
+                <RichMathText text={d.meaning} />
+              </span>
+            )}
           </span>
           {remove}
         </li>
@@ -98,8 +108,8 @@ function DetailRow({
               <MathFormula latex={d.latex} display />
             </span>
             {d.variables && (
-              <span className="block text-ink-muted" dir="auto">
-                {d.variables}
+              <span className="block text-justify text-ink-muted" dir="auto">
+                <RichMathText text={d.variables} />
               </span>
             )}
           </span>
@@ -109,13 +119,13 @@ function DetailRow({
     case 'question':
       return (
         <li className="flex items-start gap-1 rounded-neo border-2 border-dashed border-line-soft p-2 text-sm">
-          <span className="min-w-0 flex-1" dir="auto">
+          <span className="min-w-0 flex-1 text-justify" dir="auto">
             <span className="block text-xs font-bold text-ink-muted">{t('ws.panel.question')}</span>
-            {d.front}
+            <RichMathText text={d.front} />
             <span className="mt-1 block text-xs font-bold text-ink-muted">
               {t('ws.panel.answer')}
             </span>
-            {d.back}
+            <RichMathText text={d.back} />
           </span>
           {remove}
         </li>

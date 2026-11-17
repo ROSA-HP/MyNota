@@ -278,10 +278,86 @@ export function buildStudyDoc(input: {
     }
   }
 
-  // 8. tabs
+  // 8. tabs & coverOutline
   const tabs = flow
     .filter((u): u is ChapterUnit => u.kind === 'chapter')
     .map((c) => ({ number: c.number, title: c.title, color: c.color }))
+
+  const coverOutline: Array<{
+    number: number | null
+    title: string
+    color: ChapterUnit['color']
+    dir: 'ltr' | 'rtl'
+    sections: Array<{ label: string; title: string; dir: 'ltr' | 'rtl' }>
+  }> = []
+
+  if (flow.length > 0) {
+    let standaloneGroup: (typeof coverOutline)[number] | null = null
+    for (const u of flow) {
+      if (u.kind === 'chapter') {
+        coverOutline.push({
+          number: u.number,
+          title: u.title,
+          color: u.color,
+          dir: u.dir,
+          sections: [],
+        })
+      } else if (u.kind === 'section') {
+        const lastChapter = coverOutline[coverOutline.length - 1]
+        if (lastChapter && lastChapter.number !== null) {
+          lastChapter.sections.push({ label: u.label, title: u.title, dir: u.dir })
+        } else {
+          if (!standaloneGroup) {
+            standaloneGroup = {
+              number: null,
+              title: '',
+              color: u.color,
+              dir,
+              sections: [],
+            }
+            coverOutline.push(standaloneGroup)
+          }
+          standaloneGroup.sections.push({ label: u.label, title: u.title, dir: u.dir })
+        }
+      }
+    }
+  } else {
+    let chNo = 0
+    let secNo = 0
+    let standaloneGroup: (typeof coverOutline)[number] | null = null
+    for (const it of items) {
+      if (it.level === 'chapter') {
+        chNo++
+        secNo = 0
+        coverOutline.push({
+          number: chNo,
+          title: it.title.trim() || '—',
+          color: it.color,
+          dir: it.dir,
+          sections: [],
+        })
+      } else if (it.level === 'section') {
+        secNo++
+        const label = chNo > 0 ? `${chNo}.${secNo}` : String(secNo)
+        const lastChapter = coverOutline[coverOutline.length - 1]
+        if (lastChapter && lastChapter.number !== null) {
+          lastChapter.sections.push({ label, title: it.title.trim() || '—', dir: it.dir })
+        } else {
+          if (!standaloneGroup) {
+            standaloneGroup = {
+              number: null,
+              title: '',
+              color: it.color,
+              dir,
+              sections: [],
+            }
+            coverOutline.push(standaloneGroup)
+          }
+          standaloneGroup.sections.push({ label, title: it.title.trim() || '—', dir: it.dir })
+        }
+      }
+    }
+  }
 
   // 9. stats
   let chapters = 0
@@ -323,6 +399,7 @@ export function buildStudyDoc(input: {
     toc,
     tiles,
     tabs,
+    coverOutline,
     stats: { chapters, sections, blocks, formulas, cards },
   }
 }

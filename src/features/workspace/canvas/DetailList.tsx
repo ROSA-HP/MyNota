@@ -1,13 +1,13 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { MathFormula } from '@/components/ui/MathFormula'
+import { MathFormula, RichMathText } from '@/components/ui/MathFormula'
 import { cn } from '@/lib/cn'
 import type { DetailBlock } from '@/lib/database.types'
 
 /**
  * A block's details for reading (expanded cards, the details panel): bullets, formulas typeset
  * large with what their letters mean, examples as callouts, vocabulary, questions that open on
- * a tap. AI text is shown as plain text only.
+ * a tap.
  */
 export function DetailList({
   details,
@@ -35,13 +35,15 @@ function DetailItem({ d, compact }: { d: DetailBlock; compact: boolean }) {
       return (
         <li className={cn('flex gap-2', text)} dir="auto">
           <span aria-hidden className="mt-[0.55em] size-1.5 shrink-0 rounded-full bg-ink-muted" />
-          <span className="min-w-0">{d.text}</span>
+          <span className="min-w-0 flex-1 text-justify">
+            <RichMathText text={d.text} />
+          </span>
         </li>
       )
     case 'text':
       return (
-        <li className={text} dir="auto">
-          {d.text}
+        <li className={cn(text, 'text-justify')} dir="auto">
+          <RichMathText text={d.text} />
         </li>
       )
     case 'formula':
@@ -57,10 +59,13 @@ function DetailItem({ d, compact }: { d: DetailBlock; compact: boolean }) {
           </div>
           {d.variables && (
             <p
-              className={cn('text-ink-muted', compact ? 'text-[12px] leading-4' : 'text-[13px]')}
+              className={cn(
+                'mt-1 text-justify text-ink-muted',
+                compact ? 'text-[12px] leading-4' : 'text-[13px]',
+              )}
               dir="auto"
             >
-              {d.variables}
+              <RichMathText text={d.variables} />
             </p>
           )}
         </li>
@@ -69,14 +74,18 @@ function DetailItem({ d, compact }: { d: DetailBlock; compact: boolean }) {
       return (
         <li
           className={cn(
-            'border-s-[3px] border-brand bg-brand-soft/60 ps-2 pe-1.5 py-1 rounded-e-md',
+            'rounded-e-md border-s-[3px] border-brand bg-brand-soft/60 py-1 ps-2 pe-1.5 text-justify',
             text,
           )}
           dir="auto"
         >
           <span className="font-semibold">{t('ws.detail.example')}: </span>
-          {d.text}
-          {d.translation && <span className="block text-ink-muted">{d.translation}</span>}
+          <RichMathText text={d.text} />
+          {d.translation && (
+            <span className="block text-ink-muted">
+              <RichMathText text={d.translation} />
+            </span>
+          )}
         </li>
       )
     case 'vocab':
@@ -90,7 +99,9 @@ function DetailItem({ d, compact }: { d: DetailBlock; compact: boolean }) {
           <span aria-hidden className="text-ink-faint">
             —
           </span>
-          <span dir="auto">{d.meaning}</span>
+          <span dir="auto" className="text-justify">
+            <RichMathText text={d.meaning} />
+          </span>
         </li>
       )
     case 'question':
@@ -102,9 +113,13 @@ function DetailItem({ d, compact }: { d: DetailBlock; compact: boolean }) {
             aria-expanded={open}
             className="nodrag w-full cursor-pointer rounded-md border-2 border-dashed border-line-soft px-2 py-1 text-start hover:border-line"
           >
-            <span className="font-semibold">{d.front}</span>
+            <span className="block text-justify font-semibold">
+              <RichMathText text={d.front} />
+            </span>
             {open ? (
-              <span className="block text-ink-muted">{d.back}</span>
+              <span className="block text-justify text-ink-muted">
+                <RichMathText text={d.back} />
+              </span>
             ) : (
               <span className="block text-xs text-ink-faint">{t('ws.detail.showAnswer')}</span>
             )}
@@ -113,8 +128,8 @@ function DetailItem({ d, compact }: { d: DetailBlock; compact: boolean }) {
       )
     case 'cloze':
       return (
-        <li className={text} dir="auto">
-          {d.text.replace(/\{\{c\d+::(.*?)(::.*?)?\}\}/g, '$1')}
+        <li className={cn(text, 'text-justify')} dir="auto">
+          <RichMathText text={d.text.replace(/\{\{c\d+::(.*?)(::.*?)?\}\}/g, '$1')} />
         </li>
       )
   }

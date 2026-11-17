@@ -2,6 +2,7 @@ import { useReactFlow } from '@xyflow/react'
 import { ArrowLeft, ArrowRight, ChevronRight, Pencil, Sparkles, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Badge, Button, IconButton } from '@/components/ui'
+import { RichMathText } from '@/components/ui/MathFormula'
 import { BlockCards } from '@/features/study/BlockCards'
 import { cn } from '@/lib/cn'
 import type { NodeRow, RelationRow } from '@/lib/database.types'
@@ -135,8 +136,8 @@ export function BlockReader({ node, onClose }: { node: NodeRow; onClose: () => v
         )}
 
         {node.summary && (
-          <p className="text-base leading-relaxed" dir="auto">
-            {node.summary}
+          <p className="text-justify text-base leading-relaxed" dir="auto">
+            <RichMathText text={node.summary} />
           </p>
         )}
 

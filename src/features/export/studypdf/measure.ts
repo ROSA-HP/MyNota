@@ -117,7 +117,7 @@ export async function measureFlow(
       const u = units[i]
       if (!u) continue
       const el = container.querySelector(`[data-unit-index="${i}"]`) as HTMLElement | null
-      const rectH = el ? Math.round(el.getBoundingClientRect().height || el.offsetHeight) : 0
+      const rectH = el ? Math.ceil(el.getBoundingClientRect().height || el.offsetHeight) : 0
 
       if (!el || rectH === 0) {
         results.push(fallbackMeasure(u))
@@ -150,11 +150,11 @@ export async function measureFlow(
         } else {
           const headEl = el.querySelector('[data-part="head"]') as HTMLElement | null
           const head = headEl
-            ? Math.round(headEl.getBoundingClientRect().height || headEl.offsetHeight)
+            ? Math.ceil(headEl.getBoundingClientRect().height || headEl.offsetHeight)
             : 36
           const rowEls = el.querySelectorAll('[data-row]')
           const rows = Array.from(rowEls).map((r) =>
-            Math.round(r.getBoundingClientRect().height || (r as HTMLElement).offsetHeight || 24),
+            Math.ceil(r.getBoundingClientRect().height || (r as HTMLElement).offsetHeight || 24),
           )
           const gap = PAD.rowGap
           const rowSum = rows.reduce((a, b) => a + b, 0)
@@ -235,7 +235,7 @@ export async function measureCardRows(
     for (let i = 0; i < rows.length; i++) {
       if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
       const el = container.querySelector(`[data-card-row="${i}"]`) as HTMLElement | null
-      const rectH = el ? Math.round(el.getBoundingClientRect().height || el.offsetHeight) : 0
+      const rectH = el ? Math.ceil(el.getBoundingClientRect().height || el.offsetHeight) : 0
       heights.push(
         rectH > 0
           ? rectH

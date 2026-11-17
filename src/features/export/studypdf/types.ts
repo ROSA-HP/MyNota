@@ -121,6 +121,14 @@ export interface TocEntry {
   dir: 'ltr' | 'rtl'
 }
 
+export interface CoverOutlineChapter {
+  number: number | null
+  title: string
+  color: ChapterColor
+  dir: 'ltr' | 'rtl'
+  sections: Array<{ label: string; title: string; dir: 'ltr' | 'rtl' }>
+}
+
 export interface StudyDoc {
   title: string
   kind: 'book' | 'notes' | 'blank'
@@ -130,6 +138,7 @@ export interface StudyDoc {
   toc: TocEntry[]
   tiles: CardTile[]
   tabs: Array<{ number: number; title: string; color: ChapterColor }>
+  coverOutline: CoverOutlineChapter[]
   stats: { chapters: number; sections: number; blocks: number; formulas: number; cards: number }
 }
 

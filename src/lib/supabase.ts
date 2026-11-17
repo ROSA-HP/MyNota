@@ -1,15 +1,18 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from './database.types'
-import { env } from './env'
+import { env, isSupabaseConfigured } from './env'
+import { createLocalSupabaseClient } from './localSupabase'
 
-export const supabase = createClient<Database>(env.supabaseUrl, env.supabasePublishableKey, {
-  auth: {
-    flowType: 'pkce',
-    persistSession: true,
-    autoRefreshToken: true,
-    detectSessionInUrl: true,
-  },
-})
+export const supabase: SupabaseClient<Database> = isSupabaseConfigured
+  ? createClient<Database>(env.supabaseUrl, env.supabasePublishableKey, {
+      auth: {
+        flowType: 'pkce',
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+      },
+    })
+  : createLocalSupabaseClient()
 
 /** Explicit column lists: `select *` on maps would fail because link_token is not readable. */
 export const PROFILE_COLUMNS =

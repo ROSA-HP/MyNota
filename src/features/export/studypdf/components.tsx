@@ -1,5 +1,5 @@
 import React from 'react'
-import { MathFormula } from '@/components/ui/MathFormula'
+import { MathFormula, RichMathText } from '@/components/ui/MathFormula'
 import { TYPE_ICON } from '@/features/workspace/canvas/visuals'
 import type { ChapterColor } from '@/lib/database.types'
 import { arrowFor, clip, splitCloze } from './model'
@@ -16,7 +16,14 @@ import {
   mmToPx,
   textStyle,
 } from './tokens'
-import type { BlockRow, CardTile, FlowUnit, PaperTone, StudyLabels } from './types'
+import type {
+  BlockRow,
+  CardTile,
+  CoverOutlineChapter,
+  FlowUnit,
+  PaperTone,
+  StudyLabels,
+} from './types'
 
 export function PageShell({
   w,
@@ -211,6 +218,8 @@ export function CoverPage({
   stickerLabel,
   stats,
   tabs,
+  outline,
+  outlineLabel,
   moreLabel,
   madeWith,
 }: {
@@ -222,11 +231,19 @@ export function CoverPage({
   stickerLabel: string
   stats: Array<{ n: number; label: string }>
   tabs: Array<{ number: number; title: string; color: ChapterColor }>
+  outline?: CoverOutlineChapter[]
+  outlineLabel?: string
   moreLabel: string | null
   madeWith: string
 }) {
   const visibleStats = stats.filter((s) => s.n > 0)
   const visibleTabs = tabs.slice(0, 12)
+  const hasOutline = Boolean(outline && outline.length > 0)
+  const visibleOutline = outline ? outline.slice(0, 6) : []
+  const hiddenChapters = outline && outline.length > 6 ? outline.length - 6 : 0
+  const coverShadow = dir === 'rtl' ? `-6px 6px 0 ${COLORS.ink}` : SHADOW.cover
+  const chapterShadow = dir === 'rtl' ? `-4px 4px 0 ${COLORS.ink}` : SHADOW.chapter
+  const cardShadow = dir === 'rtl' ? `-2px 2px 0 ${COLORS.ink}` : SHADOW.card
 
   return (
     <PageShell w={size.w} h={size.h} tone={tone} dir={dir}>
@@ -241,230 +258,500 @@ export function CoverPage({
           right: mmToPx(14),
           display: 'flex',
           flexDirection: 'column',
-          justifyContent: 'space-between',
+          gap: 18,
         }}
       >
-        {/* Top */}
+        {/* Top bar (flush left to right) */}
         <div
           style={{
             boxSizing: 'border-box',
             margin: 0,
-            background: COLORS.white,
-            border: BORDER,
-            borderRadius: RADIUS.pill,
-            padding: '4px 12px',
-            ...textStyle('monoSmall', dir),
-            boxShadow: `2px 2px 0 ${COLORS.ink}`,
-            alignSelf: 'flex-start',
+            display: 'flex',
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            paddingBottom: 12,
+            borderBottom: BORDER,
+            flexShrink: 0,
           }}
         >
-          MyNota
+          <div
+            style={{
+              boxSizing: 'border-box',
+              margin: 0,
+              background: COLORS.white,
+              border: BORDER,
+              borderRadius: RADIUS.pill,
+              padding: '4px 12px',
+              ...textStyle('monoSmall', dir),
+              boxShadow: cardShadow,
+            }}
+          >
+            MyNota
+          </div>
+
+          <span
+            style={{
+              ...textStyle('monoSmall', dir),
+              color: COLORS.surgicalTeal,
+            }}
+          >
+            {kindLabel} · {stickerLabel}
+          </span>
         </div>
 
-        {/* Middle */}
+        {/* Main Hero & Outline */}
         <div
           style={{
             boxSizing: 'border-box',
             margin: 0,
             flex: 1,
+            minHeight: 0,
             display: 'flex',
             flexDirection: 'column',
-            justifyContent: 'center',
-            gap: 28,
+            gap: 18,
           }}
         >
-          {/* Title card */}
+          {/* Full-width Hero Title Card */}
           <div
             style={{
               boxSizing: 'border-box',
               margin: 0,
-              position: 'relative',
-              background: COLORS.white,
-              border: BORDER,
-              borderRadius: RADIUS.big,
-              boxShadow: SHADOW.cover,
-              padding: '32px 32px 36px',
+              paddingRight: dir === 'ltr' ? 6 : 0,
+              paddingLeft: dir === 'rtl' ? 6 : 0,
+              paddingBottom: 6,
+              flexShrink: 0,
             }}
           >
             <div
               style={{
                 boxSizing: 'border-box',
                 margin: 0,
-                display: 'inline-flex',
-                background: COLORS.surgicalTeal,
-                color: COLORS.mintFrost,
+                background: COLORS.white,
                 border: BORDER,
-                borderRadius: RADIUS.pill,
-                padding: '3px 12px',
-                ...textStyle('monoSmall', dir),
-                marginBottom: 18,
+                borderRadius: RADIUS.big,
+                boxShadow: coverShadow,
+                overflow: 'hidden',
               }}
             >
-              {kindLabel}
-            </div>
-
-            <div
-              style={{
-                boxSizing: 'border-box',
-                margin: 0,
-                ...textStyle('coverTitle', dir),
-                overflowWrap: 'anywhere',
-              }}
-            >
-              {clip(title, 140)}
-            </div>
-
-            {/* Tilted sticker */}
-            <div
-              style={{
-                boxSizing: 'border-box',
-                margin: 0,
-                position: 'absolute',
-                top: -16,
-                insetInlineEnd: 24,
-                transform: 'rotate(-4deg)',
-                background: CHAPTER_FILL.yellow,
-                border: BORDER,
-                borderRadius: 8,
-                padding: '5px 12px',
-                ...textStyle('mono', dir),
-                boxShadow: `2px 2px 0 ${COLORS.ink}`,
-              }}
-            >
-              {stickerLabel}
-            </div>
-          </div>
-
-          {/* Stats row */}
-          {visibleStats.length > 0 && (
-            <div
-              style={{
-                boxSizing: 'border-box',
-                margin: 0,
-                display: 'flex',
-                flexWrap: 'wrap',
-                gap: 10,
-              }}
-            >
-              {visibleStats.map((s, idx) => (
+              {/* Card Meta Band */}
+              <div
+                style={{
+                  boxSizing: 'border-box',
+                  margin: 0,
+                  display: 'flex',
+                  flexDirection: 'row',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: '12px 24px',
+                  background: COLORS.bioSlate,
+                  borderBottom: BORDER,
+                }}
+              >
                 <div
-                  key={idx}
                   style={{
                     boxSizing: 'border-box',
                     margin: 0,
-                    background: COLORS.white,
+                    display: 'inline-flex',
+                    background: COLORS.surgicalTeal,
+                    color: COLORS.mintFrost,
                     border: BORDER,
                     borderRadius: RADIUS.pill,
-                    padding: '6px 14px',
-                    boxShadow: SHADOW.card,
-                    display: 'inline-flex',
-                    alignItems: 'baseline',
-                    gap: 6,
+                    padding: '3px 12px',
+                    ...textStyle('monoSmall', dir),
                   }}
                 >
-                  <span
-                    style={{
-                      fontFamily: FONT_MONO,
-                      fontSize: 14,
-                      fontWeight: 700,
-                    }}
-                  >
-                    {s.n}
-                  </span>
-                  <span
-                    style={{
-                      ...textStyle('small', dir),
-                      color: COLORS.charcoal,
-                    }}
-                  >
-                    {s.label}
-                  </span>
+                  {kindLabel}
                 </div>
-              ))}
-            </div>
-          )}
 
-          {/* Tabs row */}
-          {tabs.length >= 2 && (
-            <div
-              style={{
-                boxSizing: 'border-box',
-                margin: 0,
-                display: 'flex',
-                flexWrap: 'wrap',
-                gap: 8,
-              }}
-            >
-              {visibleTabs.map((t, idx) => (
                 <div
-                  key={idx}
                   style={{
                     boxSizing: 'border-box',
                     margin: 0,
-                    background: CHAPTER_FILL[t.color],
+                    transform: 'rotate(-2deg)',
+                    background: CHAPTER_FILL.yellow,
                     border: BORDER,
                     borderRadius: 8,
-                    padding: '4px 10px',
-                    maxWidth: 220,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 6,
+                    padding: '4px 12px',
+                    ...textStyle('mono', dir),
+                    boxShadow: cardShadow,
                   }}
                 >
-                  <span
-                    style={{
-                      fontFamily: FONT_MONO,
-                      fontSize: 10,
-                      fontWeight: 700,
-                      flexShrink: 0,
-                    }}
-                  >
-                    {t.number}
-                  </span>
-                  <span
-                    style={{
-                      ...textStyle('small', dir),
-                      fontWeight: 700,
-                      whiteSpace: 'nowrap',
-                      textOverflow: 'ellipsis',
-                      overflow: 'hidden',
-                    }}
-                  >
-                    {t.title}
-                  </span>
+                  {stickerLabel}
                 </div>
-              ))}
-              {moreLabel !== null && (
+              </div>
+
+              {/* Hero Title */}
+              <div
+                style={{
+                  boxSizing: 'border-box',
+                  margin: 0,
+                  padding: '30px 26px',
+                }}
+              >
                 <div
                   style={{
                     boxSizing: 'border-box',
                     margin: 0,
-                    background: COLORS.white,
-                    border: BORDER,
-                    borderRadius: 8,
-                    padding: '4px 10px',
-                    ...textStyle('small', dir),
+                    fontFamily: fontFor(dir),
+                    fontSize: 40,
+                    lineHeight: dir === 'rtl' ? '50px' : '46px',
                     fontWeight: 700,
+                    letterSpacing: dir === 'rtl' ? undefined : '-0.025em',
+                    overflowWrap: 'anywhere',
                   }}
                 >
-                  {moreLabel}
+                  {clip(title, 140)}
+                </div>
+              </div>
+
+              {/* Integrated Flush Stats Strip */}
+              {visibleStats.length > 0 && (
+                <div
+                  style={{
+                    boxSizing: 'border-box',
+                    margin: 0,
+                    display: 'grid',
+                    gridTemplateColumns: `repeat(${visibleStats.length}, minmax(0, 1fr))`,
+                    borderTop: BORDER,
+                    background: COLORS.white,
+                  }}
+                >
+                  {visibleStats.map((s, idx) => (
+                    <div
+                      key={idx}
+                      style={{
+                        boxSizing: 'border-box',
+                        margin: 0,
+                        padding: '14px 16px',
+                        borderInlineEnd: idx < visibleStats.length - 1 ? BORDER : undefined,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 2,
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontFamily: FONT_MONO,
+                          fontSize: 22,
+                          lineHeight: '26px',
+                          fontWeight: 700,
+                          fontVariantNumeric: 'tabular-nums',
+                        }}
+                      >
+                        {s.n}
+                      </span>
+                      <span
+                        style={{
+                          ...textStyle('monoSmall', dir),
+                          color: COLORS.charcoal,
+                        }}
+                      >
+                        {s.label}
+                      </span>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
+          </div>
+
+          {/* Chapter & Section Outline Panel */}
+          {hasOutline ? (
+            <div
+              style={{
+                boxSizing: 'border-box',
+                margin: 0,
+                flex: 1,
+                minHeight: 0,
+                paddingRight: dir === 'ltr' ? 4 : 0,
+                paddingLeft: dir === 'rtl' ? 4 : 0,
+                paddingBottom: 4,
+                display: 'flex',
+                flexDirection: 'column',
+              }}
+            >
+              <div
+                style={{
+                  boxSizing: 'border-box',
+                  margin: 0,
+                  flex: 1,
+                  minHeight: 0,
+                  background: COLORS.white,
+                  border: BORDER,
+                  borderRadius: RADIUS.card,
+                  boxShadow: chapterShadow,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  overflow: 'hidden',
+                }}
+              >
+                <div
+                  style={{
+                    boxSizing: 'border-box',
+                    margin: 0,
+                    padding: '10px 18px',
+                    background: COLORS.bioSlate,
+                    borderBottom: BORDER,
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    flexShrink: 0,
+                  }}
+                >
+                  <span style={{ ...textStyle('mono', dir) }}>{outlineLabel ?? 'Contents'}</span>
+                  <span style={{ ...textStyle('monoSmall', dir), color: COLORS.charcoal }}>
+                    {outline?.reduce((sum, ch) => sum + Math.max(1, ch.sections.length), 0) ?? 0}
+                  </span>
+                </div>
+
+                <div
+                  style={{
+                    boxSizing: 'border-box',
+                    margin: 0,
+                    flex: 1,
+                    minHeight: 0,
+                    padding: '16px 18px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 14,
+                    overflow: 'hidden',
+                  }}
+                >
+                  {visibleOutline.map((ch, cIdx) => (
+                    <div
+                      key={cIdx}
+                      dir={ch.dir}
+                      style={{
+                        boxSizing: 'border-box',
+                        margin: 0,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 8,
+                        paddingBottom: cIdx < visibleOutline.length - 1 ? 12 : 0,
+                        borderBottom:
+                          cIdx < visibleOutline.length - 1
+                            ? `1.5px dashed ${COLORS.charcoal}`
+                            : undefined,
+                      }}
+                    >
+                      {ch.number !== null && (
+                        <div
+                          style={{
+                            boxSizing: 'border-box',
+                            margin: 0,
+                            display: 'flex',
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            gap: 10,
+                          }}
+                        >
+                          <div
+                            style={{
+                              boxSizing: 'border-box',
+                              margin: 0,
+                              width: 28,
+                              height: 28,
+                              background: CHAPTER_FILL[ch.color],
+                              border: BORDER,
+                              borderRadius: RADIUS.tile,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              flexShrink: 0,
+                              fontFamily: FONT_MONO,
+                              fontSize: 13,
+                              fontWeight: 700,
+                            }}
+                          >
+                            {ch.number}
+                          </div>
+                          <div
+                            style={{
+                              boxSizing: 'border-box',
+                              margin: 0,
+                              ...textStyle('h2', ch.dir),
+                              minWidth: 0,
+                              overflowWrap: 'anywhere',
+                            }}
+                          >
+                            {ch.title}
+                          </div>
+                        </div>
+                      )}
+
+                      {ch.sections.length > 0 && (
+                        <div
+                          style={{
+                            boxSizing: 'border-box',
+                            margin: 0,
+                            display: 'grid',
+                            gridTemplateColumns:
+                              ch.sections.length > 6
+                                ? 'repeat(2, minmax(0, 1fr))'
+                                : 'minmax(0, 1fr)',
+                            gap: '8px 14px',
+                            paddingInlineStart: ch.number !== null ? 38 : 0,
+                          }}
+                        >
+                          {ch.sections.slice(0, 14).map((sec, sIdx) => (
+                            <div
+                              key={sIdx}
+                              dir={sec.dir}
+                              style={{
+                                boxSizing: 'border-box',
+                                margin: 0,
+                                display: 'flex',
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                gap: 8,
+                                minWidth: 0,
+                              }}
+                            >
+                              <span
+                                style={{
+                                  boxSizing: 'border-box',
+                                  margin: 0,
+                                  fontFamily: FONT_MONO,
+                                  fontSize: 10,
+                                  lineHeight: '14px',
+                                  fontWeight: 700,
+                                  direction: 'ltr',
+                                  background: CHAPTER_FILL[ch.color],
+                                  border: BORDER,
+                                  borderRadius: RADIUS.pill,
+                                  padding: '1px 8px',
+                                  flexShrink: 0,
+                                }}
+                              >
+                                {sec.label}
+                              </span>
+                              <span
+                                style={{
+                                  ...textStyle('detail', sec.dir),
+                                  minWidth: 0,
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap',
+                                }}
+                              >
+                                {sec.title}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+
+                  {hiddenChapters > 0 && moreLabel !== null && (
+                    <div
+                      style={{
+                        boxSizing: 'border-box',
+                        margin: 0,
+                        marginTop: 'auto',
+                        alignSelf: 'flex-start',
+                        background: COLORS.bioSlate,
+                        border: BORDER,
+                        borderRadius: RADIUS.tile,
+                        padding: '3px 10px',
+                        ...textStyle('small', dir),
+                        fontWeight: 700,
+                      }}
+                    >
+                      {moreLabel}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          ) : (
+            tabs.length >= 2 && (
+              <div
+                style={{
+                  boxSizing: 'border-box',
+                  margin: 0,
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: 8,
+                }}
+              >
+                {visibleTabs.map((t, idx) => (
+                  <div
+                    key={idx}
+                    style={{
+                      boxSizing: 'border-box',
+                      margin: 0,
+                      background: CHAPTER_FILL[t.color],
+                      border: BORDER,
+                      borderRadius: 8,
+                      padding: '4px 10px',
+                      maxWidth: 220,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 6,
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontFamily: FONT_MONO,
+                        fontSize: 10,
+                        fontWeight: 700,
+                        flexShrink: 0,
+                      }}
+                    >
+                      {t.number}
+                    </span>
+                    <span
+                      style={{
+                        ...textStyle('small', dir),
+                        fontWeight: 700,
+                        whiteSpace: 'nowrap',
+                        textOverflow: 'ellipsis',
+                        overflow: 'hidden',
+                      }}
+                    >
+                      {t.title}
+                    </span>
+                  </div>
+                ))}
+                {moreLabel !== null && (
+                  <div
+                    style={{
+                      boxSizing: 'border-box',
+                      margin: 0,
+                      background: COLORS.white,
+                      border: BORDER,
+                      borderRadius: 8,
+                      padding: '4px 10px',
+                      ...textStyle('small', dir),
+                      fontWeight: 700,
+                    }}
+                  >
+                    {moreLabel}
+                  </div>
+                )}
+              </div>
+            )
           )}
         </div>
 
-        {/* Bottom */}
+        {/* Bottom Footer Strip */}
         <div
           style={{
             boxSizing: 'border-box',
             margin: 0,
-            ...textStyle('footer', dir),
-            color: COLORS.charcoal,
-            alignSelf: 'flex-start',
+            paddingTop: 10,
+            borderTop: BORDER,
+            display: 'flex',
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexShrink: 0,
           }}
         >
-          {madeWith}
+          <span style={{ ...textStyle('footer', dir), color: COLORS.charcoal }}>{madeWith}</span>
+          <span style={{ ...textStyle('footer', dir), color: COLORS.charcoal }}>MyNota</span>
         </div>
       </div>
     </PageShell>
@@ -654,14 +941,14 @@ export function FormulaBox({
           style={{
             boxSizing: 'border-box',
             margin: 0,
-            marginTop: 4,
-            textAlign: 'start',
+            marginTop: 6,
+            textAlign: 'justify',
             direction: dir,
             ...textStyle('small', dir),
             color: COLORS.charcoal,
           }}
         >
-          {variables}
+          <RichMathText text={variables} />
         </div>
       )}
     </div>
@@ -686,9 +973,10 @@ function RenderRow({
             margin: 0,
             ...textStyle('summary', dir),
             color: COLORS.ink,
+            textAlign: 'justify',
           }}
         >
-          {row.text}
+          <RichMathText text={row.text} />
         </div>
       )
     case 'detail': {
@@ -696,8 +984,15 @@ function RenderRow({
       switch (d.kind) {
         case 'text':
           return (
-            <div style={{ boxSizing: 'border-box', margin: 0, ...textStyle('detail', dir) }}>
-              {d.text}
+            <div
+              style={{
+                boxSizing: 'border-box',
+                margin: 0,
+                ...textStyle('detail', dir),
+                textAlign: 'justify',
+              }}
+            >
+              <RichMathText text={d.text} />
             </div>
           )
         case 'bullet':
@@ -731,9 +1026,10 @@ function RenderRow({
                   flex: 1,
                   minWidth: 0,
                   ...textStyle('detail', dir),
+                  textAlign: 'justify',
                 }}
               >
-                {d.text}
+                <RichMathText text={d.text} />
               </div>
             </div>
           )
@@ -747,8 +1043,15 @@ function RenderRow({
                 paddingInlineStart: 8,
               }}
             >
-              <div style={{ boxSizing: 'border-box', margin: 0, ...textStyle('detail', dir) }}>
-                {d.text}
+              <div
+                style={{
+                  boxSizing: 'border-box',
+                  margin: 0,
+                  ...textStyle('detail', dir),
+                  textAlign: 'justify',
+                }}
+              >
+                <RichMathText text={d.text} />
               </div>
               {d.translation && (
                 <div
@@ -758,34 +1061,54 @@ function RenderRow({
                     ...textStyle('small', dir),
                     color: COLORS.charcoal,
                     marginTop: 2,
+                    textAlign: 'justify',
                   }}
                 >
-                  {d.translation}
+                  <RichMathText text={d.translation} />
                 </div>
               )}
             </div>
           )
         case 'cloze':
           return (
-            <div style={{ boxSizing: 'border-box', margin: 0, ...textStyle('detail', dir) }}>
+            <div
+              style={{
+                boxSizing: 'border-box',
+                margin: 0,
+                ...textStyle('detail', dir),
+                textAlign: 'justify',
+              }}
+            >
               {splitCloze(d.text).map((seg, idx) => (
                 <span
                   key={idx}
                   style={seg.gap ? { fontWeight: 700, textDecoration: 'underline 2px' } : undefined}
                 >
-                  {seg.text}
+                  <RichMathText text={seg.text} />
                 </span>
               ))}
             </div>
           )
         case 'vocab':
           return (
-            <div style={{ boxSizing: 'border-box', margin: 0, ...textStyle('detail', dir) }}>
+            <div
+              style={{
+                boxSizing: 'border-box',
+                margin: 0,
+                ...textStyle('detail', dir),
+                textAlign: 'justify',
+              }}
+            >
               <span style={{ fontWeight: 700 }}>
                 {[d.article, d.term].filter(Boolean).join(' ')}
               </span>
               {d.plural && <span> ({d.plural})</span>}
-              {d.meaning && <span style={{ color: COLORS.charcoal }}> — {d.meaning}</span>}
+              {d.meaning && (
+                <span style={{ color: COLORS.charcoal }}>
+                  {' '}
+                  — <RichMathText text={d.meaning} />
+                </span>
+              )}
             </div>
           )
         case 'formula':
@@ -801,7 +1124,7 @@ function RenderRow({
                 gap: 6,
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}>
                 <span
                   style={{
                     fontFamily: FONT_MONO,
@@ -813,13 +1136,24 @@ function RenderRow({
                     background: COLORS.ink,
                     color: COLORS.mintFrost,
                     flexShrink: 0,
+                    marginTop: 2,
                   }}
                 >
                   {labels.q}
                 </span>
-                <span style={{ ...textStyle('detail', dir), fontWeight: 700 }}>{d.front}</span>
+                <span
+                  style={{
+                    ...textStyle('detail', dir),
+                    fontWeight: 700,
+                    flex: 1,
+                    minWidth: 0,
+                    textAlign: 'justify',
+                  }}
+                >
+                  <RichMathText text={d.front} />
+                </span>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}>
                 <span
                   style={{
                     fontFamily: FONT_MONO,
@@ -831,11 +1165,21 @@ function RenderRow({
                     background: COLORS.cyanGlow,
                     color: COLORS.ink,
                     flexShrink: 0,
+                    marginTop: 2,
                   }}
                 >
                   {labels.a}
                 </span>
-                <span style={{ ...textStyle('detail', dir) }}>{d.back}</span>
+                <span
+                  style={{
+                    ...textStyle('detail', dir),
+                    flex: 1,
+                    minWidth: 0,
+                    textAlign: 'justify',
+                  }}
+                >
+                  <RichMathText text={d.back} />
+                </span>
               </div>
             </div>
           )
@@ -857,8 +1201,12 @@ function RenderRow({
           <span style={{ fontFamily: FONT_MONO, fontSize: 11, fontWeight: 700 }}>
             {arrowFor(row.outgoing, dir)}
           </span>
-          <span style={{ ...textStyle('small', dir), fontWeight: 700 }}>{row.label}</span>
-          <span style={{ ...textStyle('small', dir), color: COLORS.charcoal }}>: {row.other}</span>
+          <span style={{ ...textStyle('small', dir), fontWeight: 700 }}>
+            <RichMathText text={row.label} />
+          </span>
+          <span style={{ ...textStyle('small', dir), color: COLORS.charcoal }}>
+            : <RichMathText text={row.other} />
+          </span>
         </div>
       )
     case 'source':
@@ -904,11 +1252,11 @@ function RenderRow({
             gap: 4,
           }}
         >
-          <div style={{ ...textStyle('small', dir), fontWeight: 700 }}>
-            {labels.q} {row.front}
+          <div style={{ ...textStyle('small', dir), fontWeight: 700, textAlign: 'justify' }}>
+            {labels.q} <RichMathText text={row.front} />
           </div>
-          <div style={{ ...textStyle('small', dir) }}>
-            {labels.a} {row.back}
+          <div style={{ ...textStyle('small', dir), textAlign: 'justify' }}>
+            {labels.a} <RichMathText text={row.back} />
           </div>
         </div>
       )
@@ -935,6 +1283,7 @@ export function FlowUnitView({
   continued?: boolean
 }) {
   if (unit.kind === 'chapter') {
+    const chapterShadow = dir === 'rtl' ? `-4px 4px 0 ${COLORS.ink}` : SHADOW.chapter
     return (
       <div
         dir={dir}
@@ -942,7 +1291,9 @@ export function FlowUnitView({
           boxSizing: 'border-box',
           margin: 0,
           paddingTop: atTop ? 0 : PAD.chapterTop,
-          paddingBottom: PAD.chapterBottom,
+          paddingBottom: PAD.chapterBottom + 4,
+          paddingRight: dir === 'ltr' ? 4 : 0,
+          paddingLeft: dir === 'rtl' ? 4 : 0,
         }}
       >
         <div
@@ -954,7 +1305,7 @@ export function FlowUnitView({
             background: COLORS.white,
             border: BORDER,
             borderRadius: RADIUS.card,
-            boxShadow: SHADOW.chapter,
+            boxShadow: chapterShadow,
             overflow: 'hidden',
           }}
         >
@@ -1008,9 +1359,10 @@ export function FlowUnitView({
                   ...textStyle('detail', unit.dir),
                   color: COLORS.charcoal,
                   marginTop: 4,
+                  textAlign: 'justify',
                 }}
               >
-                {unit.summary}
+                <RichMathText text={unit.summary} />
               </div>
             )}
           </div>
@@ -1093,20 +1445,22 @@ export function FlowUnitView({
               ...textStyle('summary', unit.dir),
               color: COLORS.charcoal,
               paddingTop: 6,
+              textAlign: 'justify',
             }}
           >
-            {unit.summary}
+            <RichMathText text={unit.summary} />
           </div>
         )}
       </div>
     )
   }
 
-  // Block unit
+  // Block unit (aligned flush left and right with shadow clearance inside body width)
   const totalRows = unit.rows.length
   const to = rowTo ?? totalRows
   const visibleRows = unit.rows.slice(rowFrom, to)
   const IconComponent = unit.type ? TYPE_ICON[unit.type] : null
+  const blockShadow = dir === 'rtl' ? `-2px 2px 0 ${COLORS.ink}` : SHADOW.card
 
   return (
     <div
@@ -1115,8 +1469,10 @@ export function FlowUnitView({
         boxSizing: 'border-box',
         margin: 0,
         direction: dir,
-        paddingInlineStart: unit.relDepth * PAD.blockIndent,
-        paddingBottom: PAD.blockBottom,
+        paddingInlineStart: 0,
+        paddingRight: dir === 'ltr' ? 2 : 0,
+        paddingLeft: dir === 'rtl' ? 2 : 0,
+        paddingBottom: PAD.blockBottom + 2,
       }}
     >
       <div
@@ -1129,7 +1485,7 @@ export function FlowUnitView({
           background: COLORS.white,
           border: BORDER,
           borderRadius: RADIUS.card,
-          boxShadow: SHADOW.card,
+          boxShadow: blockShadow,
           overflow: 'hidden',
         }}
       >
@@ -1305,6 +1661,7 @@ export function CardTileView({
   labels: StudyLabels
   width: number
 }) {
+  const tileShadow = tile.dir === 'rtl' ? `-2px 2px 0 ${COLORS.ink}` : SHADOW.card
   return (
     <div
       dir={tile.dir}
@@ -1315,7 +1672,7 @@ export function CardTileView({
         background: COLORS.white,
         border: BORDER,
         borderRadius: RADIUS.card,
-        boxShadow: SHADOW.card,
+        boxShadow: tileShadow,
         overflow: 'hidden',
         direction: tile.dir,
       }}
@@ -1369,7 +1726,7 @@ export function CardTileView({
       >
         {mode === 'full' && (
           <>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}>
               <span
                 style={{
                   fontFamily: FONT_MONO,
@@ -1381,12 +1738,21 @@ export function CardTileView({
                   background: COLORS.ink,
                   color: COLORS.mintFrost,
                   flexShrink: 0,
+                  marginTop: 2,
                 }}
               >
                 {labels.q}
               </span>
-              <span style={{ ...textStyle('summary', tile.dir), fontWeight: 700 }}>
-                {tile.front}
+              <span
+                style={{
+                  ...textStyle('summary', tile.dir),
+                  fontWeight: 700,
+                  flex: 1,
+                  minWidth: 0,
+                  textAlign: 'justify',
+                }}
+              >
+                <RichMathText text={tile.front} />
               </span>
             </div>
             <div
@@ -1396,7 +1762,7 @@ export function CardTileView({
                 borderTop: `2px dashed ${COLORS.charcoal}`,
                 paddingTop: 6,
                 display: 'flex',
-                alignItems: 'center',
+                alignItems: 'flex-start',
                 gap: 6,
               }}
             >
@@ -1411,17 +1777,27 @@ export function CardTileView({
                   background: COLORS.cyanGlow,
                   color: COLORS.ink,
                   flexShrink: 0,
+                  marginTop: 2,
                 }}
               >
                 {labels.a}
               </span>
-              <span style={{ ...textStyle('detail', tile.dir) }}>{tile.back}</span>
+              <span
+                style={{
+                  ...textStyle('detail', tile.dir),
+                  flex: 1,
+                  minWidth: 0,
+                  textAlign: 'justify',
+                }}
+              >
+                <RichMathText text={tile.back} />
+              </span>
             </div>
           </>
         )}
 
         {mode === 'front' && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}>
             <span
               style={{
                 fontFamily: FONT_MONO,
@@ -1433,16 +1809,27 @@ export function CardTileView({
                 background: COLORS.ink,
                 color: COLORS.mintFrost,
                 flexShrink: 0,
+                marginTop: 2,
               }}
             >
               {labels.q}
             </span>
-            <span style={{ ...textStyle('summary', tile.dir), fontWeight: 700 }}>{tile.front}</span>
+            <span
+              style={{
+                ...textStyle('summary', tile.dir),
+                fontWeight: 700,
+                flex: 1,
+                minWidth: 0,
+                textAlign: 'justify',
+              }}
+            >
+              <RichMathText text={tile.front} />
+            </span>
           </div>
         )}
 
         {mode === 'answer' && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}>
             <span
               style={{
                 fontFamily: FONT_MONO,
@@ -1454,11 +1841,21 @@ export function CardTileView({
                 background: COLORS.cyanGlow,
                 color: COLORS.ink,
                 flexShrink: 0,
+                marginTop: 2,
               }}
             >
               {labels.a}
             </span>
-            <span style={{ ...textStyle('detail', tile.dir) }}>{tile.back}</span>
+            <span
+              style={{
+                ...textStyle('detail', tile.dir),
+                flex: 1,
+                minWidth: 0,
+                textAlign: 'justify',
+              }}
+            >
+              <RichMathText text={tile.back} />
+            </span>
           </div>
         )}
       </div>
@@ -1488,7 +1885,9 @@ export function CardRowView({
         display: 'flex',
         flexDirection: 'row',
         gap: PAD.cardGap,
-        paddingBottom: PAD.cardRowBottom,
+        paddingBottom: PAD.cardRowBottom + 2,
+        paddingRight: dir === 'ltr' ? 2 : 0,
+        paddingLeft: dir === 'rtl' ? 2 : 0,
         direction: dir,
       }}
     >

@@ -1,22 +1,42 @@
-import { useLayoutEffect, useRef } from 'react'
+import { Fragment, useLayoutEffect, useRef } from 'react'
 import katex from 'katex'
 import 'katex/dist/katex.min.css'
 import { cn } from '@/lib/cn'
+import { splitInlineMath } from './inlineMath'
 
 /**
  * Makes AI-written LaTeX read like a textbook equation (only for display; stored text is kept):
  * - word subscripts and superscripts are upright text, not a product of italic letters:
- *   θ_{dark} → θ_{\mathrm{dark}}, I_{max} → I_{\mathrm{max}} (single letters stay italic,
- *   they are variables);
- * - function names written without a backslash are typeset as functions: sin x → \sin x.
+ *   θ_{dark} → θ_{\mathrm{dark}}, E_rms → E_{\mathrm{rms}}, I_{max} → I_{\mathrm{max}};
+ * - function names written without a backslash are typeset as functions: sin x → \sin x,
+ *   arctan x → \arctan x.
  */
 export function standardLatex(latex: string): string {
-  return latex
+  const protectedSpans: string[] = []
+  const protectedLatex = latex.replace(/\\(?:text|mathrm|mathbf|mathit)\{[^{}]*\}/g, (m) => {
+    const idx = protectedSpans.length
+    protectedSpans.push(m)
+    return `\uE000${idx}\uE001`
+  })
+
+  const normalized = protectedLatex
+    .replace(
+      /([_^])([A-Za-z]{2,})(?![A-Za-z{])/g,
+      (_m, mark: string, word: string) => `${mark}{\\mathrm{${word}}}`,
+    )
     .replace(
       /([_^])\{([A-Za-z]{2,}(?:\s+[A-Za-z]+)*)\}/g,
       (_m, mark: string, word: string) => `${mark}{\\mathrm{${word}}}`,
     )
-    .replace(/(^|[^\\A-Za-z])(sin|cos|tan|cot|sec|csc|log|ln|exp)(?![A-Za-z])/g, '$1\\$2')
+    .replace(
+      /(^|[^\\A-Za-z])(arcsin|arccos|arctan|sinh|cosh|tanh|sin|cos|tan|cot|sec|csc|log|ln|exp)(?![A-Za-z])/g,
+      '$1\\$2',
+    )
+
+  return normalized.replace(/\uE000(\d+)\uE001/g, (_m, idxStr: string) => {
+    const idx = Number(idxStr)
+    return protectedSpans[idx] ?? ''
+  })
 }
 
 /**
@@ -58,5 +78,35 @@ export function MathFormula({
   }, [latex, display])
 
   // Formulas read left to right in every language.
-  return <span ref={ref} dir="ltr" className={cn('mynota-math', className)} />
+  return (
+    <span
+      ref={ref}
+      dir="ltr"
+      style={display ? undefined : { unicodeBidi: 'isolate' }}
+      className={cn('mynota-math', !display && 'mynota-math-inline', className)}
+    />
+  )
 }
+
+/**
+ * Renders prose containing delimited ($...$, \(...\)) or bare LaTeX expressions
+ * (\vec{S}, \mu_0, \frac{1}{\sqrt{LC}}, u_E, theta_B) with inline KaTeX math.
+ */
+export function RichMathText({ text, className }: { text: string; className?: string }) {
+  const segments = splitInlineMath(text)
+  if (segments.length === 0) return null
+  if (segments.length === 1 && segments[0]?.kind === 'text') {
+    return className ? <span className={className}>{segments[0].text}</span> : <>{segments[0].text}</>
+  }
+
+  const content = segments.map((seg, idx) =>
+    seg.kind === 'math' ? (
+      <MathFormula key={idx} latex={seg.latex} display={false} />
+    ) : (
+      <Fragment key={idx}>{seg.text}</Fragment>
+    ),
+  )
+
+  return className ? <span className={className}>{content}</span> : <>{content}</>
+}
+

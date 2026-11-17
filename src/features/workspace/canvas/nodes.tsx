@@ -15,7 +15,7 @@ import {
 import { Link } from 'react-router'
 import { useTranslation } from 'react-i18next'
 import { Spinner } from '@/components/ui'
-import { MathFormula } from '@/components/ui/MathFormula'
+import { MathFormula, RichMathText } from '@/components/ui/MathFormula'
 import { useKeyFor } from '@/features/settings/aiKeyStore'
 import { useDeck } from '@/features/study/deckStore'
 import { masteryMapFor, type Mastery } from '@/features/study/mastery'
@@ -331,7 +331,7 @@ export function SectionNode({ data, selected }: NodeProps<SectionNodeT>) {
         </span>
         {node.summary && (
           <span dir="auto" className="zt-body text-ink-muted">
-            {node.summary}
+            <RichMathText text={node.summary} />
           </span>
         )}
         <span className="zt-small font-semibold text-ink-muted">
@@ -511,15 +511,15 @@ export function BlockNode({ data, selected }: NodeProps<BlockNodeT>) {
           dir="auto"
           className={cn('text-[12.5px] leading-4 text-ink-muted', CLAMP[card.summaryLines])}
         >
-          {node.summary}
+          <RichMathText text={node.summary} />
         </p>
       )}
       {open && (
         <div className="mynota-reveal nowheel flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto pe-0.5">
           <DetailList details={node.details.filter((d) => d.kind === 'formula')} compact />
           {node.summary && (
-            <p dir="auto" className="text-[12.5px] leading-4 text-ink-muted">
-              {node.summary}
+            <p dir="auto" className="text-justify text-[12.5px] leading-4 text-ink-muted">
+              <RichMathText text={node.summary} />
             </p>
           )}
           <DetailList details={node.details.filter((d) => d.kind !== 'formula')} compact />
