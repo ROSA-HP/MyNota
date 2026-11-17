@@ -116,4 +116,49 @@ describe('inline math tokenizer and RichMathText', () => {
     expect(container.textContent).not.toContain('\\vec{S}')
     expect(container.textContent).not.toContain('\\mu_0')
   })
+
+  it('handles Unicode subscripts/superscripts, Delta expressions, and legend variables cleanly', () => {
+    const samples = [
+      'I = E_rms² / (c μ₀)',
+      'I = P_s / (4π r²)',
+      'Δp = 2ΔU / c',
+      'I = I_0 cos² θ',
+    ]
+    for (const s of samples) {
+      const segs = splitInlineMath(s)
+      const mathRuns = segs.filter((seg) => seg.kind === 'math')
+      expect(mathRuns).toHaveLength(1)
+      expect(segs).toEqual([mathRuns[0]])
+      expect(() =>
+        katex.renderToString(standardLatex(mathRuns[0]!.latex), {
+          displayMode: false,
+          throwOnError: true,
+        }),
+      ).not.toThrow()
+    }
+
+    const legend =
+      'I = wave intensity; P_s = power of source; r = radial distance; \\omega = angular frequency; L = inductance; C = capacitance'
+    const legendSegs = splitInlineMath(legend, { legend: true })
+    const legendMath = legendSegs.filter((s) => s.kind === 'math').map((s) => s.latex)
+    expect(legendMath).toEqual(['I', 'P_s', 'r', '\\omega', 'L', 'C'])
+
+    const { container } = render(
+      <RichMathText text="u_B = magnetic energy density; \\mu_0 = permeability constant; B = magnetic field" legend />,
+    )
+    expect(container.querySelectorAll('.katex').length).toBe(3)
+    expect(container.textContent).not.toContain('\\mu_0')
+  })
+
+  it('repairs JSON-mangled control characters before known LaTeX commands without hurting prose', () => {
+    const mangled = 'Poynting vector \u000bec{S} uses \\mu_0 and \theta_B = 90°;\nNext sentence.'
+    const segs = splitInlineMath(mangled)
+    expect(segs.some((s) => s.kind === 'math' && s.latex === '\\vec{S}')).toBe(true)
+    expect(segs.some((s) => s.kind === 'math' && s.latex.includes('\\theta_B'))).toBe(true)
+    expect(segs.some((s) => s.kind === 'text' && s.text.includes('\nNext sentence.'))).toBe(true)
+
+    expect(splitInlineMath('Measured in (W/m²).')).toEqual([
+      { kind: 'text', text: 'Measured in (W/m²).' },
+    ])
+  })
 })

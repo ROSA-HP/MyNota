@@ -7,10 +7,12 @@ import {
   BORDER,
   CHAPTER_FILL,
   COLORS,
+  COVER_SHADOW_GUTTER,
   FONT_MONO,
   PAD,
   RADIUS,
   SHADOW,
+  SHADOW_GUTTER,
   TEXT,
   fontFor,
   mmToPx,
@@ -90,8 +92,8 @@ export function ContentPage({
           boxSizing: 'border-box',
           margin: 0,
           position: 'absolute',
-          left: body.x,
-          width: body.w,
+          left: dir === 'ltr' ? body.x : body.x + SHADOW_GUTTER,
+          width: body.w - SHADOW_GUTTER,
           top: mmToPx(10),
           height: mmToPx(8),
           display: 'flex',
@@ -189,8 +191,8 @@ export function ContentPage({
           boxSizing: 'border-box',
           margin: 0,
           position: 'absolute',
-          left: body.x,
-          width: body.w,
+          left: dir === 'ltr' ? body.x : body.x + SHADOW_GUTTER,
+          width: body.w - SHADOW_GUTTER,
           bottom: mmToPx(10),
           height: mmToPx(8),
           display: 'flex',
@@ -265,8 +267,20 @@ export function CoverPage({
         : moreLabel)
     : null
   const coverShadow = dir === 'rtl' ? `-6px 6px 0 ${COLORS.ink}` : SHADOW.cover
-  const chapterShadow = dir === 'rtl' ? `-4px 4px 0 ${COLORS.ink}` : SHADOW.chapter
   const cardShadow = dir === 'rtl' ? `-2px 2px 0 ${COLORS.ink}` : SHADOW.card
+
+  const totalVisibleSections = visibleOutline.reduce(
+    (sum, ch) => sum + Math.min(ch.sections.length, maxSections),
+    0,
+  )
+  const isCompactOutline = !isLandscape && visibleOutline.length <= 3 && totalVisibleSections <= 8
+  const coverGutter = (style?: React.CSSProperties): React.CSSProperties => ({
+    boxSizing: 'border-box',
+    margin: 0,
+    paddingRight: dir === 'ltr' ? COVER_SHADOW_GUTTER : 0,
+    paddingLeft: dir === 'rtl' ? COVER_SHADOW_GUTTER : 0,
+    ...style,
+  })
 
   return (
     <PageShell w={size.w} h={size.h} tone={tone} dir={dir}>
@@ -284,43 +298,44 @@ export function CoverPage({
           gap: isLandscape ? 12 : 18,
         }}
       >
-        {/* Top bar (flush left to right) */}
-        <div
-          style={{
-            boxSizing: 'border-box',
-            margin: 0,
-            display: 'flex',
-            flexDirection: 'row',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            paddingBottom: 12,
-            borderBottom: BORDER,
-            flexShrink: 0,
-          }}
-        >
+        {/* Top bar (flush left to right with hero and outline borders) */}
+        <div style={coverGutter({ flexShrink: 0 })}>
           <div
             style={{
               boxSizing: 'border-box',
               margin: 0,
-              background: COLORS.white,
-              border: BORDER,
-              borderRadius: RADIUS.pill,
-              padding: '4px 12px',
-              ...textStyle('monoSmall', dir),
-              boxShadow: cardShadow,
+              display: 'flex',
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              paddingBottom: 12,
+              borderBottom: BORDER,
             }}
           >
-            MyNota
-          </div>
+            <div
+              style={{
+                boxSizing: 'border-box',
+                margin: 0,
+                background: COLORS.white,
+                border: BORDER,
+                borderRadius: RADIUS.pill,
+                padding: '4px 12px',
+                ...textStyle('monoSmall', dir),
+                boxShadow: cardShadow,
+              }}
+            >
+              MyNota
+            </div>
 
-          <span
-            style={{
-              ...textStyle('monoSmall', dir),
-              color: COLORS.surgicalTeal,
-            }}
-          >
-            {kindLabel} · {stickerLabel}
-          </span>
+            <span
+              style={{
+                ...textStyle('monoSmall', dir),
+                color: COLORS.surgicalTeal,
+              }}
+            >
+              {kindLabel} · {stickerLabel}
+            </span>
+          </div>
         </div>
 
         {/* Main Hero & Outline */}
@@ -489,13 +504,10 @@ export function CoverPage({
           {hasOutline ? (
             <div
               style={{
-                boxSizing: 'border-box',
-                margin: 0,
+                ...coverGutter(),
                 flex: 1,
                 minHeight: 0,
-                paddingRight: dir === 'ltr' ? 4 : 0,
-                paddingLeft: dir === 'rtl' ? 4 : 0,
-                paddingBottom: 4,
+                paddingBottom: 6,
                 display: 'flex',
                 flexDirection: 'column',
               }}
@@ -509,7 +521,7 @@ export function CoverPage({
                   background: COLORS.white,
                   border: BORDER,
                   borderRadius: RADIUS.card,
-                  boxShadow: chapterShadow,
+                  boxShadow: coverShadow,
                   display: 'flex',
                   flexDirection: 'column',
                   overflow: 'hidden',
@@ -540,10 +552,11 @@ export function CoverPage({
                     margin: 0,
                     flex: 1,
                     minHeight: 0,
-                    padding: isLandscape ? '12px 16px' : '16px 18px',
+                    padding: isLandscape ? '12px 16px' : isCompactOutline ? '20px 22px' : '16px 18px',
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: isLandscape ? 8 : 14,
+                    justifyContent: isCompactOutline ? 'space-between' : 'flex-start',
+                    gap: isLandscape ? 8 : isCompactOutline ? 16 : 14,
                     overflow: 'hidden',
                   }}
                 >
@@ -554,9 +567,10 @@ export function CoverPage({
                       style={{
                         boxSizing: 'border-box',
                         margin: 0,
+                        flex: isCompactOutline && visibleOutline.length === 1 ? 1 : undefined,
                         display: 'flex',
                         flexDirection: 'column',
-                        gap: isLandscape ? 6 : 8,
+                        gap: isLandscape ? 6 : isCompactOutline ? 12 : 8,
                         paddingBottom:
                           cIdx < visibleOutline.length - 1 ? (isLandscape ? 8 : 12) : 0,
                         borderBottom:
@@ -610,18 +624,41 @@ export function CoverPage({
                         </div>
                       )}
 
+                      {isCompactOutline && ch.summary && (
+                        <div
+                          style={{
+                            boxSizing: 'border-box',
+                            margin: 0,
+                            ...textStyle('detail', ch.dir),
+                            color: COLORS.charcoal,
+                            textAlign: 'justify',
+                            textJustify: 'inter-word',
+                            paddingInlineStart: ch.number !== null ? 38 : 0,
+                          }}
+                        >
+                          <RichMathText text={clip(ch.summary, 220)} />
+                        </div>
+                      )}
+
                       {ch.sections.length > 0 && (
                         <div
                           style={{
                             boxSizing: 'border-box',
                             margin: 0,
+                            flex: isCompactOutline && visibleOutline.length === 1 ? 1 : undefined,
                             display: 'grid',
-                            gridTemplateColumns:
-                              ch.sections.length > 6 || (isLandscape && ch.sections.length > 2)
+                            gridTemplateColumns: isCompactOutline
+                              ? 'minmax(0, 1fr)'
+                              : ch.sections.length > 6 || (isLandscape && ch.sections.length > 2)
                                 ? 'repeat(2, minmax(0, 1fr))'
                                 : 'minmax(0, 1fr)',
-                            gap: isLandscape ? '6px 14px' : '8px 14px',
-                            paddingInlineStart: ch.number !== null ? 38 : 0,
+                            alignContent:
+                              isCompactOutline && visibleOutline.length === 1
+                                ? 'space-evenly'
+                                : 'start',
+                            gap: isLandscape ? '6px 14px' : isCompactOutline ? '10px 14px' : '8px 14px',
+                            paddingInlineStart:
+                              ch.number !== null && !isCompactOutline ? 38 : 0,
                           }}
                         >
                           {ch.sections.slice(0, maxSections).map((sec, sIdx) => (
@@ -632,41 +669,78 @@ export function CoverPage({
                                 boxSizing: 'border-box',
                                 margin: 0,
                                 display: 'flex',
-                                flexDirection: 'row',
-                                alignItems: 'center',
-                                gap: 8,
+                                flexDirection: 'column',
+                                gap: isCompactOutline ? 4 : 0,
+                                padding: isCompactOutline ? '10px 12px' : 0,
+                                borderRadius: isCompactOutline ? RADIUS.tile : 0,
+                                border: isCompactOutline
+                                  ? `1.5px solid ${COLORS.ink}`
+                                  : undefined,
+                                background: isCompactOutline ? COLORS.mintFrost : undefined,
                                 minWidth: 0,
                               }}
                             >
-                              <span
+                              <div
                                 style={{
                                   boxSizing: 'border-box',
                                   margin: 0,
-                                  fontFamily: FONT_MONO,
-                                  fontSize: 10,
-                                  lineHeight: '14px',
-                                  fontWeight: 700,
-                                  direction: 'ltr',
-                                  background: CHAPTER_FILL[ch.color],
-                                  border: BORDER,
-                                  borderRadius: RADIUS.pill,
-                                  padding: '1px 8px',
-                                  flexShrink: 0,
-                                }}
-                              >
-                                {sec.label}
-                              </span>
-                              <span
-                                style={{
-                                  ...textStyle('detail', sec.dir),
+                                  display: 'flex',
+                                  flexDirection: 'row',
+                                  alignItems: isCompactOutline ? 'flex-start' : 'center',
+                                  gap: 8,
                                   minWidth: 0,
-                                  overflow: 'hidden',
-                                  textOverflow: 'ellipsis',
-                                  whiteSpace: 'nowrap',
                                 }}
                               >
-                                {sec.title}
-                              </span>
+                                <span
+                                  style={{
+                                    boxSizing: 'border-box',
+                                    margin: 0,
+                                    fontFamily: FONT_MONO,
+                                    fontSize: 10,
+                                    lineHeight: '14px',
+                                    fontWeight: 700,
+                                    direction: 'ltr',
+                                    background: CHAPTER_FILL[ch.color],
+                                    border: BORDER,
+                                    borderRadius: RADIUS.pill,
+                                    padding: '1px 8px',
+                                    flexShrink: 0,
+                                    marginTop: isCompactOutline ? 1 : 0,
+                                  }}
+                                >
+                                  {sec.label}
+                                </span>
+                                <span
+                                  style={{
+                                    ...textStyle(isCompactOutline ? 'blockTitle' : 'detail', sec.dir),
+                                    minWidth: 0,
+                                    ...(isCompactOutline
+                                      ? { overflowWrap: 'anywhere' }
+                                      : {
+                                          overflow: 'hidden',
+                                          textOverflow: 'ellipsis',
+                                          whiteSpace: 'nowrap',
+                                        }),
+                                  }}
+                                >
+                                  {sec.title}
+                                </span>
+                              </div>
+                              {isCompactOutline && sec.summary && (
+                                <div
+                                  style={{
+                                    boxSizing: 'border-box',
+                                    margin: 0,
+                                    ...textStyle('small', sec.dir),
+                                    color: COLORS.charcoal,
+                                    textAlign: 'justify',
+                                    textJustify: 'inter-word',
+                                    paddingInlineStart: 36,
+                                  }}
+                                >
+                                  <RichMathText text={clip(sec.summary, 180)} />
+                                </div>
+                              )}
                             </div>
                           ))}
                         </div>
@@ -768,21 +842,22 @@ export function CoverPage({
         </div>
 
         {/* Bottom Footer Strip */}
-        <div
-          style={{
-            boxSizing: 'border-box',
-            margin: 0,
-            paddingTop: 10,
-            borderTop: BORDER,
-            display: 'flex',
-            flexDirection: 'row',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            flexShrink: 0,
-          }}
-        >
-          <span style={{ ...textStyle('footer', dir), color: COLORS.charcoal }}>{madeWith}</span>
-          <span style={{ ...textStyle('footer', dir), color: COLORS.charcoal }}>MyNota</span>
+        <div style={coverGutter({ flexShrink: 0 })}>
+          <div
+            style={{
+              boxSizing: 'border-box',
+              margin: 0,
+              paddingTop: 10,
+              borderTop: BORDER,
+              display: 'flex',
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}
+          >
+            <span style={{ ...textStyle('footer', dir), color: COLORS.charcoal }}>{madeWith}</span>
+            <span style={{ ...textStyle('footer', dir), color: COLORS.charcoal }}>MyNota</span>
+          </div>
         </div>
       </div>
     </PageShell>
@@ -865,6 +940,8 @@ export function TocPage({
               height: isChapter ? 32 : 26,
               overflow: 'hidden',
               paddingInlineStart: isChapter ? 0 : 36,
+              paddingRight: dir === 'ltr' ? SHADOW_GUTTER : 0,
+              paddingLeft: dir === 'rtl' ? SHADOW_GUTTER : 0,
             }}
           >
             {isChapter ? (
@@ -1010,12 +1087,13 @@ export function FormulaBox({
             margin: 0,
             marginTop: 6,
             textAlign: 'justify',
+            textJustify: 'inter-word',
             direction: dir,
             ...textStyle('small', dir),
             color: COLORS.charcoal,
           }}
         >
-          <RichMathText text={variables} />
+          <RichMathText text={variables} legend />
         </div>
       )}
     </div>
@@ -1041,6 +1119,7 @@ function RenderRow({
             ...textStyle('summary', dir),
             color: COLORS.ink,
             textAlign: 'justify',
+            textJustify: 'inter-word',
           }}
         >
           <RichMathText text={row.text} />
@@ -1057,6 +1136,7 @@ function RenderRow({
                 margin: 0,
                 ...textStyle('detail', dir),
                 textAlign: 'justify',
+                textJustify: 'inter-word',
               }}
             >
               <RichMathText text={d.text} />
@@ -1094,6 +1174,7 @@ function RenderRow({
                   minWidth: 0,
                   ...textStyle('detail', dir),
                   textAlign: 'justify',
+                  textJustify: 'inter-word',
                 }}
               >
                 <RichMathText text={d.text} />
@@ -1116,6 +1197,7 @@ function RenderRow({
                   margin: 0,
                   ...textStyle('detail', dir),
                   textAlign: 'justify',
+                  textJustify: 'inter-word',
                 }}
               >
                 <RichMathText text={d.text} />
@@ -1129,6 +1211,7 @@ function RenderRow({
                     color: COLORS.charcoal,
                     marginTop: 2,
                     textAlign: 'justify',
+                    textJustify: 'inter-word',
                   }}
                 >
                   <RichMathText text={d.translation} />
@@ -1144,6 +1227,7 @@ function RenderRow({
                 margin: 0,
                 ...textStyle('detail', dir),
                 textAlign: 'justify',
+                textJustify: 'inter-word',
               }}
             >
               {splitCloze(d.text).map((seg, idx) => (
@@ -1164,6 +1248,7 @@ function RenderRow({
                 margin: 0,
                 ...textStyle('detail', dir),
                 textAlign: 'justify',
+                textJustify: 'inter-word',
               }}
             >
               <span style={{ fontWeight: 700 }}>
@@ -1215,6 +1300,7 @@ function RenderRow({
                     flex: 1,
                     minWidth: 0,
                     textAlign: 'justify',
+                    textJustify: 'inter-word',
                   }}
                 >
                   <RichMathText text={d.front} />
@@ -1243,6 +1329,7 @@ function RenderRow({
                     flex: 1,
                     minWidth: 0,
                     textAlign: 'justify',
+                    textJustify: 'inter-word',
                   }}
                 >
                   <RichMathText text={d.back} />
@@ -1265,14 +1352,24 @@ function RenderRow({
             alignItems: 'baseline',
           }}
         >
-          <span style={{ fontFamily: FONT_MONO, fontSize: 11, fontWeight: 700 }}>
+          <span style={{ fontFamily: FONT_MONO, fontSize: 11, fontWeight: 700, flexShrink: 0 }}>
             {arrowFor(row.outgoing, dir)}
           </span>
-          <span style={{ ...textStyle('small', dir), fontWeight: 700 }}>
-            <RichMathText text={row.label} />
-          </span>
-          <span style={{ ...textStyle('small', dir), color: COLORS.charcoal }}>
-            : <RichMathText text={row.other} />
+          <span
+            style={{
+              ...textStyle('small', dir),
+              flex: 1,
+              minWidth: 0,
+              textAlign: 'justify',
+              textJustify: 'inter-word',
+            }}
+          >
+            <span style={{ fontWeight: 700 }}>
+              <RichMathText text={row.label} />
+            </span>
+            <span style={{ color: COLORS.charcoal }}>
+              : <RichMathText text={row.other} />
+            </span>
           </span>
         </div>
       )
@@ -1319,10 +1416,17 @@ function RenderRow({
             gap: 4,
           }}
         >
-          <div style={{ ...textStyle('small', dir), fontWeight: 700, textAlign: 'justify' }}>
+          <div
+            style={{
+              ...textStyle('small', dir),
+              fontWeight: 700,
+              textAlign: 'justify',
+              textJustify: 'inter-word',
+            }}
+          >
             {labels.q} <RichMathText text={row.front} />
           </div>
-          <div style={{ ...textStyle('small', dir), textAlign: 'justify' }}>
+          <div style={{ ...textStyle('small', dir), textAlign: 'justify', textJustify: 'inter-word' }}>
             {labels.a} <RichMathText text={row.back} />
           </div>
         </div>
@@ -1427,6 +1531,7 @@ export function FlowUnitView({
                   color: COLORS.charcoal,
                   marginTop: 4,
                   textAlign: 'justify',
+                  textJustify: 'inter-word',
                 }}
               >
                 <RichMathText text={unit.summary} />
@@ -1447,6 +1552,8 @@ export function FlowUnitView({
           margin: 0,
           paddingTop: atTop ? 0 : PAD.sectionTop,
           paddingBottom: PAD.sectionBottom,
+          paddingRight: dir === 'ltr' ? SHADOW_GUTTER : 0,
+          paddingLeft: dir === 'rtl' ? SHADOW_GUTTER : 0,
         }}
       >
         <div
@@ -1513,6 +1620,7 @@ export function FlowUnitView({
               color: COLORS.charcoal,
               paddingTop: 6,
               textAlign: 'justify',
+              textJustify: 'inter-word',
             }}
           >
             <RichMathText text={unit.summary} />
@@ -1522,7 +1630,7 @@ export function FlowUnitView({
     )
   }
 
-  // Block unit (aligned flush left and right with shadow clearance inside body width)
+  // Block unit (aligned flush left and right to match chapter, section, header, and footer gutters)
   const totalRows = unit.rows.length
   const to = rowTo ?? totalRows
   const visibleRows = unit.rows.slice(rowFrom, to)
@@ -1537,8 +1645,8 @@ export function FlowUnitView({
         margin: 0,
         direction: dir,
         paddingInlineStart: 0,
-        paddingRight: dir === 'ltr' ? 2 : 0,
-        paddingLeft: dir === 'rtl' ? 2 : 0,
+        paddingRight: dir === 'ltr' ? SHADOW_GUTTER : 0,
+        paddingLeft: dir === 'rtl' ? SHADOW_GUTTER : 0,
         paddingBottom: PAD.blockBottom + 2,
       }}
     >
@@ -1817,6 +1925,7 @@ export function CardTileView({
                   flex: 1,
                   minWidth: 0,
                   textAlign: 'justify',
+                  textJustify: 'inter-word',
                 }}
               >
                 <RichMathText text={tile.front} />
@@ -1855,6 +1964,7 @@ export function CardTileView({
                   flex: 1,
                   minWidth: 0,
                   textAlign: 'justify',
+                  textJustify: 'inter-word',
                 }}
               >
                 <RichMathText text={tile.back} />
@@ -1888,6 +1998,7 @@ export function CardTileView({
                 flex: 1,
                 minWidth: 0,
                 textAlign: 'justify',
+                textJustify: 'inter-word',
               }}
             >
               <RichMathText text={tile.front} />
@@ -1919,6 +2030,7 @@ export function CardTileView({
                 flex: 1,
                 minWidth: 0,
                 textAlign: 'justify',
+                textJustify: 'inter-word',
               }}
             >
               <RichMathText text={tile.back} />
@@ -1953,8 +2065,8 @@ export function CardRowView({
         flexDirection: 'row',
         gap: PAD.cardGap,
         paddingBottom: PAD.cardRowBottom + 2,
-        paddingRight: dir === 'ltr' ? 2 : 0,
-        paddingLeft: dir === 'rtl' ? 2 : 0,
+        paddingRight: dir === 'ltr' ? SHADOW_GUTTER : 0,
+        paddingLeft: dir === 'rtl' ? SHADOW_GUTTER : 0,
         direction: dir,
       }}
     >
@@ -1977,12 +2089,12 @@ export function MapSlot({
       style={{
         boxSizing: 'border-box',
         margin: 0,
-        width: size.w - 4,
-        height: size.h - 4,
+        width: size.w - SHADOW_GUTTER,
+        height: size.h - SHADOW_GUTTER,
         background: COLORS.white,
         border: BORDER,
         borderRadius: RADIUS.big,
-        boxShadow: `4px 4px 0 ${COLORS.ink}`,
+        boxShadow: SHADOW.chapter,
         padding: 10,
         display: 'flex',
         flexDirection: 'column',

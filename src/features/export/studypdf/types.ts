@@ -124,9 +124,10 @@ export interface TocEntry {
 export interface CoverOutlineChapter {
   number: number | null
   title: string
+  summary?: string
   color: ChapterColor
   dir: 'ltr' | 'rtl'
-  sections: Array<{ label: string; title: string; dir: 'ltr' | 'rtl' }>
+  sections: Array<{ label: string; title: string; summary?: string; dir: 'ltr' | 'rtl' }>
 }
 
 export interface StudyDoc {

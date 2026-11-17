@@ -1,6 +1,7 @@
 import type { AiBlock, AiDetail, DetailsResponse } from '../schemas/details'
 import { LIMITS } from '../schemas/common'
 import type { Paragraph } from '../prompts/shared'
+import { fixInlineLatex } from '@/lib/fixInlineLatex'
 
 /**
  * Formulas must never get lost between the source and the map (2026-11-01: the owner found
@@ -571,6 +572,29 @@ function oneHomePerFormula(res: DetailsResponse, sources: SourceFormula[]): Deta
  * Added links are labelled with the formula itself in plain symbols (or its block's title when
  * the formula is long), so the arrow says what it carries.
  */
+function cleanDetailLatex(d: AiDetail): AiDetail {
+  switch (d.kind) {
+    case 'formula':
+      return {
+        ...d,
+        text: fixLatex(d.text),
+        ...(d.extra ? { extra: fixInlineLatex(d.extra) } : {}),
+      }
+    case 'bullet':
+    case 'text':
+    case 'cloze':
+      return { ...d, text: fixInlineLatex(d.text) }
+    case 'example':
+    case 'vocab':
+    case 'question':
+      return {
+        ...d,
+        text: fixInlineLatex(d.text),
+        ...(d.extra ? { extra: fixInlineLatex(d.extra) } : {}),
+      }
+  }
+}
+
 export function ensureFormulas(
   res: DetailsResponse,
   paragraphs: readonly Paragraph[],
@@ -578,13 +602,9 @@ export function ensureFormulas(
   const sources = sourceFormulas(paragraphs)
   let blocks = res.blocks.map((b) => ({
     ...b,
-    details: formulasFirst(
-      b.details.map((d) =>
-        d.kind === 'formula'
-          ? { ...d, text: fixLatex(d.text), ...(d.extra ? { extra: fixLatex(d.extra) } : {}) }
-          : d,
-      ),
-    ),
+    title: fixInlineLatex(b.title),
+    summary: fixInlineLatex(b.summary),
+    details: formulasFirst(b.details.map(cleanDetailLatex)),
   }))
 
   const known = () => blocks.flatMap(formulasOf)

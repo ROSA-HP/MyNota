@@ -4,6 +4,7 @@ import type {
   BlockUnit,
   CardTile,
   ChapterUnit,
+  CoverOutlineChapter,
   FlowUnit,
   SectionUnit,
   StudyDoc,
@@ -283,29 +284,25 @@ export function buildStudyDoc(input: {
     .filter((u): u is ChapterUnit => u.kind === 'chapter')
     .map((c) => ({ number: c.number, title: c.title, color: c.color }))
 
-  const coverOutline: Array<{
-    number: number | null
-    title: string
-    color: ChapterUnit['color']
-    dir: 'ltr' | 'rtl'
-    sections: Array<{ label: string; title: string; dir: 'ltr' | 'rtl' }>
-  }> = []
+  const coverOutline: CoverOutlineChapter[] = []
 
   if (flow.length > 0) {
-    let standaloneGroup: (typeof coverOutline)[number] | null = null
+    let standaloneGroup: CoverOutlineChapter | null = null
     for (const u of flow) {
       if (u.kind === 'chapter') {
         coverOutline.push({
           number: u.number,
           title: u.title,
+          summary: u.summary,
           color: u.color,
           dir: u.dir,
           sections: [],
         })
       } else if (u.kind === 'section') {
         const lastChapter = coverOutline[coverOutline.length - 1]
+        const secEntry = { label: u.label, title: u.title, summary: u.summary, dir: u.dir }
         if (lastChapter && lastChapter.number !== null) {
-          lastChapter.sections.push({ label: u.label, title: u.title, dir: u.dir })
+          lastChapter.sections.push(secEntry)
         } else {
           if (!standaloneGroup) {
             standaloneGroup = {
@@ -317,14 +314,14 @@ export function buildStudyDoc(input: {
             }
             coverOutline.push(standaloneGroup)
           }
-          standaloneGroup.sections.push({ label: u.label, title: u.title, dir: u.dir })
+          standaloneGroup.sections.push(secEntry)
         }
       }
     }
   } else {
     let chNo = 0
     let secNo = 0
-    let standaloneGroup: (typeof coverOutline)[number] | null = null
+    let standaloneGroup: CoverOutlineChapter | null = null
     for (const it of items) {
       if (it.level === 'chapter') {
         chNo++
@@ -332,6 +329,7 @@ export function buildStudyDoc(input: {
         coverOutline.push({
           number: chNo,
           title: it.title.trim() || '—',
+          summary: it.summary,
           color: it.color,
           dir: it.dir,
           sections: [],
@@ -340,8 +338,14 @@ export function buildStudyDoc(input: {
         secNo++
         const label = chNo > 0 ? `${chNo}.${secNo}` : String(secNo)
         const lastChapter = coverOutline[coverOutline.length - 1]
+        const secEntry = {
+          label,
+          title: it.title.trim() || '—',
+          summary: it.summary,
+          dir: it.dir,
+        }
         if (lastChapter && lastChapter.number !== null) {
-          lastChapter.sections.push({ label, title: it.title.trim() || '—', dir: it.dir })
+          lastChapter.sections.push(secEntry)
         } else {
           if (!standaloneGroup) {
             standaloneGroup = {
@@ -353,7 +357,7 @@ export function buildStudyDoc(input: {
             }
             coverOutline.push(standaloneGroup)
           }
-          standaloneGroup.sections.push({ label, title: it.title.trim() || '—', dir: it.dir })
+          standaloneGroup.sections.push(secEntry)
         }
       }
     }

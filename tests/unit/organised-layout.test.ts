@@ -122,4 +122,48 @@ describe('a small map', () => {
         )
       }
   })
+
+  it('lays out maps horizontally when horizontal mode is enabled for PDF capture', () => {
+    const { nodes } = notesMap(3, [8, 8, 8])
+    const L = computeLayout(nodes, { horizontal: true, pageRatio: 1.85, useSavedPositions: false })
+    expect(L.width).toBeGreaterThan(L.height)
+    expect(L.width / L.height).toBeGreaterThanOrEqual(1.25)
+
+    // Book with 3 chapters and sections inside
+    const bookRoot = makeNode({ map_id: MAP, level: 'book', title: 'Book' })
+    const bookNodes: NodeRow[] = [bookRoot]
+    for (let c = 0; c < 3; c++) {
+      const ch = makeNode({
+        map_id: MAP,
+        level: 'chapter',
+        title: `Chapter ${c + 1}`,
+        parent_id: bookRoot.id,
+        sort_order: c,
+      })
+      bookNodes.push(ch)
+      const sec = makeNode({
+        map_id: MAP,
+        level: 'section',
+        title: `Sec ${c + 1}`,
+        parent_id: ch.id,
+        sort_order: 0,
+      })
+      bookNodes.push(sec)
+      for (let b = 0; b < 5; b++) {
+        bookNodes.push(
+          makeNode({
+            map_id: MAP,
+            level: 'block',
+            title: `Block ${c + 1}.${b + 1}`,
+            summary: 'Short physics note.',
+            parent_id: sec.id,
+            sort_order: b,
+          }),
+        )
+      }
+    }
+    const B = computeLayout(bookNodes, { horizontal: true, pageRatio: 1.85, useSavedPositions: false })
+    expect(B.width).toBeGreaterThan(B.height)
+    expect(B.width / B.height).toBeGreaterThanOrEqual(1.25)
+  })
 })

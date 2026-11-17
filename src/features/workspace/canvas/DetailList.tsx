@@ -65,7 +65,7 @@ function DetailItem({ d, compact }: { d: DetailBlock; compact: boolean }) {
               )}
               dir="auto"
             >
-              <RichMathText text={d.variables} />
+              <RichMathText text={d.variables} legend />
             </p>
           )}
         </li>

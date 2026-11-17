@@ -1,6 +1,13 @@
+import { fixInlineLatex } from '@/lib/fixInlineLatex'
+
 export type InlineMathSegment =
   | { kind: 'text'; text: string }
   | { kind: 'math'; latex: string }
+
+export interface SplitInlineMathOptions {
+  /** Treat short leading LHS symbols in variable legends (`L = inductance; C = capacitance`) as math. */
+  legend?: boolean
+}
 
 const GREEK_WORDS = new Set([
   'alpha',
@@ -243,6 +250,9 @@ const UNICODE_SUB: Record<string, string> = {
   '₋': '-',
 }
 
+const UNI_SCRIPT_CHARS = /^[⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻ⁿ₀₁₂₃₄₅₆₇₈₉₊₋]+/
+const UNI_SUB_ONLY = /^[₀₁₂₃₄₅₆₇₈₉₊₋]+/
+
 function readBalanced(s: string, start: number, open: string, close: string): number {
   if (s[start] !== open) return -1
   let depth = 1
@@ -260,27 +270,42 @@ function readBalanced(s: string, start: number, open: string, close: string): nu
   return depth === 0 ? i : -1
 }
 
-function readScripts(s: string, start: number): number {
+function readScripts(s: string, start: number, allowDirectUnicode = false): number {
   let i = start
-  while (i < s.length && (s[i] === '_' || s[i] === '^')) {
-    const next = s[i + 1]
-    if (!next) break
-    if (next === '{') {
-      const end = readBalanced(s, i + 1, '{', '}')
-      if (end === -1) break
-      i = end
-      continue
+  let hadExplicitScript = false
+  while (i < s.length) {
+    const ch = s[i]
+    if (ch === '_' || ch === '^') {
+      const next = s[i + 1]
+      if (!next) break
+      if (next === '{') {
+        const end = readBalanced(s, i + 1, '{', '}')
+        if (end === -1) break
+        i = end
+        hadExplicitScript = true
+        continue
+      }
+      const rest = s.slice(i + 1)
+      const m = /^[A-Za-z0-9]+/.exec(rest)
+      if (m) {
+        i += 1 + m[0].length
+        hadExplicitScript = true
+        continue
+      }
+      if (next === '\\') {
+        const cmdEnd = readLatexAtom(s, i + 1)
+        if (cmdEnd !== -1) {
+          i = cmdEnd.end
+          hadExplicitScript = true
+          continue
+        }
+      }
+      break
     }
-    const rest = s.slice(i + 1)
-    const m = /^[A-Za-z0-9]+/.exec(rest)
-    if (m) {
-      i += 1 + m[0].length
-      continue
-    }
-    if (next === '\\') {
-      const cmdEnd = readLatexAtom(s, i + 1)
-      if (cmdEnd !== -1) {
-        i = cmdEnd.end
+    if (allowDirectUnicode || hadExplicitScript) {
+      const um = UNI_SCRIPT_CHARS.exec(s.slice(i))
+      if (um) {
+        i += um[0].length
         continue
       }
     }
@@ -324,7 +349,7 @@ function readLatexAtom(s: string, start: number): { end: number; command: string
     break
   }
 
-  i = readScripts(s, i)
+  i = readScripts(s, i, true)
   return { end: i, command }
 }
 
@@ -334,33 +359,49 @@ function isWordBoundaryBefore(s: string, i: number): boolean {
   return !/[A-Za-z0-9_\\]/.test(prev)
 }
 
-function readScriptedVar(s: string, start: number): number {
+function readScriptedVar(s: string, start: number, inEquation = false): number {
   if (!isWordBoundaryBefore(s, start)) return -1
-  const m = /^([A-Za-z][A-Za-z0-9]*|\d+(?:\.\d+)?)(?=[_^])/.exec(s.slice(start))
+  const m = /^([A-Za-z][A-Za-z0-9]*|\d+(?:\.\d+)?)(?=[_^]|[⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻ⁿ₀₁₂₃₄₅₆₇₈₉₊₋])/.exec(
+    s.slice(start),
+  )
   if (!m) return -1
   const stem = m[1] ?? ''
   const afterStem = start + stem.length
-  const end = readScripts(s, afterStem)
-  if (end <= afterStem) return -1
-
-  const scriptPart = s.slice(afterStem, end)
   const isDigitStem = /^\d/.test(stem)
   const isSingleLetter = stem.length === 1
   const isGreek = GREEK_WORDS.has(stem)
   const isFunc = FUNC_WORDS.has(stem)
+
+  const allowUnicodeDirect = inEquation || isFunc || isDigitStem || UNI_SUB_ONLY.test(s.slice(afterStem))
+  const end = readScripts(s, afterStem, allowUnicodeDirect)
+  if (end <= afterStem) return -1
+
+  const scriptPart = s.slice(afterStem, end)
   const hasCaret = scriptPart.includes('^')
   const hasBracedSub = /_\{/.test(scriptPart)
   const hasShortSub = /^_[A-Za-z0-9](?![A-Za-z0-9])/.test(scriptPart)
+  const hasUnicodeSub = UNI_SUB_ONLY.test(scriptPart)
+  const hasUnicodeInEq = inEquation && stem.length <= 2 && UNI_SCRIPT_CHARS.test(scriptPart)
 
-  if (!isDigitStem && !isSingleLetter && !isGreek && !isFunc && !hasCaret && !hasBracedSub && !hasShortSub) {
+  if (
+    !isDigitStem &&
+    !isSingleLetter &&
+    !isGreek &&
+    !isFunc &&
+    !hasCaret &&
+    !hasBracedSub &&
+    !hasShortSub &&
+    !hasUnicodeSub &&
+    !hasUnicodeInEq
+  ) {
     return -1
   }
 
-  // Include optional call parens such as cos^2(theta)
+  // Include optional call parens such as cos^2(theta) or cos²(theta)
   let finalEnd = end
   if (isFunc && s[finalEnd] === '(') {
     const parenEnd = readBalanced(s, finalEnd, '(', ')')
-    if (parenEnd !== -1) finalEnd = parenEnd
+    if (parenEnd !== -1) finalEnd = readScripts(s, parenEnd, inEquation)
   }
   return finalEnd
 }
@@ -375,10 +416,10 @@ function readFuncCall(s: string, start: number): number {
   const openIdx = start + m[0].length - 1
   const closeIdx = readBalanced(s, openIdx, '(', ')')
   if (closeIdx === -1) return -1
-  return readScripts(s, closeIdx)
+  return readScripts(s, closeIdx, true)
 }
 
-function readParenMathGroup(s: string, start: number): number {
+function readParenMathGroup(s: string, start: number, inEquation = false): number {
   if (s[start] !== '(') return -1
   const end = readBalanced(s, start, '(', ')')
   if (end === -1) return -1
@@ -386,21 +427,24 @@ function readParenMathGroup(s: string, start: number): number {
   if (
     /\\[A-Za-z]+|[_^=×·≈≤≥≠±∝+\-*]|\d+\s*\/\s*\d+|[A-Za-z0-9]\s+\/\s+[A-Za-z0-9]|[α-ωΑ-Ω₀-₉⁰-⁹]/.test(
       inner,
-    )
+    ) ||
+    (inEquation &&
+      inner.length > 0 &&
+      inner.length <= 28 &&
+      !/[A-Za-z]{4,}\s+[A-Za-z]{3,}/.test(inner) &&
+      /[A-Za-z0-9/]/.test(inner))
   ) {
-    return end
+    return readScripts(s, end, inEquation)
   }
   return -1
 }
 
-function readNumberToken(s: string, start: number): number {
+function readNumberToken(s: string, start: number, inEquation = false): number {
   if (start > 0 && /[A-Za-z0-9_.]/.test(s[start - 1] ?? '')) return -1
   const m = /^\d+(?:\.\d+)?[°]?/.exec(s.slice(start))
   if (!m) return -1
   let end = start + m[0].length
-  if (s[end] === '_' || s[end] === '^') {
-    end = readScripts(s, end)
-  }
+  end = readScripts(s, end, inEquation)
   return end
 }
 
@@ -421,7 +465,12 @@ function skipSpaces(s: string, i: number): number {
 function readMathTerm(
   s: string,
   pos: number,
-  options: { allowSingleVar: boolean; allowNumber: boolean; allowGreekWord: boolean },
+  options: {
+    allowSingleVar: boolean
+    allowNumber: boolean
+    allowGreekWord: boolean
+    inEquation: boolean
+  },
 ): { end: number; isPrefixCmd: boolean; hasVarOrMath: boolean } | null {
   if (pos >= s.length) return null
 
@@ -439,7 +488,7 @@ function readMathTerm(
     }
   }
 
-  const scriptedEnd = readScriptedVar(s, pos)
+  const scriptedEnd = readScriptedVar(s, pos, options.inEquation)
   if (scriptedEnd !== -1) {
     return { end: scriptedEnd, isPrefixCmd: false, hasVarOrMath: true }
   }
@@ -449,30 +498,37 @@ function readMathTerm(
     return { end: funcEnd, isPrefixCmd: false, hasVarOrMath: true }
   }
 
-  const parenEnd = readParenMathGroup(s, pos)
+  const parenEnd = readParenMathGroup(s, pos, options.inEquation)
   if (parenEnd !== -1) {
     return { end: parenEnd, isPrefixCmd: false, hasVarOrMath: true }
   }
 
   if (options.allowNumber) {
-    const numEnd = readNumberToken(s, pos)
+    const numEnd = readNumberToken(s, pos, options.inEquation)
     if (numEnd !== -1) {
       return { end: numEnd, isPrefixCmd: false, hasVarOrMath: false }
     }
   }
 
-  // Greek word inside math run (e.g. "theta" in "theta_B + theta")
+  // Greek word inside math run (e.g. "theta" in "theta_B + theta" or "cos^2 theta")
   if (options.allowGreekWord && isWordBoundaryBefore(s, pos)) {
     const wm = /^[A-Za-z]+/.exec(s.slice(pos))
     if (wm && GREEK_WORDS.has(wm[0])) {
-      return { end: pos + wm[0].length, isPrefixCmd: false, hasVarOrMath: true }
+      const end = readScripts(s, pos + wm[0].length, options.inEquation)
+      return { end, isPrefixCmd: false, hasVarOrMath: true }
     }
   }
 
-  // Unicode Greek + optional Unicode subscripts (e.g. μ₀)
-  const uniM = /^[α-ωΑ-Ω][₀-₉⁰-⁹]*/.exec(s.slice(pos))
+  // Unicode Greek / differential operator + optional Unicode scripts (e.g. μ₀, Δ, ∇, ∂)
+  const uniM = /^[α-ωΑ-Ω∇∂][₀-₉⁰-⁹⁺⁻ⁿ]*/.exec(s.slice(pos))
   if (uniM) {
-    return { end: pos + uniM[0].length, isPrefixCmd: false, hasVarOrMath: true }
+    const ch = uniM[0].slice(0, 1)
+    const end = readScripts(s, pos + uniM[0].length, options.inEquation)
+    return {
+      end,
+      isPrefixCmd: ch === 'Δ' || ch === '∇' || ch === '∂',
+      hasVarOrMath: true,
+    }
   }
 
   // Single-letter variable (e.g. 'c', 'I', 'p', 'U')
@@ -494,7 +550,8 @@ function readMathTerm(
       if ((ch === 'a' || ch === 'A') && afterSp > pos + 1 && /^[a-z]/.test(s.slice(afterSp))) {
         return null
       }
-      return { end: pos + 1, isPrefixCmd: false, hasVarOrMath: true }
+      const end = readScripts(s, pos + 1, options.inEquation)
+      return { end, isPrefixCmd: false, hasVarOrMath: true }
     }
   }
 
@@ -502,12 +559,25 @@ function readMathTerm(
 }
 
 /**
+ * Reads standalone Unicode operator+symbol such as `Δp` or `ΔU`.
+ */
+function readUnicodeDeltaVar(s: string, start: number): number {
+  if (!isWordBoundaryBefore(s, start)) return -1
+  const m = /^[Δ∇∂]\s?[A-Za-z][₀-₉⁰-⁹]?(?![A-Za-z0-9])/.exec(s.slice(start))
+  if (!m) return -1
+  return readScripts(s, start + m[0].length, true)
+}
+
+/**
  * Checks whether starting at `pos` there is a complete equation LHS = RHS (e.g. `c = E_m / B_m`,
- * `I = P_s / (4\pi r^2)`, `c \approx 3.0 \times 10^8\text{ m/s}`).
+ * `I = P_s / (4\pi r^2)`, `I = E_rms² / (c μ₀)`, `Δp = 2ΔU / c`, `c \approx 3.0 \times 10^8\text{ m/s}`).
  */
 function tryReadEquationRun(s: string, start: number): number {
   if (!isWordBoundaryBefore(s, start)) return -1
-  const lhsM = /^([A-Z]{1,3}(?![A-Za-z])|[a-z](?![A-Za-z])|[α-ωΑ-Ω][₀-₉⁰-⁹]*)/.exec(s.slice(start))
+  const lhsM =
+    /^([Δ∇∂]\s?[A-Za-z](?![A-Za-z])|[A-Z]{1,3}(?![A-Za-z])|[a-z](?![A-Za-z])|[A-Za-z][₀-₉]+[⁰¹²³⁴⁵⁶⁷⁸⁹]*|[α-ωΑ-Ω∇∂][₀-₉⁰-⁹]*)/.exec(
+      s.slice(start),
+    )
   if (!lhsM) return -1
   let cur = start + lhsM[0].length
   const afterSp = skipSpaces(s, cur)
@@ -520,20 +590,26 @@ function tryReadEquationRun(s: string, start: number): number {
     allowSingleVar: true,
     allowNumber: true,
     allowGreekWord: true,
+    inEquation: true,
   })
   if (!firstRhs) return -1
 
   cur = firstRhs.end
   // If firstRhs was just a plain number without further operators/math terms (e.g. "n = 1.5 for glass"),
   // require a trailing math operator or LaTeX relation.
-  const extended = extendMathRun(s, cur, firstRhs.isPrefixCmd)
+  const extended = extendMathRun(s, cur, firstRhs.isPrefixCmd, true)
   if (extended === cur && !firstRhs.hasVarOrMath && !relM[0].startsWith('\\')) {
     return -1
   }
   return extended
 }
 
-function extendMathRun(s: string, initialEnd: number, initialPrefixCmd: boolean): number {
+function extendMathRun(
+  s: string,
+  initialEnd: number,
+  initialPrefixCmd: boolean,
+  inEquation = false,
+): number {
   let cur = initialEnd
   let prevWasPrefixCmd = initialPrefixCmd
 
@@ -542,11 +618,13 @@ function extendMathRun(s: string, initialEnd: number, initialPrefixCmd: boolean)
     const opM = OP_REGEX.exec(s.slice(sp))
     if (opM) {
       const afterOp = skipSpaces(s, sp + opM[0].length)
+      const eqContext = inEquation || opM[0] === '='
       // An operator continues ONLY if followed by a valid math term (never a prose word!)
       const rhs = readMathTerm(s, afterOp, {
         allowSingleVar: true,
         allowNumber: true,
         allowGreekWord: true,
+        inEquation: eqContext,
       })
       if (!rhs) break
       if (opM[0] === '=' && !rhs.hasVarOrMath) {
@@ -557,6 +635,7 @@ function extendMathRun(s: string, initialEnd: number, initialPrefixCmd: boolean)
       }
       cur = rhs.end
       prevWasPrefixCmd = rhs.isPrefixCmd
+      inEquation = eqContext
       continue
     }
 
@@ -564,14 +643,15 @@ function extendMathRun(s: string, initialEnd: number, initialPrefixCmd: boolean)
     const adjacent = readMathTerm(s, sp, {
       allowSingleVar: prevWasPrefixCmd || sp === cur, // e.g. \Delta p or 4\pi r^2 or c\mu_0
       allowNumber: sp === cur, // glued coefficient/script only
-      allowGreekWord: sp === cur,
+      allowGreekWord: true, // allow `cos^2 theta`, `sin theta`
+      inEquation,
     })
     if (adjacent) {
       if (
         sp > cur &&
         !prevWasPrefixCmd &&
         /^[A-Za-z]$/.test(s.slice(sp, adjacent.end)) &&
-        !/^[A-Za-z](?:[_^]|\s*[=+\-*/×·])/.test(s.slice(sp))
+        !/^[A-Za-z](?:[_^₀-₉⁰-⁹]|\s*[=+\-*/×·])/.test(s.slice(sp))
       ) {
         break
       }
@@ -588,13 +668,13 @@ function extendMathRun(s: string, initialEnd: number, initialPrefixCmd: boolean)
         prevWasPrefixCmd = PREFIX_COMMANDS.has(nextLatex.command)
         continue
       }
-      const nextScript = readScriptedVar(s, sp)
+      const nextScript = readScriptedVar(s, sp, inEquation)
       if (nextScript !== -1) {
         cur = nextScript
         prevWasPrefixCmd = false
         continue
       }
-      const nextParen = readParenMathGroup(s, sp)
+      const nextParen = readParenMathGroup(s, sp, inEquation)
       if (nextParen !== -1) {
         cur = nextParen
         prevWasPrefixCmd = false
@@ -621,6 +701,8 @@ export function normalizeBareLatex(raw: string): string {
 
   // Replace Unicode math characters
   out = out.replace(/[α-ωΑ-Ω]/g, (ch) => `${UNICODE_GREEK[ch] ?? ch} `)
+  out = out.replace(/∇/g, '\\nabla ')
+  out = out.replace(/∂/g, '\\partial ')
   out = out.replace(/°/g, '^{\\circ}')
   out = out.replace(/×/g, '\\times ')
   out = out.replace(/·/g, '\\cdot ')
@@ -647,6 +729,9 @@ export function normalizeBareLatex(raw: string): string {
     return `_{${mapped}}`
   })
 
+  // Attach scripts directly to preceding command without extra space (\mu _{0} -> \mu_{0})
+  out = out.replace(/(\\[A-Za-z]+)\s+([_^])/g, '$1$2')
+
   // Protect \text{...} and \mathrm{...} spans before replacing bare * or bare Greek words
   const protectedSpans: string[] = []
   out = out.replace(/\\(?:text|mathrm|mathbf|mathit)\{[^{}]*\}/g, (m) => {
@@ -669,7 +754,16 @@ export function normalizeBareLatex(raw: string): string {
   return out.replace(/\s{2,}/g, ' ').trim()
 }
 
-function splitBareMath(segment: string): InlineMathSegment[] {
+function readLegendSymbol(segment: string, pos: number): number {
+  if (!isWordBoundaryBefore(segment, pos)) return -1
+  const before = segment.slice(0, pos)
+  const atClauseStart = pos === 0 || /(?:[;,\n]|—|:)\s*$/.test(before)
+  if (!atClauseStart) return -1
+  const m = /^([A-Za-z]'?(?![A-Za-z0-9_])|[α-ωΑ-Ω∇∂][₀-₉⁰-⁹]*)(?=\s*=)/.exec(segment.slice(pos))
+  return m ? pos + (m[1]?.length ?? 0) : -1
+}
+
+function splitBareMath(segment: string, options: SplitInlineMathOptions = {}): InlineMathSegment[] {
   if (!segment) return []
   const out: InlineMathSegment[] = []
   let textStart = 0
@@ -689,8 +783,8 @@ function splitBareMath(segment: string): InlineMathSegment[] {
     if (latexStart !== -1) {
       runEnd = extendMathRun(segment, latexStart.end, PREFIX_COMMANDS.has(latexStart.command))
     } else {
-      // 2. Scripted variable (u_E, I_{0}, E_rms^2, theta_B, n_1, 10^8)
-      const scriptStart = readScriptedVar(segment, i)
+      // 2. Scripted variable (u_E, I_{0}, E_rms^2, theta_B, n_1, 10^8, I₀)
+      const scriptStart = readScriptedVar(segment, i, false)
       if (scriptStart !== -1) {
         runEnd = extendMathRun(segment, scriptStart, false)
       } else {
@@ -699,10 +793,21 @@ function splitBareMath(segment: string): InlineMathSegment[] {
         if (funcStart !== -1) {
           runEnd = extendMathRun(segment, funcStart, false)
         } else {
-          // 4. Bare equation starting with short symbol (c = E_m / B_m, I = P_s / (4\pi r^2), c \approx 3.0 \times 10^8\text{ m/s})
+          // 4. Bare equation starting with short symbol (c = E_m / B_m, I = E_rms² / (c μ₀), Δp = 2ΔU / c)
           const eqStart = tryReadEquationRun(segment, i)
           if (eqStart !== -1) {
             runEnd = eqStart
+          } else {
+            // 5. Standalone Δp / ΔU or legend variable (`L = inductance; C = capacitance`)
+            const deltaEnd = readUnicodeDeltaVar(segment, i)
+            if (deltaEnd !== -1) {
+              runEnd = extendMathRun(segment, deltaEnd, false)
+            } else if (options.legend) {
+              const legendEnd = readLegendSymbol(segment, i)
+              if (legendEnd !== -1) {
+                runEnd = legendEnd
+              }
+            }
           }
         }
       }
@@ -728,8 +833,12 @@ function splitBareMath(segment: string): InlineMathSegment[] {
  * Splits prose containing delimited ($...$, \(...\), \[...\]) or bare LaTeX equations
  * into alternating plain-text and KaTeX-ready math segments.
  */
-export function splitInlineMath(input: string): InlineMathSegment[] {
-  if (!input) return []
+export function splitInlineMath(
+  rawInput: string,
+  options: SplitInlineMathOptions = {},
+): InlineMathSegment[] {
+  if (!rawInput) return []
+  const input = fixInlineLatex(rawInput)
 
   const delimited: InlineMathSegment[] = []
   let textStart = 0
@@ -737,7 +846,7 @@ export function splitInlineMath(input: string): InlineMathSegment[] {
 
   const pushPlain = (end: number) => {
     if (end > textStart) {
-      delimited.push(...splitBareMath(input.slice(textStart, end)))
+      delimited.push(...splitBareMath(input.slice(textStart, end), options))
     }
   }
 

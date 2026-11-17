@@ -225,7 +225,13 @@ export function ExportDialog({ open, onClose }: { open: boolean; onClose: () => 
         ui.setCover(false)
         ws.select(null)
         const shot = async (ids: Set<string> | null, caption: string, screen = false) => {
-          const p = await captureMap(rf, { ids, screen, light: opts.light, links: opts.links })
+          const p = await captureMap(rf, {
+            ids,
+            screen,
+            light: opts.light,
+            links: opts.links,
+            horizontal: format === 'pdf' && !screen,
+          })
           pictures.push({ ...p, caption })
         }
         if (scope === 'screen') await shot(null, map.title, true)

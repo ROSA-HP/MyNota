@@ -109,7 +109,7 @@ function DetailRow({
             </span>
             {d.variables && (
               <span className="block text-justify text-ink-muted" dir="auto">
-                <RichMathText text={d.variables} />
+                <RichMathText text={d.variables} legend />
               </span>
             )}
           </span>

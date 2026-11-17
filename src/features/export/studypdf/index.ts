@@ -5,7 +5,16 @@ import { ensureFontsLoaded, measureCardRows, measureFlow, paginateCardRows } fro
 import { buildStudyDoc } from './model'
 import { chapterForPage, pageIndexOfUnits, paginateFlow, paginateToc } from './paginate'
 import { capturePageElement } from './render'
-import { bodyBoxPx, COLORS, orientationOf, pageSizeMm, pageSizePx, PAD, PX_PER_MM } from './tokens'
+import {
+  bodyBoxPx,
+  COLORS,
+  orientationOf,
+  pageSizeMm,
+  pageSizePx,
+  PAD,
+  PX_PER_MM,
+  SHADOW_GUTTER,
+} from './tokens'
 import type { CardTile, NotesPage, StudyPdfInput } from './types'
 
 export * from './tokens'
@@ -80,7 +89,7 @@ export async function buildStudyPdf(input: StudyPdfInput): Promise<Blob> {
       pairedTiles.push(doc.tiles.slice(i, i + 2))
     }
     const cardsBody = bodyBoxPx(input.paper, 'cards')
-    const cardWidth = Math.floor((cardsBody.w - PAD.cardGap - 4) / 2)
+    const cardWidth = Math.floor((cardsBody.w - PAD.cardGap - SHADOW_GUTTER) / 2)
 
     if (input.answersAtEnd) {
       const frontHeights = await measureCardRows(
@@ -317,7 +326,7 @@ export async function buildStudyPdf(input: StudyPdfInput): Promise<Blob> {
   const cardsSize = pageSizePx(input.paper, 'cards')
   const cardsMm = pageSizeMm(input.paper, 'cards')
   const cardsBody = bodyBoxPx(input.paper, 'cards')
-  const cardWidth = Math.floor((cardsBody.w - PAD.cardGap - 4) / 2)
+  const cardWidth = Math.floor((cardsBody.w - PAD.cardGap - SHADOW_GUTTER) / 2)
 
   if (input.preset === 'cards') {
     if (input.answersAtEnd) {

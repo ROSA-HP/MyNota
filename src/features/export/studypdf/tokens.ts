@@ -41,8 +41,11 @@ export const FONT_LOAD_SPECS: Array<[string, string]> = [
   ["400 15px 'KaTeX_Main'", 'x'],
   ["700 15px 'KaTeX_Main'", 'x'],
   ["italic 400 15px 'KaTeX_Math'", 'x'],
+  ["400 15px 'KaTeX_AMS'", '∑'],
   ["400 15px 'KaTeX_Size1'", '∑'],
   ["400 15px 'KaTeX_Size2'", '∑'],
+  ["400 15px 'KaTeX_Size3'", '('],
+  ["400 15px 'KaTeX_Size4'", '('],
 ]
 
 export const TEXT = {
@@ -72,6 +75,9 @@ export const SHADOW = {
   chapter: `4px 4px 0 ${COLORS.ink}`,
   card: `2px 2px 0 ${COLORS.ink}`,
 } as const
+
+export const SHADOW_GUTTER = 4
+export const COVER_SHADOW_GUTTER = 6
 
 export const PAD = {
   chapterTop: 14,
@@ -105,9 +111,12 @@ export function parsePaper(paper: Paper): {
 }
 
 export function orientationOf(paper: Paper, kind: PageKind): 'portrait' | 'landscape' {
+  if (kind === 'map') {
+    return 'landscape'
+  }
   const { layout } = parsePaper(paper)
   if (layout === 'mixed') {
-    return kind === 'map' ? 'landscape' : 'portrait'
+    return 'portrait'
   }
   return layout
 }

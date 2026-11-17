@@ -262,4 +262,53 @@ describe('the owner’s physical optics notes (the map that repeated and lost fo
     // Each arrow says what it carries: the formula itself, in plain symbols.
     expect(out.relations.map((r) => r.label)).toEqual(['sin θdark = mλ/a', 'sin θdark = mλ/a'])
   })
+
+  it('repairs mangled inline LaTeX escapes across summaries, bullets, questions, and legends', () => {
+    const mangledReply = DetailsResponseSchema.parse({
+      blocks: [
+        {
+          key: 'poynting',
+          parent: null,
+          title: 'Poynting Vector \u000bec{S}',
+          summary: 'Describes energy flow via \u000bec{E} \times \u000bec{B}.',
+          type: 'formula',
+          importance: 'core',
+          details: [
+            {
+              kind: 'formula',
+              text: '\u000bec{S} = \frac{1}{\\mu_0} \u000bec{E} \times \u000bec{B}',
+              extra: '\u000bec{S} = Poynting vector; \theta = angle',
+            },
+            {
+              kind: 'bullet',
+              text: 'Angle uses \theta and \frac{1}{2} factor;\nKeep newline before prose.',
+            },
+            {
+              kind: 'question',
+              text: 'Direction of \u000bec{S}?',
+              extra: 'Follows \nabla \times \u000bec{B}.',
+            },
+          ],
+          source: [1],
+        },
+      ],
+    })
+    const repaired = ensureFormulas(mangledReply, [{ n: 1, text: 'Poynting theorem' }])
+    const blk = repaired.blocks[0]!
+    expect(blk.title).toBe('Poynting Vector \\vec{S}')
+    expect(blk.summary).toBe('Describes energy flow via \\vec{E} \\times \\vec{B}.')
+    expect(blk.details[0]).toMatchObject({
+      kind: 'formula',
+      extra: '\\vec{S} = Poynting vector; \\theta = angle',
+    })
+    expect(blk.details[1]).toMatchObject({
+      kind: 'bullet',
+      text: 'Angle uses \\theta and \\frac{1}{2} factor;\nKeep newline before prose.',
+    })
+    expect(blk.details[2]).toMatchObject({
+      kind: 'question',
+      text: 'Direction of \\vec{S}?',
+      extra: 'Follows \\nabla \\times \\vec{B}.',
+    })
+  })
 })

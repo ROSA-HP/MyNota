@@ -2,6 +2,7 @@ import { Fragment, useLayoutEffect, useRef } from 'react'
 import katex from 'katex'
 import 'katex/dist/katex.min.css'
 import { cn } from '@/lib/cn'
+import { fixInlineLatex } from '@/lib/fixInlineLatex'
 import { splitInlineMath } from './inlineMath'
 
 /**
@@ -12,8 +13,9 @@ import { splitInlineMath } from './inlineMath'
  *   arctan x → \arctan x.
  */
 export function standardLatex(latex: string): string {
+  const repaired = fixInlineLatex(latex)
   const protectedSpans: string[] = []
-  const protectedLatex = latex.replace(/\\(?:text|mathrm|mathbf|mathit)\{[^{}]*\}/g, (m) => {
+  const protectedLatex = repaired.replace(/\\(?:text|mathrm|mathbf|mathit)\{[^{}]*\}/g, (m) => {
     const idx = protectedSpans.length
     protectedSpans.push(m)
     return `\uE000${idx}\uE001`
@@ -92,8 +94,16 @@ export function MathFormula({
  * Renders prose containing delimited ($...$, \(...\)) or bare LaTeX expressions
  * (\vec{S}, \mu_0, \frac{1}{\sqrt{LC}}, u_E, theta_B) with inline KaTeX math.
  */
-export function RichMathText({ text, className }: { text: string; className?: string }) {
-  const segments = splitInlineMath(text)
+export function RichMathText({
+  text,
+  className,
+  legend = false,
+}: {
+  text: string
+  className?: string
+  legend?: boolean
+}) {
+  const segments = splitInlineMath(text, legend ? { legend: true } : undefined)
   if (segments.length === 0) return null
   if (segments.length === 1 && segments[0]?.kind === 'text') {
     return className ? <span className={className}>{segments[0].text}</span> : <>{segments[0].text}</>

@@ -483,6 +483,116 @@ describe('studypdf components', () => {
     expect(container.textContent).not.toContain('\\mu_0')
   })
 
+  it('renders flush symmetric gutters, justified link rows, legend variables, and compact cover summaries', () => {
+    const { container: pageContainer } = render(
+      <ContentPage
+        size={{ w: 794, h: 1123 }}
+        body={{ x: 53, y: 83, w: 688, h: 957 }}
+        tone="mint"
+        dir="ltr"
+        headerTitle="Electromagnetic Waves"
+        headerChapter={{ label: 'Ch. 1', title: 'Waves', color: 'coral' }}
+        headerTag={null}
+        pageNo={2}
+        total={5}
+      >
+        <FlowUnitView
+          unit={{
+            kind: 'block',
+            id: 'b_wave',
+            relDepth: 0,
+            title: 'Wave Intensity',
+            type: 'formula',
+            importance: 'core',
+            color: 'coral',
+            dir: 'ltr',
+            aiAdded: false,
+            rows: [
+              {
+                kind: 'detail',
+                detail: {
+                  kind: 'formula',
+                  latex: 'I = \\frac{1}{c\\mu_0} E_{\\mathrm{rms}}^2',
+                  variables: 'I = wave intensity; c = speed of light; \\mu_0 = permeability constant',
+                },
+              },
+              {
+                kind: 'link',
+                label: 'determines absorption pressure',
+                other: 'Total Absorption',
+                outgoing: true,
+              },
+            ],
+          }}
+          dir="ltr"
+          labels={testLabels}
+          aiTags={false}
+          atTop
+        />
+      </ContentPage>,
+    )
+
+    const outer = pageContainer.firstElementChild as HTMLElement
+    // Header wrapper, Body slot, Footer wrapper share exact 4px SHADOW_GUTTER right inset in LTR.
+    const bands = Array.from(outer.children) as HTMLElement[]
+    expect(bands[0]?.style.paddingRight).toBe('4px')
+    expect(bands[2]?.style.paddingRight).toBe('4px')
+    const flowOuter = bands[1]?.querySelector('[data-unit-id="b_wave"]') as HTMLElement
+    expect(flowOuter.style.paddingRight).toBe('4px')
+
+    // All three legend variables (I, c, \mu_0) plus the display formula render via KaTeX.
+    expect(flowOuter.querySelectorAll('.katex').length).toBe(4)
+
+    // Link row text spans justify cleanly without ragged text.
+    const linkRow = flowOuter.querySelector('[data-row="1"]')?.firstElementChild as HTMLElement
+    expect(linkRow.style.textAlign).toBe('justify')
+
+    // Compact CoverPage renders summaries when portrait outline has <= 3 chapters / <= 8 sections.
+    const { container: coverContainer } = render(
+      <CoverPage
+        size={{ w: 794, h: 1123 }}
+        tone="mint"
+        dir="ltr"
+        title="Electromagnetic Waves & Polarization"
+        kindLabel="Notes"
+        stickerLabel="Study notes"
+        stats={[
+          { n: 1, label: 'Chapters' },
+          { n: 2, label: 'Sections' },
+        ]}
+        tabs={[]}
+        outline={[
+          {
+            number: 1,
+            title: 'EM Waves & Polarization',
+            summary: 'Maxwell equations, energy transport, radiation pressure, and polarization.',
+            color: 'coral',
+            dir: 'ltr',
+            sections: [
+              {
+                label: '1.1',
+                title: 'Wave Propagation & Energy',
+                summary: 'Poynting vector, intensity, and inverse-square law.',
+                dir: 'ltr',
+              },
+              {
+                label: '1.2',
+                title: 'Polarization Laws',
+                summary: 'Malus law and Brewster angle.',
+                dir: 'ltr',
+              },
+            ],
+          },
+        ]}
+        outlineLabel="Contents"
+        moreLabel={null}
+        madeWith="Made with MyNota"
+      />,
+    )
+    expect(coverContainer.textContent).toContain('Poynting vector, intensity, and inverse-square law.')
+    expect(coverContainer.textContent).toContain('Malus law and Brewster angle.')
+  })
+
   it('contains exactly one data-slot element in MapSlot and it has no children', () => {
     const { container } = render(
       <MapSlot size={{ x: 53, y: 83, w: 1017, h: 628 }} caption="Whole Map" />,

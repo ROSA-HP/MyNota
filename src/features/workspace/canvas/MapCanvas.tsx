@@ -186,9 +186,10 @@ export function MapCanvas() {
       }),
     [nodes, folds],
   )
+  const exportLayout = useCanvasUi((s) => s.exportLayout)
   // Short cards (owner, 2026-11-03): a card never grows in place; its details open in the
   // side panel, so the map keeps still.
-  const layout = useMemo(() => computeLayout(list), [list])
+  const layout = useMemo(() => computeLayout(list, exportLayout ?? undefined), [list, exportLayout])
   const numbers = useMemo(() => readingNumbers(list), [list])
   const kids = useMemo(() => childrenIndex(list), [list])
   const { book, rootId } = layout

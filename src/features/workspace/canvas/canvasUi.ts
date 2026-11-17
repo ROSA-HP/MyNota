@@ -71,6 +71,10 @@ interface CanvasUiState {
    */
   folds: Record<string, boolean>
   setFold: (nodeId: string, folded: boolean) => void
+
+  /** Temporary layout override applied while capturing a horizontal map picture for PDF export. */
+  exportLayout: { useSavedPositions?: boolean; pageRatio?: number; horizontal?: boolean } | null
+  setExportLayout: (layout: CanvasUiState['exportLayout']) => void
 }
 
 const MASTERY_KEY = 'mynota.mastery'
@@ -151,4 +155,7 @@ export const useCanvasUi = create<CanvasUiState>((set, get) => ({
 
   folds: {},
   setFold: (nodeId, folded) => set((s) => ({ folds: { ...s.folds, [nodeId]: folded } })),
+
+  exportLayout: null,
+  setExportLayout: (exportLayout) => set({ exportLayout }),
 }))

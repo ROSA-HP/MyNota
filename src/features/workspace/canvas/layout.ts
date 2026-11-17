@@ -202,10 +202,14 @@ export function findRoot(nodes: NodeRow[]): NodeRow | undefined {
 export const tabWidth = (title: string, max: number): number =>
   Math.min(max, Math.max(220, 86 + title.length * 10))
 
-export function computeLayout(
-  nodes: NodeRow[],
-  opts: { useSavedPositions?: boolean; expandedId?: string | null } = {},
-): LayoutResult {
+export interface LayoutOptions {
+  useSavedPositions?: boolean
+  expandedId?: string | null
+  pageRatio?: number
+  horizontal?: boolean
+}
+
+export function computeLayout(nodes: NodeRow[], opts: LayoutOptions = {}): LayoutResult {
   const S = SIZES
   const kids = childrenIndex(nodes)
   const root = findRoot(nodes)
@@ -287,12 +291,14 @@ export function computeLayout(
       const ordered = section.branch_view === 'process' || section.branch_view === 'timeline'
       const total = groups.reduce((sum, g) => sum + g.h, 0)
       const nested = groups.filter((g) => g.items.length > 1).length
+      const sectionSiblings = (kids.get(parentId) ?? []).length
+      const colTarget = opts.horizontal && sectionSiblings <= 2 ? 320 : S.columnTarget
       const want = ordered
         ? 1
         : Math.min(
             4,
             groups.length,
-            Math.max(1, nested >= 2 ? nested : Math.ceil(total / S.columnTarget)),
+            Math.max(1, nested >= 2 ? nested : Math.ceil(total / colTarget)),
           )
       const cols = balancedColumns(groups, want)
       const grouped = !ordered
@@ -356,6 +362,7 @@ export function computeLayout(
       for (let i = 0; i < laid.length; i += perRow) out.push(laid.slice(i, i + perRow))
       return out
     }
+    const targetRatio = opts.pageRatio ?? (opts.horizontal ? 1.85 : S.pageRatio)
     const shapeOf = (rs: Array<typeof laid>) => {
       const rowWidths = rs.map((row) => row.reduce((sum, l) => sum + l.w, 0) + S.colGap * (row.length - 1))
       const w = Math.max(...rowWidths)
@@ -363,11 +370,16 @@ export function computeLayout(
       const variancePenalty =
         rs.length > 1 ? Math.max(...rowWidths) / Math.max(1, Math.min(...rowWidths)) - 1 : 0
       const h =
-        S.sectionTop +
+        top +
         rs.reduce((sum, row) => sum + Math.max(...row.map((l) => l.h)), 0) +
         S.sectionRowGap * (rs.length - 1)
-      return Math.abs(Math.log(Math.max(1, w) / Math.max(1, h) / S.pageRatio)) +
+      const ratio = Math.max(1, w) / Math.max(1, h)
+      const horizontalPenalty = opts.horizontal && ratio < 1.35 ? (1.35 - ratio) * 2.5 : 0
+      return (
+        Math.abs(Math.log(ratio / targetRatio)) +
+        horizontalPenalty +
         (w - avgW > avgW * 0.45 ? variancePenalty * 0.08 : 0)
+      )
     }
     const totalW = laid.reduce((sum, l) => sum + l.w, 0) + S.colGap * (laid.length - 1)
     const maxItemW = Math.max(...laid.map((l) => l.w))
@@ -484,38 +496,84 @@ export function computeLayout(
         },
       })
     }
+    const packChapters = (limit: number) => {
+      const out: Packed[][] = []
+      let cur: Packed[] = []
+      let curW = 0
+      for (const p of packed) {
+        const nextW = cur.length ? curW + S.chapterGapX + p.w : p.w
+        if (cur.length > 0 && nextW > limit) {
+          out.push(cur)
+          cur = [p]
+          curW = p.w
+        } else {
+          cur.push(p)
+          curW = nextW
+        }
+      }
+      if (cur.length > 0) out.push(cur)
+      return out
+    }
     const widths = packed.map((p) => p.w).sort((a, b) => a - b)
     const median = widths[Math.floor(widths.length / 2)] ?? S.waitingW
-    const rowLimit = Math.max(widths.at(-1) ?? 0, median * 3 + S.chapterGapX * 2)
-    let x = 0
-    let rowTop = S.chapterTop
-    let rowH = 0
-    let maxRight = 0
-    for (const p of packed) {
-      if (x > 0 && x + p.w > rowLimit) {
-        rowTop += rowH + S.chapterGapY
-        x = 0
-        rowH = 0
+    const defaultLimit = Math.max(widths.at(-1) ?? 0, median * 3 + S.chapterGapX * 2)
+    let chapterRows = packChapters(defaultLimit)
+    if (opts.horizontal && packed.length > 1) {
+      const targetRatio = opts.pageRatio ?? 1.85
+      const totalChW = packed.reduce((s, p) => s + p.w, 0) + S.chapterGapX * (packed.length - 1)
+      const maxChW = Math.max(...packed.map((p) => p.w))
+      const chCandidates: Packed[][][] = [chapterRows, [packed]]
+      for (let r = 2; r <= packed.length; r++) {
+        chCandidates.push(packChapters(Math.max(maxChW, totalChW / r)))
       }
-      // Region below its tab; content inside the region's padding.
-      const regionY = rowTop + S.tabH
-      p.shift(x + S.chapterPad, regionY + S.chapterPad)
-      boxes[p.id] = { x, y: rowTop, w: tabWidth(p.title, p.w), h: S.tabH }
-      regions.push({
-        sectionId: p.id,
-        kind: 'chapter',
-        built: p.built,
-        x,
-        y: regionY,
-        w: p.w,
-        h: p.h,
-      })
-      x += p.w + S.chapterGapX
-      rowH = Math.max(rowH, p.h + S.tabH)
+      const chScore = (rs: Packed[][]) => {
+        const w = Math.max(
+          ...rs.map((row) => row.reduce((s, p) => s + p.w, 0) + S.chapterGapX * (row.length - 1)),
+        )
+        const h =
+          S.chapterTop +
+          rs.reduce((s, row) => s + Math.max(...row.map((p) => p.h + S.tabH)), 0) +
+          S.chapterGapY * (rs.length - 1)
+        const ratio = Math.max(1, w) / Math.max(1, h)
+        const horizontalPenalty = ratio < 1.35 ? (1.35 - ratio) * 2.5 : 0
+        return Math.abs(Math.log(ratio / targetRatio)) + horizontalPenalty
+      }
+      let best = chScore(chapterRows)
+      for (const c of chCandidates) {
+        const s = chScore(c)
+        if (s < best) {
+          best = s
+          chapterRows = c
+        }
+      }
+    }
+    let rowTop = S.chapterTop
+    let maxRight = 0
+    for (const row of chapterRows) {
+      let x = 0
+      let rowH = 0
+      for (const p of row) {
+        // Region below its tab; content inside the region's padding.
+        const regionY = rowTop + S.tabH
+        p.shift(x + S.chapterPad, regionY + S.chapterPad)
+        boxes[p.id] = { x, y: rowTop, w: tabWidth(p.title, p.w), h: S.tabH }
+        regions.push({
+          sectionId: p.id,
+          kind: 'chapter',
+          built: p.built,
+          x,
+          y: regionY,
+          w: p.w,
+          h: p.h,
+        })
+        x += p.w + S.chapterGapX
+        rowH = Math.max(rowH, p.h + S.tabH)
+      }
       maxRight = Math.max(maxRight, x - S.chapterGapX)
+      rowTop += rowH + S.chapterGapY
     }
     width = Math.max(maxRight, S.rootW)
-    contentBottom = rowTop + rowH
+    contentBottom = packed.length ? rowTop - S.chapterGapY : S.chapterTop
   }
 
   boxes[root.id] = { x: width / 2 - S.rootW / 2, y: 0, w: S.rootW, h: S.rootH }

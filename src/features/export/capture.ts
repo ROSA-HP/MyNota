@@ -1,4 +1,5 @@
 import { getNodesBounds, type Node, type ReactFlowInstance } from '@xyflow/react'
+import { useCanvasUi } from '@/features/workspace/canvas/canvasUi'
 
 /** Biggest side of a map picture in CSS pixels (×2 for sharpness stays under canvas limits). */
 const MAX_SIDE = 7000
@@ -14,6 +15,8 @@ export interface CaptureOptions {
   light: boolean
   /** Draw the links between blocks. */
   links: boolean
+  /** Force a landscape/horizontal arrangement so the captured mind map fills landscape PDF pages. */
+  horizontal?: boolean
 }
 
 const nextFrame = () => new Promise<void>((r) => requestAnimationFrame(() => r()))
@@ -91,9 +94,18 @@ export async function captureMap(
       )
     : undefined
 
+  const scopedNodes = () =>
+    rf
+      .getNodes()
+      .filter((n: Node) =>
+        opts.ids ? opts.ids.has(n.id) || opts.ids.has(n.id.replace(/^region:/, '')) : true,
+      )
+
   const root = document.documentElement
   const theme = root.dataset.theme
   const before = rf.getViewport()
+  const canvasUi = useCanvasUi.getState()
+  const prevExportLayout = canvasUi.exportLayout
   root.dataset.theme = 'light'
   flow.classList.add('is-exporting')
   if (opts.light) flow.classList.add('export-light')
@@ -110,14 +122,27 @@ export async function captureMap(
     }
     // Blocks level everywhere (zoomed-out levels draw cards instead of blocks).
     await rf.setViewport({ x: before.x, y: before.y, zoom: 1 })
-    await nextFrame()
-    await nextFrame()
-    await wait(120)
-    const nodes = rf
-      .getNodes()
-      .filter((n: Node) =>
-        opts.ids ? opts.ids.has(n.id) || opts.ids.has(n.id.replace(/^region:/, '')) : true,
-      )
+    if (opts.horizontal) {
+      canvasUi.setExportLayout({ horizontal: true, pageRatio: 1.85, useSavedPositions: true })
+      await nextFrame()
+      await nextFrame()
+      await wait(80)
+      const firstNodes = scopedNodes()
+      if (firstNodes.length) {
+        const firstBounds = getNodesBounds(firstNodes)
+        if (firstBounds.width / Math.max(1, firstBounds.height) < 1.35) {
+          canvasUi.setExportLayout({ horizontal: true, pageRatio: 1.85, useSavedPositions: false })
+          await nextFrame()
+          await nextFrame()
+          await wait(120)
+        }
+      }
+    } else {
+      await nextFrame()
+      await nextFrame()
+      await wait(120)
+    }
+    const nodes = scopedNodes()
     if (!nodes.length) throw new Error('Nothing to export.')
     const b = getNodesBounds(nodes)
     // Allow clearance for outer Bus spines, neo-brutalist card shadows, and curved relation arcs.
@@ -144,6 +169,7 @@ export async function captureMap(
     })
     return { dataUrl, width, height }
   } finally {
+    canvasUi.setExportLayout(prevExportLayout)
     flow.classList.remove('is-exporting', 'export-light')
     if (theme) root.dataset.theme = theme
     else delete root.dataset.theme

@@ -54,6 +54,20 @@ describe('studypdf tokens', () => {
     expect(monoSmallLtr.textTransform).toBe('uppercase')
   })
 
+  it('always uses landscape orientation for map pages even on portrait paper settings', () => {
+    expect(pageSizePx('a4-portrait', 'map')).toEqual({ w: 1123, h: 794 })
+    expect(pageSizePx('letter-portrait', 'map')).toEqual({ w: 1056, h: 816 })
+    expect(bodyBoxPx('a4-portrait', 'map')).toEqual({ x: 53, y: 83, w: 1017, h: 628 })
+  })
+
+  it('includes KaTeX_AMS, KaTeX_Size3, and KaTeX_Size4 in FONT_LOAD_SPECS', async () => {
+    const { FONT_LOAD_SPECS } = await import('@/features/export/studypdf/tokens')
+    const joined = FONT_LOAD_SPECS.join(' ')
+    expect(joined).toContain('KaTeX_AMS')
+    expect(joined).toContain('KaTeX_Size3')
+    expect(joined).toContain('KaTeX_Size4')
+  })
+
   it('has valid hex fills for all ChapterColor keys', () => {
     const colors: ChapterColor[] = [
       'yellow',
