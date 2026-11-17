@@ -38,6 +38,11 @@ export const FONT_LOAD_SPECS: Array<[string, string]> = [
   ["700 14px 'IBM Plex Sans Arabic'", 'مرحبا'],
   ["400 12px 'Space Mono'", 'Abc'],
   ["700 12px 'Space Mono'", 'Abc'],
+  ["400 15px 'KaTeX_Main'", 'x'],
+  ["700 15px 'KaTeX_Main'", 'x'],
+  ["italic 400 15px 'KaTeX_Math'", 'x'],
+  ["400 15px 'KaTeX_Size1'", '∑'],
+  ["400 15px 'KaTeX_Size2'", '∑'],
 ]
 
 export const TEXT = {

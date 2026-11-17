@@ -83,6 +83,71 @@ describe('computeLayout', () => {
     expect(mirrorBox({ x: 10, y: 5, w: 100, h: 20 }, 500)).toEqual({ x: 390, y: 5, w: 100, h: 20 })
   })
 
+  it('keeps mirrorWidth constant when a card is dragged beyond auto bounds', () => {
+    const { nodes, ids } = build()
+    const base = computeLayout(nodes)
+    const moved = nodes.map((n) => (n.id === ids.c ? { ...n, position: { x: 1800, y: 120 } } : n))
+    const afterDrag = computeLayout(moved)
+    expect(afterDrag.mirrorWidth).toBe(base.mirrorWidth)
+    expect(afterDrag.width).toBeGreaterThan(afterDrag.mirrorWidth)
+  })
+
+  it('resolves colliding dragged blocks without overlapping other visible cards', () => {
+    const { nodes, ids } = build()
+    const base = computeLayout(nodes)
+    const bBox = base.boxes[ids.b!]!
+    const moved = nodes.map((n) =>
+      n.id === ids.c ? { ...n, position: { x: bBox.x, y: bBox.y } } : n,
+    )
+    const L = computeLayout(moved)
+    const resolvedC = L.boxes[ids.c!]!
+    const resolvedB = L.boxes[ids.b!]!
+    const intersects =
+      resolvedC.x < resolvedB.x + resolvedB.w &&
+      resolvedB.x < resolvedC.x + resolvedC.w &&
+      resolvedC.y < resolvedB.y + resolvedB.h &&
+      resolvedB.y < resolvedC.y + resolvedC.h
+    expect(intersects).toBe(false)
+  })
+
+  it('pushes lower section rows down cleanly when an upper row expands via dragging', () => {
+    const root = makeNode({ map_id: 'm', level: 'chapter', title: 'Root' })
+    const nodes: NodeRow[] = [root]
+    const secIds: string[] = []
+    const firstBlockIds: string[] = []
+    for (let i = 0; i < 6; i++) {
+      const s = makeNode({
+        map_id: 'm',
+        level: 'section',
+        title: `S${i}`,
+        parent_id: root.id,
+        sort_order: i,
+      })
+      const blk = makeNode({
+        map_id: 'm',
+        level: 'block',
+        title: `B${i}`,
+        parent_id: s.id,
+        sort_order: 0,
+      })
+      nodes.push(s, blk)
+      secIds.push(s.id)
+      firstBlockIds.push(blk.id)
+    }
+    const base = computeLayout(nodes)
+    const firstRowY = base.boxes[secIds[0]!]!.y
+    const lowerSec = secIds.find((id) => base.boxes[id]!.y > firstRowY)!
+    const origLowerY = base.boxes[lowerSec]!.y
+    // Drag upper block 0 far down so row 0 grows taller than row 1's initial top.
+    const moved = nodes.map((n) =>
+      n.id === firstBlockIds[0] ? { ...n, position: { x: base.boxes[n.id]!.x, y: origLowerY + 80 } } : n,
+    )
+    const L = computeLayout(moved)
+    const upperReg = L.regions.find((r) => r.sectionId === secIds[0])!
+    const lowerReg = L.regions.find((r) => r.sectionId === lowerSec)!
+    expect(lowerReg.y).toBeGreaterThanOrEqual(upperReg.y + upperReg.h)
+  })
+
   it('handles an empty map and a root without sections', () => {
     expect(computeLayout([]).rootId).toBeNull()
     const root = makeNode({ map_id: 'm', level: 'chapter', title: 'Only' })
@@ -157,7 +222,7 @@ describe('computeLayout for books', () => {
     expect([r2.w, r2.h]).toEqual([SIZES.waitingW, SIZES.waitingH])
   })
 
-  it('packs chapters into rows instead of one long line', () => {
+  it('packs chapters into rows instead of one long line and shifts expanded chapters without overlap', () => {
     const { nodes, chapterIds } = book(
       Array.from({ length: 7 }, () => ({ sections: 3, blocks: 1 })),
     )
@@ -165,8 +230,16 @@ describe('computeLayout for books', () => {
     const tops = new Set(chapterIds.map((id) => L.boxes[id]!.y))
     expect(tops.size).toBeGreaterThan(1)
     expect(tops.size).toBeLessThan(7)
-    // No two regions overlap.
-    const rs = L.regions
+
+    // Drag a block in chapter 0 far right & down so chapter 0 expands into neighbors.
+    const ch0Block = nodes.find((n) => n.level === 'block' && L.chapterOf[n.id] === chapterIds[0])!
+    const moved = nodes.map((n) =>
+      n.id === ch0Block.id
+        ? { ...n, position: { x: L.boxes[ch0Block.id]!.x + 600, y: L.boxes[ch0Block.id]!.y + 400 } }
+        : n,
+    )
+    const L2 = computeLayout(moved)
+    const rs = L2.regions.filter((r) => r.kind === 'chapter')
     for (let i = 0; i < rs.length; i++)
       for (let j = i + 1; j < rs.length; j++) {
         const a = rs[i]!
@@ -176,11 +249,32 @@ describe('computeLayout for books', () => {
       }
   })
 
-  it('records each section column for the zoomed-out section view', () => {
-    const { nodes } = book([{ sections: 2, blocks: 3 }])
+  it('records each section column with minimum zoomed-out card height even for empty sections', () => {
+    const { nodes } = book([
+      { sections: 2, blocks: 3 },
+      { sections: 1, blocks: 0 },
+    ])
     const L = computeLayout(nodes)
-    const section = nodes.find((n) => n.level === 'section')!
-    const col = L.columns[section.id]!
-    expect(col.h).toBeGreaterThan(SIZES.sectionH + 3 * SIZES.blockH)
+    const sections = nodes.filter((n) => n.level === 'section')
+    expect(L.columns[sections[0]!.id]!.h).toBeGreaterThan(SIZES.sectionH + 3 * SIZES.blockH)
+    const emptySection = sections.at(-1)!
+    expect(L.columns[emptySection.id]!.h).toBeGreaterThanOrEqual(SIZES.minExpandedSectionH)
+  })
+
+  it('shifts section columns alongside dragged sections so zoomed-out section cards stay aligned', () => {
+    const { nodes, ids } = build()
+    const base = computeLayout(nodes)
+    const s2Col = base.columns[ids.s2!]!
+    const dx = 180
+    const dy = 140
+    const subtree = new Set([ids.s2!, ids.c!])
+    const moved = nodes.map((n) =>
+      subtree.has(n.id)
+        ? { ...n, position: { x: base.boxes[n.id]!.x + dx, y: base.boxes[n.id]!.y + dy } }
+        : n,
+    )
+    const L = computeLayout(moved)
+    expect(L.columns[ids.s2!]!.x).toBeCloseTo(s2Col.x + dx)
+    expect(L.columns[ids.s2!]!.y).toBeCloseTo(s2Col.y + dy)
   })
 })

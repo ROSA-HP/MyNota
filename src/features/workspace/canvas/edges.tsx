@@ -33,11 +33,12 @@ import { bezierAt, labelSize, pickLabelPoint } from './labelPlacement'
 import { existingLink, nodeIdAt } from './linking'
 import {
   arrowHead,
-  bracket,
   centrePath,
+  clearRelationCurve,
   downThenAcross,
   nearestSides,
   oneBend,
+  railBracket,
   sideCurve,
   split,
   taperedPath,
@@ -228,13 +229,16 @@ export function RailEdge({ id, source, target, data }: EdgeProps<RailEdgeT>) {
         from={4.5}
       />
     )
-  // Blocked: a bracket that turns one way only, out of the section's side towards the block's
-  // column, down the gap beside the column (12px from the block) and into the block's side.
-  const toLeft = t.x + t.w / 2 < s.x + s.w / 2
-  const from = { x: toLeft ? s.x : s.x + s.w, y: s.y + s.h / 2 }
-  const gapX = toLeft ? t.x - 12 : t.x + t.w + 12
-  const end = { x: toLeft ? t.x : t.x + t.w, y: t.y + Math.min(t.h / 2, 24) }
-  return <OrganicBranch id={id} segs={bracket(from, gapX, end)} color={data?.color} from={4.5} />
+  // Blocked: drop from the bottom edge of the section heading directly down the column's 22px
+  // rail gap and into the block's side without crossing the heading or adjacent columns.
+  return (
+    <OrganicBranch
+      id={id}
+      segs={railBracket(s, t, data?.rtl ?? false)}
+      color={data?.color}
+      from={4.5}
+    />
+  )
 }
 
 /** Process sections: from one step to the next, at the nearest sides. */
@@ -291,20 +295,42 @@ function roundedPath(points: Array<{ x: number; y: number }>, radius = 12): stri
 export function BusEdge({ id, source, target, data }: EdgeProps<BusEdgeT>) {
   const s = rectOf(useInternalNode(source))
   const t = rectOf(useInternalNode(target))
+  const spineData = data?.spineX ?? null
+  const sxHint = s ? s.x + s.w / 2 : 0
+  const liveSpineX = useStore(
+    useCallback(
+      (st: ReactFlowState) => {
+        if (spineData === null) return null
+        const rtl = spineData > sxHint
+        let extreme = spineData
+        for (const n of st.nodeLookup.values()) {
+          if (n.hidden || (n.type !== 'region' && n.type !== 'section')) continue
+          const r = rectOf(n)
+          if (!r) continue
+          if (rtl) extreme = Math.max(extreme, r.x + r.w + 12)
+          else extreme = Math.min(extreme, r.x - 12)
+        }
+        return extreme
+      },
+      [spineData, sxHint],
+    ),
+  )
   if (!s || !t || !data) return null
   const sx = s.x + s.w / 2
   const tx = t.x + t.w / 2
+  const dropY = t.y <= data.y + 8 ? t.y - 24 : data.y
+  const topY = Math.min(data.top, dropY)
   const points = [
     { x: sx, y: s.y + s.h },
-    { x: sx, y: data.top },
+    { x: sx, y: topY },
   ]
-  if (data.spineX !== null)
-    points.push({ x: data.spineX, y: data.top }, { x: data.spineX, y: data.y })
-  points.push({ x: tx, y: data.y })
+  if (liveSpineX !== null)
+    points.push({ x: liveSpineX, y: topY }, { x: liveSpineX, y: dropY })
+  points.push({ x: tx, y: dropY })
   const drop: Cubic = [
-    { x: tx, y: data.y },
-    { x: tx, y: data.y + (t.y - data.y) / 3 },
-    { x: tx, y: t.y - (t.y - data.y) / 3 },
+    { x: tx, y: dropY },
+    { x: tx, y: dropY + (t.y - dropY) / 3 },
+    { x: tx, y: t.y - (t.y - dropY) / 3 },
     { x: tx, y: t.y },
   ]
   const color = data.color ?? 'var(--line)'
@@ -335,58 +361,11 @@ export function BusEdge({ id, source, target, data }: EdgeProps<BusEdgeT>) {
   )
 }
 
-/** Picks the facing sides of two boxes and returns a smooth curve between them. */
-function floatingPath(a: Rect, b: Rect, rtl: boolean) {
-  const ac = { x: a.x + a.w / 2, y: a.y + a.h / 2 }
-  const bc = { x: b.x + b.w / 2, y: b.y + b.h / 2 }
-  const dx = bc.x - ac.x
-  const dy = bc.y - ac.y
-  let p1: { x: number; y: number }
-  let p2: { x: number; y: number }
-  let c1: { x: number; y: number }
-  let c2: { x: number; y: number }
-  if (Math.abs(dx) > Math.abs(dy) * 0.8 && Math.abs(dx) > (a.w + b.w) / 2) {
-    const sa = dx > 0 ? 1 : -1
-    p1 = { x: ac.x + (sa * a.w) / 2, y: ac.y }
-    p2 = { x: bc.x - (sa * b.w) / 2, y: bc.y }
-    const gap = Math.abs(p2.x - p1.x)
-    const k = Math.max(40, gap / 2)
-    // Short hops between neighbouring columns arc upward so the label has room.
-    const lift = gap < 140 ? 46 : 0
-    c1 = { x: p1.x + sa * k, y: p1.y - lift }
-    c2 = { x: p2.x - sa * k, y: p2.y - lift }
-  } else if (Math.abs(dx) < (a.w + b.w) / 2 && Math.abs(dy) < 260) {
-    // Same column: loop out to the side away from the tree lines (right in LTR, left in RTL)
-    // so the link doesn't run through the blocks between.
-    const out = rtl ? -1 : 1
-    p1 = { x: rtl ? a.x : a.x + a.w, y: ac.y }
-    p2 = { x: rtl ? b.x : b.x + b.w, y: bc.y }
-    const edge = rtl ? Math.min(p1.x, p2.x) : Math.max(p1.x, p2.x)
-    const bulge = edge + out * (40 + Math.abs(dy) / 6)
-    c1 = { x: bulge, y: p1.y }
-    c2 = { x: bulge, y: p2.y }
-  } else {
-    const sa = dy > 0 ? 1 : -1
-    p1 = { x: ac.x, y: ac.y + (sa * a.h) / 2 }
-    p2 = { x: bc.x, y: bc.y - (sa * b.h) / 2 }
-    const k = Math.max(40, Math.abs(p2.y - p1.y) / 2)
-    c1 = { x: p1.x, y: p1.y + sa * k }
-    c2 = { x: p2.x, y: p2.y - sa * k }
-  }
-  // One bend, no S (it still arrives squarely, where the arrowhead is).
-  ;[, c1, c2] = oneBend([p1, c1, c2, p2])
-  const path = `M${p1.x},${p1.y} C${c1.x},${c1.y} ${c2.x},${c2.y} ${p2.x},${p2.y}`
-  const at = bezierAt(p1, c1, c2, p2)
-  // Point on the cubic at t = 0.5 for the label (useLabelPoint moves it off other cards).
-  const label = at(0.5)
-  return { path, label, p1, p2, at }
-}
-
 /**
- * The label position of a link between `source` and `target`: on the curve, nearest the middle,
- * not covering another card. Re-computed when nodes move; re-renders only when it changes.
+ * Computes an obstacle-avoiding relation curve and label placement from live card positions.
+ * Re-computed only when card positions change (never on pan/zoom).
  */
-function useLabelPoint(source: string, target: string, rtl: boolean, labelWidth: number) {
+function useRelationRoute(source: string, target: string, rtl: boolean, labelWidth: number) {
   return useStore(
     useCallback(
       (st: ReactFlowState) => {
@@ -398,6 +377,7 @@ function useLabelPoint(source: string, target: string, rtl: boolean, labelWidth:
           if (
             n.id === source ||
             n.id === target ||
+            n.hidden ||
             n.type === 'region' ||
             n.type === 'chapterRegion'
           )
@@ -405,11 +385,20 @@ function useLabelPoint(source: string, target: string, rtl: boolean, labelWidth:
           const r = rectOf(n)
           if (r) obstacles.push(r)
         }
-        return pickLabelPoint(floatingPath(a, b, rtl).at, obstacles, { w: labelWidth, h: 26 })
+        const [p1, c1, c2, p2] = clearRelationCurve(a, b, rtl, obstacles)
+        const at = bezierAt(p1, c1, c2, p2)
+        const label = pickLabelPoint(at, obstacles, { w: labelWidth, h: 26 })
+        const path = `M${p1.x},${p1.y} C${c1.x},${c1.y} ${c2.x},${c2.y} ${p2.x},${p2.y}`
+        return { path, label, p1, p2 }
       },
       [source, target, rtl, labelWidth],
     ),
-    (x, y) => x?.x === y?.x && x?.y === y?.y,
+    (x, y) =>
+      x?.path === y?.path &&
+      x?.label.x === y?.label.x &&
+      x?.label.y === y?.label.y &&
+      x?.p1.x === y?.p1.x &&
+      x?.p2.x === y?.p2.x,
   )
 }
 
@@ -433,12 +422,11 @@ export function RelationEdge({
   const labelText = rel ? rel.label || t(`ws.relations.${rel.type}`) : ''
   // Suggested links also carry accept / dismiss buttons beside the label.
   const labelWidth = labelSize(labelText).w + (rel?.status === 'suggested' ? 60 : 0)
-  const placed = useLabelPoint(source, target, data?.rtl ?? false, labelWidth)
-  if (!s || !tg || !data) return null
+  const route = useRelationRoute(source, target, data?.rtl ?? false, labelWidth)
+  if (!s || !tg || !data || !route) return null
   const { relation, canEdit, selected } = data
   const suggested = relation.status === 'suggested'
-  const { path, label: middle, p1, p2 } = floatingPath(s, tg, data.rtl)
-  const label = placed ?? middle
+  const { path, label, p1, p2 } = route
   const text = relation.label || t(`ws.relations.${relation.type}`)
   const showTools = selected && canEdit && !suggested && !pickerOpen
   return (
@@ -470,6 +458,8 @@ export function RelationEdge({
             data.dimmed && 'pointer-events-none opacity-20',
           )}
           data-relation-label=""
+          data-source={source}
+          data-target={target}
           data-suggested={suggested ? '' : undefined}
           style={{ transform: `translate(-50%, -50%) translate(${label.x}px, ${label.y}px)` }}
         >
@@ -752,10 +742,9 @@ export type BundleEdgeT = Edge<
 export function BundleEdge({ id, source, target, data }: EdgeProps<BundleEdgeT>) {
   const s = rectOf(useInternalNode(source))
   const tg = rectOf(useInternalNode(target))
-  const placed = useLabelPoint(source, target, data?.rtl ?? false, labelSize(data?.label ?? '').w)
-  if (!s || !tg || !data) return null
-  const { path, label: middle } = floatingPath(s, tg, data.rtl)
-  const label = placed ?? middle
+  const route = useRelationRoute(source, target, data?.rtl ?? false, labelSize(data?.label ?? '').w)
+  if (!s || !tg || !data || !route) return null
+  const { path, label } = route
   const width = 2.5 + Math.min(data.count, 6) * 0.6
   return (
     <>
@@ -767,6 +756,9 @@ export function BundleEdge({ id, source, target, data }: EdgeProps<BundleEdgeT>)
       />
       <EdgeLabelRenderer>
         <div
+          data-relation-label=""
+          data-source={source}
+          data-target={target}
           className={cn(
             'mynota-zoomtext nodrag nopan pointer-events-none absolute',
             data.dimmed && 'opacity-20',

@@ -2,7 +2,8 @@ import { getNodesBounds, type Node, type ReactFlowInstance } from '@xyflow/react
 
 /** Biggest side of a map picture in CSS pixels (×2 for sharpness stays under canvas limits). */
 const MAX_SIDE = 7000
-const PADDING = 48
+const PADDING_X = 72
+const PADDING_Y = 64
 
 export interface CaptureOptions {
   /** Node ids to fit (a chapter or section and everything in it); null for the whole map. */
@@ -19,7 +20,11 @@ const nextFrame = () => new Promise<void>((r) => requestAnimationFrame(() => r()
 const wait = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
 
 /** Elements that never belong in a picture of the map. */
-function keep(links: boolean) {
+export function keep(
+  links: boolean,
+  scopeIds?: Set<string> | null,
+  excludedEdgeIds?: Set<string>,
+) {
   return (el: HTMLElement | SVGElement) => {
     const cl = el.classList
     if (!cl) return true
@@ -33,13 +38,28 @@ function keep(links: boolean) {
       return false
     // Suggested links are not part of the map yet.
     if (cl.contains('is-suggested')) return false
-    if (el instanceof HTMLElement && el.dataset.suggested !== undefined) return false
+    if (el.getAttribute('data-suggested') !== null) return false
     if (
       !links &&
       (cl.contains('react-flow__edge-relation') || cl.contains('react-flow__edge-bundle'))
     )
       return false
-    if (!links && el instanceof HTMLElement && el.dataset.relationLabel !== undefined) return false
+    if (!links && el.getAttribute('data-relation-label') !== null) return false
+
+    if (scopeIds) {
+      if (cl.contains('react-flow__node')) {
+        const id = el.getAttribute('data-id')
+        if (id && !scopeIds.has(id) && !scopeIds.has(id.replace(/^region:/, ''))) return false
+      }
+      if (cl.contains('react-flow__edge') && excludedEdgeIds) {
+        const edgeId = el.getAttribute('data-id')
+        if (edgeId && excludedEdgeIds.has(edgeId)) return false
+      }
+      const src = el.getAttribute('data-source')
+      const tgt = el.getAttribute('data-target')
+      if ((src && !scopeIds.has(src)) || (tgt && !scopeIds.has(tgt))) return false
+    }
+
     return true
   }
 }
@@ -61,6 +81,16 @@ export async function captureMap(
   const viewport = flow?.querySelector<HTMLElement>('.react-flow__viewport')
   if (!flow || !viewport) throw new Error('The map is not on screen.')
 
+  const scopeIds = opts.ids
+  const excludedEdgeIds = scopeIds
+    ? new Set(
+        rf
+          .getEdges()
+          .filter((e) => !scopeIds.has(e.source) || !scopeIds.has(e.target))
+          .map((e) => e.id),
+      )
+    : undefined
+
   const root = document.documentElement
   const theme = root.dataset.theme
   const before = rf.getViewport()
@@ -74,7 +104,7 @@ export async function captureMap(
       const dataUrl = await toPng(flow, {
         pixelRatio: 2,
         backgroundColor: '#ffffff',
-        filter: keep(opts.links),
+        filter: keep(opts.links, opts.ids, excludedEdgeIds),
       })
       return { dataUrl, width: r.width, height: r.height }
     }
@@ -90,8 +120,12 @@ export async function captureMap(
       )
     if (!nodes.length) throw new Error('Nothing to export.')
     const b = getNodesBounds(nodes)
-    const w = b.width + PADDING * 2
-    const h = b.height + PADDING * 2
+    // Allow clearance for outer Bus spines, neo-brutalist card shadows, and curved relation arcs.
+    const edgeExtra = opts.links ? 32 : 0
+    const padX = PADDING_X + edgeExtra
+    const padY = PADDING_Y + edgeExtra
+    const w = b.width + padX * 2
+    const h = b.height + padY * 2
     const scale = Math.min(1, MAX_SIDE / Math.max(w, h))
     const width = Math.round(w * scale)
     const height = Math.round(h * scale)
@@ -100,11 +134,12 @@ export async function captureMap(
       height,
       pixelRatio: 2,
       backgroundColor: '#ffffff',
-      filter: keep(opts.links),
+      filter: keep(opts.links, opts.ids, excludedEdgeIds),
       style: {
         width: `${width}px`,
         height: `${height}px`,
-        transform: `translate(${(PADDING - b.x) * scale}px, ${(PADDING - b.y) * scale}px) scale(${scale})`,
+        transformOrigin: '0 0',
+        transform: `translate(${(padX - b.x) * scale}px, ${(padY - b.y) * scale}px) scale(${scale})`,
       },
     })
     return { dataUrl, width, height }

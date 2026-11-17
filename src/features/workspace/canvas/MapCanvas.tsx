@@ -28,7 +28,15 @@ import { useCanvasUi } from './canvasUi'
 import { focusGroupOf } from './focus'
 import { OUTLINE_DRAG_TYPE, anchorBeside, createLinkedBlock, linkNodes, nodeIdAt } from './linking'
 import { edgeTypes } from './edges'
-import { childrenIndex, computeLayout, mirrorBox, readingNumbers, type Box } from './layout'
+import {
+  SIZES,
+  childrenIndex,
+  computeLayout,
+  mirrorBox,
+  readingNumbers,
+  resolveBoxOverlaps,
+  type Box,
+} from './layout'
 import { nodeTypes } from './nodes'
 import {
   bundleRelations,
@@ -154,12 +162,15 @@ export function MapCanvas() {
   const canEdit = useWorkspace((s) => s.role === 'owner' || s.role === 'editor')
   const select = useWorkspace((s) => s.select)
   const updateNode = useWorkspace((s) => s.updateNode)
+  const updateNodes = useWorkspace((s) => s.updateNodes)
   const failedSections = useBuild((s) => s.sections)
   const { connecting, connectFrom, multi, pick, cancelConnect, openMenu, askDelete } = useCanvasUi()
   const spotlight = useCanvasUi((s) => s.spotlight)
   const focusId = useCanvasUi((s) => s.focusId)
   const { fitView } = useReactFlow()
   const [drag, setDrag] = useState<Record<string, { x: number; y: number }>>({})
+  const dragRef = useRef<Record<string, { x: number; y: number }>>({})
+  const [measured, setMeasured] = useState<Record<string, { width: number; height: number }>>({})
   // While a link is being dragged: the block under the pointer, highlighted as the drop target.
   const [linking, setLinking] = useState(false)
   const [linkTarget, setLinkTarget] = useState<string | null>(null)
@@ -230,10 +241,10 @@ export function MapCanvas() {
     [book, layout.chapterOf, nodes],
   )
 
-  // Logical layout → screen: mirrored for Arabic so columns run right to left.
+  // Logical layout → screen: mirrored for Arabic so columns run right to left around the stable base width.
   const toScreen = useCallback(
-    (b: Box) => (rtl ? mirrorBox(b, layout.width) : b),
-    [rtl, layout.width],
+    (b: Box) => (rtl ? mirrorBox(b, layout.mirrorWidth) : b),
+    [rtl, layout.mirrorWidth],
   )
 
   // Book maps: a chapter's live document loads when the chapter is on screen at the sections or
@@ -297,13 +308,30 @@ export function MapCanvas() {
 
   const flowNodes = useMemo<Node[]>(() => {
     const out: Node[] = []
+    const sectionDelta = (sectionId: string | undefined): { dx: number; dy: number } | null => {
+      if (!sectionId) return null
+      const d = drag[sectionId]
+      const baseBox = layout.boxes[sectionId]
+      if (!d || !baseBox) return null
+      const screenBase = toScreen(baseBox)
+      return { dx: d.x - screenBase.x, dy: d.y - screenBase.y }
+    }
+    const measuredFor = (id: string, w: number, h: number) => {
+      const m = measured[id]
+      if (!m) return undefined
+      return Math.abs(m.width - w) <= 4 && Math.abs(m.height - h) <= 4 ? m : undefined
+    }
     for (const region of layout.regions) {
       const b = toScreen(region)
+      const sd = region.kind === 'section' ? sectionDelta(region.sectionId) : null
+      const regionId = `region:${region.sectionId}`
+      const regionMeasured = measuredFor(regionId, b.w, b.h)
       const base = {
-        id: `region:${region.sectionId}`,
-        position: { x: b.x, y: b.y },
+        id: regionId,
+        position: sd ? { x: b.x + sd.dx, y: b.y + sd.dy } : { x: b.x, y: b.y },
         width: b.w,
         height: b.h,
+        ...(regionMeasured && { measured: regionMeasured }),
         draggable: false,
         selectable: false,
         focusable: false,
@@ -341,20 +369,23 @@ export function MapCanvas() {
       if (level === 'chapters' && !isRoot) continue
       if (level === 'sections' && !isRoot && !isChapter && !isSectionCard) continue
       const b = toScreen(box)
-      const pos = drag[n.id] ?? { x: b.x, y: b.y }
+      const sd = !isSectionCard && section ? sectionDelta(section.id) : null
+      const pos = drag[n.id] ?? (sd ? { x: b.x + sd.dx, y: b.y + sd.dy } : { x: b.x, y: b.y })
       const marked = connectFrom === n.id || multi.includes(n.id) || spotlight.includes(n.id)
+      const commonMeasured = measuredFor(n.id, box.w, box.h)
       const common = {
         id: n.id,
         position: pos,
         width: box.w,
         height: box.h,
+        ...(commonMeasured && { measured: commonMeasured }),
         className: cn(
           marked && 'is-marked',
           linkTarget === n.id && 'is-link-target',
           !isRoot && outside(n.id) && 'is-dimmed',
         ),
         selected: n.id === selectedId,
-        draggable: canEdit && level === 'blocks' && !isChapter,
+        draggable: canEdit && level === 'blocks' && !isChapter && !isRoot,
         ariaLabel:
           cover && n.level === 'block' && n.id !== selectedId && !revealed.includes(n.id)
             ? t('ws.studyView.covered')
@@ -373,8 +404,10 @@ export function MapCanvas() {
         const eb = expanded
           ? toScreen({ x: column.x, y: column.y, w: column.w, h: column.h })
           : null
+        const sectionMeasured = measuredFor(n.id, eb ? eb.w : box.w, eb ? eb.h : box.h)
         out.push({
           ...common,
+          measured: sectionMeasured,
           ...(eb && { position: { x: eb.x, y: eb.y }, width: eb.w, height: eb.h }),
           type: 'section',
           data: {
@@ -420,6 +453,7 @@ export function MapCanvas() {
     nodes,
     toScreen,
     drag,
+    measured,
     selectedId,
     numbers,
     crossLinks,
@@ -478,7 +512,8 @@ export function MapCanvas() {
             color: tint(target),
             top: line.top,
             y: line.y,
-            spineX: line.spineX === null ? null : rtl ? layout.width - line.spineX : line.spineX,
+            spineX:
+              line.spineX === null ? null : rtl ? layout.mirrorWidth - line.spineX : line.spineX,
           },
           selectable: false,
           focusable: false,
@@ -629,27 +664,90 @@ export function MapCanvas() {
 
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => {
+      const dimPatches: Array<{ id: string; dimensions: { width: number; height: number } }> = []
+      const pendingNodePatches: Array<{ id: string; patch: Partial<NodeRow> }> = []
       for (const c of changes) {
+        if (c.type === 'dimensions' && c.dimensions) {
+          dimPatches.push({ id: c.id, dimensions: c.dimensions })
+          continue
+        }
         if (c.type !== 'position') continue
         if (c.dragging && c.position) {
           const p = c.position
+          dragRef.current[c.id] = p
           setDrag((d) => ({ ...d, [c.id]: p }))
         } else if (c.dragging === false) {
+          const p = dragRef.current[c.id]
+          Reflect.deleteProperty(dragRef.current, c.id)
           setDrag((d) => {
-            const p = d[c.id]
-            const box = layout.boxes[c.id]
-            if (p && box) {
-              const logicalX = rtl ? layout.width - p.x - box.w : p.x
-              updateNode(c.id, { position: { x: Math.round(logicalX), y: Math.round(p.y) } })
-            }
+            if (!(c.id in d)) return d
             const next = { ...d }
             Reflect.deleteProperty(next, c.id)
             return next
           })
+          const box = layout.boxes[c.id]
+          const node = nodes[c.id]
+          if (p && box && node) {
+            const logicalX = rtl ? layout.mirrorWidth - p.x - box.w : p.x
+            const logicalDx = logicalX - box.x
+            const logicalDy = p.y - box.y
+            if (isSection(node)) {
+              const stack = [c.id]
+              const seen = new Set<string>()
+              while (stack.length) {
+                const id = stack.pop() as string
+                if (seen.has(id)) continue
+                seen.add(id)
+                const b = layout.boxes[id]
+                if (b && !layout.hidden.has(id)) {
+                  pendingNodePatches.push({
+                    id,
+                    patch: {
+                      position: { x: Math.round(b.x + logicalDx), y: Math.round(b.y + logicalDy) },
+                    },
+                  })
+                }
+                for (const kid of kids.get(id) ?? []) stack.push(kid.id)
+              }
+            } else {
+              const obstacles = Object.entries(layout.boxes)
+                .filter(([otherId]) => otherId !== c.id && !layout.hidden.has(otherId))
+                .map(([, ob]) => ob)
+              const resolved = resolveBoxOverlaps(
+                { x: logicalX, y: p.y, w: box.w, h: box.h },
+                obstacles,
+                SIZES.rowGap,
+              )
+              pendingNodePatches.push({
+                id: c.id,
+                patch: { position: { x: Math.round(resolved.x), y: Math.round(resolved.y) } },
+              })
+            }
+          }
         }
       }
+      if (pendingNodePatches.length) {
+        if (pendingNodePatches.length === 1) {
+          const only = pendingNodePatches[0]
+          if (only) updateNode(only.id, only.patch)
+        } else {
+          updateNodes(pendingNodePatches)
+        }
+      }
+      if (dimPatches.length) {
+        setMeasured((prev) => {
+          let next: typeof prev | null = null
+          for (const { id, dimensions } of dimPatches) {
+            const cur = prev[id]
+            if (cur && cur.width === dimensions.width && cur.height === dimensions.height) continue
+            next ??= { ...prev }
+            next[id] = dimensions
+          }
+          return next ?? prev
+        })
+      }
     },
-    [layout, rtl, updateNode],
+    [layout, nodes, rtl, isSection, kids, updateNode, updateNodes],
   )
 
   // Keep the whole map in view while it grows (the AI adds sections, then blocks), until the

@@ -172,6 +172,7 @@ export async function buildStudyPdf(input: StudyPdfInput): Promise<Blob> {
       outline: doc.coverOutline,
       outlineLabel: input.labels.contents,
       moreLabel: doc.tabs.length > 12 ? input.labels.more(doc.tabs.length - 12) : null,
+      formatMore: input.labels.more,
       madeWith: input.labels.madeWith,
     }),
     coverSize,

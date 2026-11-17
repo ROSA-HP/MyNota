@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useLayoutEffect, useRef } from 'react'
 import { MathFormula, RichMathText } from '@/components/ui/MathFormula'
 import { TYPE_ICON } from '@/features/workspace/canvas/visuals'
 import type { ChapterColor } from '@/lib/database.types'
@@ -221,6 +221,7 @@ export function CoverPage({
   outline,
   outlineLabel,
   moreLabel,
+  formatMore,
   madeWith,
 }: {
   size: { w: number; h: number }
@@ -234,13 +235,35 @@ export function CoverPage({
   outline?: CoverOutlineChapter[]
   outlineLabel?: string
   moreLabel: string | null
+  formatMore?: (count: number) => string
   madeWith: string
 }) {
+  const isLandscape = size.w > size.h
   const visibleStats = stats.filter((s) => s.n > 0)
   const visibleTabs = tabs.slice(0, 12)
   const hasOutline = Boolean(outline && outline.length > 0)
-  const visibleOutline = outline ? outline.slice(0, 6) : []
-  const hiddenChapters = outline && outline.length > 6 ? outline.length - 6 : 0
+  const maxChapters = isLandscape ? 4 : 6
+  const visibleOutline = outline ? outline.slice(0, maxChapters) : []
+  const maxSections = isLandscape
+    ? visibleOutline.length <= 2
+      ? 8
+      : 4
+    : visibleOutline.length <= 2
+      ? 14
+      : visibleOutline.length <= 4
+        ? 8
+        : 4
+  const hiddenChapters = outline && outline.length > maxChapters ? outline.length - maxChapters : 0
+  const hiddenSections = visibleOutline.reduce(
+    (sum, ch) => sum + Math.max(0, ch.sections.length - maxSections),
+    0,
+  )
+  const hasTruncatedOutline = hiddenChapters > 0 || hiddenSections > 0
+  const resolvedOutlineMore = hasTruncatedOutline
+    ? (formatMore
+        ? formatMore(hiddenChapters > 0 ? hiddenChapters : hiddenSections)
+        : moreLabel)
+    : null
   const coverShadow = dir === 'rtl' ? `-6px 6px 0 ${COLORS.ink}` : SHADOW.cover
   const chapterShadow = dir === 'rtl' ? `-4px 4px 0 ${COLORS.ink}` : SHADOW.chapter
   const cardShadow = dir === 'rtl' ? `-2px 2px 0 ${COLORS.ink}` : SHADOW.card
@@ -252,13 +275,13 @@ export function CoverPage({
           boxSizing: 'border-box',
           margin: 0,
           position: 'absolute',
-          top: mmToPx(14),
-          bottom: mmToPx(14),
+          top: mmToPx(isLandscape ? 10 : 14),
+          bottom: mmToPx(isLandscape ? 10 : 14),
           left: mmToPx(14),
           right: mmToPx(14),
           display: 'flex',
           flexDirection: 'column',
-          gap: 18,
+          gap: isLandscape ? 12 : 18,
         }}
       >
         {/* Top bar (flush left to right) */}
@@ -309,7 +332,7 @@ export function CoverPage({
             minHeight: 0,
             display: 'flex',
             flexDirection: 'column',
-            gap: 18,
+            gap: isLandscape ? 12 : 18,
           }}
         >
           {/* Full-width Hero Title Card */}
@@ -343,7 +366,7 @@ export function CoverPage({
                   flexDirection: 'row',
                   justifyContent: 'space-between',
                   alignItems: 'center',
-                  padding: '12px 24px',
+                  padding: isLandscape ? '8px 20px' : '12px 24px',
                   background: COLORS.bioSlate,
                   borderBottom: BORDER,
                 }}
@@ -386,7 +409,7 @@ export function CoverPage({
                 style={{
                   boxSizing: 'border-box',
                   margin: 0,
-                  padding: '30px 26px',
+                  padding: isLandscape ? '16px 22px' : '30px 26px',
                 }}
               >
                 <div
@@ -394,8 +417,14 @@ export function CoverPage({
                     boxSizing: 'border-box',
                     margin: 0,
                     fontFamily: fontFor(dir),
-                    fontSize: 40,
-                    lineHeight: dir === 'rtl' ? '50px' : '46px',
+                    fontSize: isLandscape ? 30 : 40,
+                    lineHeight: isLandscape
+                      ? dir === 'rtl'
+                        ? '40px'
+                        : '36px'
+                      : dir === 'rtl'
+                        ? '50px'
+                        : '46px',
                     fontWeight: 700,
                     letterSpacing: dir === 'rtl' ? undefined : '-0.025em',
                     overflowWrap: 'anywhere',
@@ -511,10 +540,10 @@ export function CoverPage({
                     margin: 0,
                     flex: 1,
                     minHeight: 0,
-                    padding: '16px 18px',
+                    padding: isLandscape ? '12px 16px' : '16px 18px',
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: 14,
+                    gap: isLandscape ? 8 : 14,
                     overflow: 'hidden',
                   }}
                 >
@@ -527,8 +556,9 @@ export function CoverPage({
                         margin: 0,
                         display: 'flex',
                         flexDirection: 'column',
-                        gap: 8,
-                        paddingBottom: cIdx < visibleOutline.length - 1 ? 12 : 0,
+                        gap: isLandscape ? 6 : 8,
+                        paddingBottom:
+                          cIdx < visibleOutline.length - 1 ? (isLandscape ? 8 : 12) : 0,
                         borderBottom:
                           cIdx < visibleOutline.length - 1
                             ? `1.5px dashed ${COLORS.charcoal}`
@@ -587,14 +617,14 @@ export function CoverPage({
                             margin: 0,
                             display: 'grid',
                             gridTemplateColumns:
-                              ch.sections.length > 6
+                              ch.sections.length > 6 || (isLandscape && ch.sections.length > 2)
                                 ? 'repeat(2, minmax(0, 1fr))'
                                 : 'minmax(0, 1fr)',
-                            gap: '8px 14px',
+                            gap: isLandscape ? '6px 14px' : '8px 14px',
                             paddingInlineStart: ch.number !== null ? 38 : 0,
                           }}
                         >
-                          {ch.sections.slice(0, 14).map((sec, sIdx) => (
+                          {ch.sections.slice(0, maxSections).map((sec, sIdx) => (
                             <div
                               key={sIdx}
                               dir={sec.dir}
@@ -644,8 +674,9 @@ export function CoverPage({
                     </div>
                   ))}
 
-                  {hiddenChapters > 0 && moreLabel !== null && (
+                  {resolvedOutlineMore !== null && (
                     <div
+                      data-outline-more=""
                       style={{
                         boxSizing: 'border-box',
                         margin: 0,
@@ -659,7 +690,7 @@ export function CoverPage({
                         fontWeight: 700,
                       }}
                     >
-                      {moreLabel}
+                      {resolvedOutlineMore}
                     </div>
                   )}
                 </div>
@@ -919,8 +950,31 @@ export function FormulaBox({
   variables?: string
   dir: 'ltr' | 'rtl'
 }) {
+  const boxRef = useRef<HTMLDivElement>(null)
+  const wrapRef = useRef<HTMLDivElement>(null)
+  const formulaRef = useRef<HTMLSpanElement>(null)
+
+  useLayoutEffect(() => {
+    const box = boxRef.current
+    const wrap = wrapRef.current
+    const formula = formulaRef.current
+    if (!box || !wrap || !formula) return
+    formula.style.transform = ''
+    formula.style.transformOrigin = 'center center'
+    wrap.style.height = ''
+    const avail = box.clientWidth - 24
+    const naturalW = formula.scrollWidth
+    const naturalH = formula.scrollHeight
+    if (avail > 0 && naturalW > avail && naturalW > 0) {
+      const scale = Math.max(0.55, avail / naturalW)
+      formula.style.transform = `scale(${scale})`
+      if (naturalH > 0) wrap.style.height = `${Math.ceil(naturalH * scale)}px`
+    }
+  }, [latex])
+
   return (
     <div
+      ref={boxRef}
       style={{
         boxSizing: 'border-box',
         margin: 0,
@@ -932,9 +986,22 @@ export function FormulaBox({
         overflow: 'hidden',
       }}
     >
-      <span style={{ fontSize: 15 }}>
-        <MathFormula latex={latex} display />
-      </span>
+      <div
+        ref={wrapRef}
+        style={{
+          boxSizing: 'border-box',
+          margin: 0,
+          width: '100%',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          overflow: 'hidden',
+        }}
+      >
+        <span ref={formulaRef} style={{ display: 'inline-block', fontSize: 15 }}>
+          <MathFormula latex={latex} display />
+        </span>
+      </div>
       {variables && (
         <div
           dir={dir}

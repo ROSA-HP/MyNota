@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { makeNode } from '@/ai/pipeline/convert'
-import { fileName } from '@/features/export/capture'
+import { fileName, keep } from '@/features/export/capture'
 import { detailLine, outlineItems, toMarkdown } from '@/features/export/outline'
 import type { CardRow, NodeRow, RelationRow } from '@/lib/database.types'
 
@@ -173,5 +173,36 @@ describe('export', () => {
     })
     const itemBNoDetails = itemsNoDetails.find((i) => i.id === 'B')!
     expect(itemBNoDetails.detailBlocks).toEqual([])
+  })
+
+  it('filters out-of-scope nodes, excluded edges, and suggested links when capturing a scoped section/chapter', () => {
+    const scopeIds = new Set(['C', 'S', 'B'])
+    const excludedEdges = new Set(['edge-outside'])
+    const filter = keep(true, scopeIds, excludedEdges)
+
+    const inScopeNode = document.createElement('div')
+    inScopeNode.className = 'react-flow__node'
+    inScopeNode.setAttribute('data-id', 'region:S')
+    expect(filter(inScopeNode)).toBe(true)
+
+    const outOfScopeNode = document.createElement('div')
+    outOfScopeNode.className = 'react-flow__node'
+    outOfScopeNode.setAttribute('data-id', 'OTHER_SECTION')
+    expect(filter(outOfScopeNode)).toBe(false)
+
+    const outEdge = document.createElementNS('http://www.w3.org/2000/svg', 'g')
+    outEdge.classList.add('react-flow__edge')
+    outEdge.setAttribute('data-id', 'edge-outside')
+    expect(filter(outEdge)).toBe(false)
+
+    const outLabel = document.createElement('div')
+    outLabel.setAttribute('data-relation-label', '')
+    outLabel.setAttribute('data-source', 'B')
+    outLabel.setAttribute('data-target', 'OTHER_NODE')
+    expect(filter(outLabel)).toBe(false)
+
+    const suggestedLabel = document.createElement('div')
+    suggestedLabel.setAttribute('data-suggested', '')
+    expect(filter(suggestedLabel)).toBe(false)
   })
 })

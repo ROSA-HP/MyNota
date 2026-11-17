@@ -642,8 +642,21 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
     updateNode: (id, patch) => get().updateNodes([{ id, patch }]),
 
     updateNodes: (patches, opts) => {
-      if (!live || !get().canEdit()) return
+      if (!get().canEdit()) return
       const at = new Date().toISOString()
+      if (!live) {
+        if (get().fromCache || get().status !== 'ready') return
+        const next = { ...get().nodes }
+        let changed = false
+        for (const { id, patch } of patches) {
+          const cur = next[id]
+          if (!cur) continue
+          next[id] = { ...cur, ...patch, updated_at: at }
+          changed = true
+        }
+        if (changed) set({ nodes: next })
+        return
+      }
       const byDoc = new Map<DocKey, typeof patches>()
       for (const p of patches) {
         const key = keyOfNodeId(p.id)

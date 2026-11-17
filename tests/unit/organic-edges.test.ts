@@ -155,3 +155,35 @@ describe('one smooth bend, never an S (owner, 2026-11-03)', async () => {
     }
   })
 })
+
+describe('railBracket and obstacle-avoiding relation curves', () => {
+  it('routes railBracket cleanly down the rail gap from section bottom without an S-bend', async () => {
+    const o = await import('@/features/workspace/canvas/organic')
+    const section = { x: 100, y: 0, w: 500, h: 48 }
+    const col1Block = { x: 374, y: 180, w: 226, h: 100 }
+    const segs = o.railBracket(section, col1Block, false)
+    expect(segs).toHaveLength(2)
+    expect(segs[0][0].y).toBe(section.y + section.h)
+    expect(segs[1][3].x).toBe(col1Block.x)
+    expect(segs[0][0].x).toBeGreaterThanOrEqual(section.x + 8)
+    for (const seg of segs) expect(o.inflects(seg)).toBe(false)
+  })
+
+  it('deflects relation curve around intermediate obstacle cards without S-bends', async () => {
+    const o = await import('@/features/workspace/canvas/organic')
+    const a = { x: 0, y: 0, w: 200, h: 80 }
+    const obstacle = { x: 260, y: -10, w: 200, h: 100 }
+    const b = { x: 520, y: 0, w: 200, h: 80 }
+    const curve = o.clearRelationCurve(a, b, false, [obstacle])
+    expect(o.inflects(curve)).toBe(false)
+    for (let i = 1; i < 16; i++) {
+      const p = o.point(curve, i / 16)
+      const hitsObstacle =
+        p.x > obstacle.x + 2 &&
+        p.x < obstacle.x + obstacle.w - 2 &&
+        p.y > obstacle.y + 2 &&
+        p.y < obstacle.y + obstacle.h - 2
+      expect(hitsObstacle).toBe(false)
+    }
+  })
+})

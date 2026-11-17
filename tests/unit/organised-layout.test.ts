@@ -106,5 +106,20 @@ describe('a small map', () => {
     const { nodes, ids } = notesMap(2, [2, 2])
     const L = computeLayout(nodes)
     expect(new Set(ids.map((id) => L.boxes[id]?.y)).size).toBe(1)
+    expect(SIZES.rowGap).toBeGreaterThanOrEqual(22)
+  })
+
+  it('balances mixed-width sections into clean non-overlapping rows', () => {
+    const { nodes } = notesMap(6, [8, 2, 2, 8, 2, 2])
+    const L = computeLayout(nodes)
+    const regions = L.regions.filter((r) => r.kind === 'section')
+    for (let i = 0; i < regions.length; i++)
+      for (let j = i + 1; j < regions.length; j++) {
+        const a = regions[i]!
+        const b = regions[j]!
+        expect(a.x + a.w <= b.x || b.x + b.w <= a.x || a.y + a.h <= b.y || b.y + b.h <= a.y).toBe(
+          true,
+        )
+      }
   })
 })

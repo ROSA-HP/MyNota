@@ -39,11 +39,17 @@ export function paginateFlow(units: MeasuredUnit[], bodyHeight: number): NotesPa
 
     // 3. Group
     let end = Math.min(n - 1, i + unit.keepWithNext)
+    const minFollowerHeight = (u: MeasuredUnit): number =>
+      u.split ? u.split.base + u.split.head + (u.split.rows[0] ?? 0) : u.height
+    const minSelfHeight = (top: boolean): number =>
+      unit.split && unit.split.rows.length > 1
+        ? unit.split.base + unit.split.head + (unit.split.rows[0] ?? 0)
+        : unit.height - (top ? unit.padTop : 0)
     const calcGroupSum = (toIdx: number, top: boolean): number => {
-      let sum = unit.height - (top ? unit.padTop : 0)
+      let sum = minSelfHeight(top)
       for (let k = i + 1; k <= toIdx; k++) {
         const u = units[k]
-        if (u) sum += u.height
+        if (u) sum += minFollowerHeight(u)
       }
       return sum
     }
@@ -75,8 +81,10 @@ export function paginateFlow(units: MeasuredUnit[], bodyHeight: number): NotesPa
       continue
     }
 
-    // 6. Otherwise: if not atTop, flush and recompute
-    if (!atTop) {
+    // 6. If splittable and at least row 0 fits right after prior headings on this page, start splitting here;
+    // otherwise flush first if not already at top of a page.
+    const minFirstSlice = unit.split ? partHeight(unit, 0, 1) : h
+    if (!atTop && (totalRows <= 1 || used + minFirstSlice > bodyHeight)) {
       flush()
       h = unit.height - unit.padTop
       if (used + h <= bodyHeight) {
@@ -103,12 +111,13 @@ export function paginateFlow(units: MeasuredUnit[], bodyHeight: number): NotesPa
       continue
     }
 
-    // 8. Otherwise split it
+    // 8. Otherwise split it (first slice uses remaining page space when continuing below a heading)
     let from = 0
     let continued = false
     while (from < totalRows) {
+      const avail = bodyHeight - used
       let to = from + 1
-      while (to < totalRows && partHeight(unit, from, to + 1) <= bodyHeight) {
+      while (to < totalRows && partHeight(unit, from, to + 1) <= avail) {
         to++
       }
 
@@ -118,7 +127,7 @@ export function paginateFlow(units: MeasuredUnit[], bodyHeight: number): NotesPa
         rowTo: to,
         continued,
       })
-      used = partHeight(unit, from, to)
+      used += partHeight(unit, from, to)
       from = to
       continued = true
       if (from < totalRows) {

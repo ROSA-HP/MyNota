@@ -34,7 +34,7 @@ describe('block cards (canvas step 1)', () => {
     expect(core.h).toBe(withSummary.h + 26)
   })
 
-  it('caps long titles and summaries (the card clamps them)', () => {
+  it('caps long titles and summaries and gives slack for math or RTL lines', () => {
     const n = makeNode({
       map_id: MAP,
       level: 'block',
@@ -42,6 +42,20 @@ describe('block cards (canvas step 1)', () => {
       summary: 'y '.repeat(300),
     })
     expect(blockCard(n)).toMatchObject({ titleLines: 2, summaryLines: 2 }) // short cards
+
+    const plain = makeNode({
+      map_id: MAP,
+      level: 'block',
+      title: 'Energy',
+      summary: 'Average energy density.',
+    })
+    const math = makeNode({
+      map_id: MAP,
+      level: 'block',
+      title: 'Energy',
+      summary: 'Magnetic energy density is $u_B = \\frac{B^2}{2\\mu_0}$.',
+    })
+    expect(blockCard(math).h).toBeGreaterThanOrEqual(blockCard(plain).h + 6)
   })
 })
 

@@ -65,6 +65,31 @@ describe('studypdf paginate', () => {
     expect(pages[1]?.placed.map((p) => p.unitIndex)).toEqual([1])
   })
 
+  it('keeps chapter and section attached to the first slice of a following tall splittable block', () => {
+    const units: MeasuredUnit[] = [
+      makeUnit(400),
+      makeUnit(70, 0, 2),
+      makeUnit(40, 0, 1),
+      {
+        height: 552,
+        padTop: 0,
+        keepWithNext: 0,
+        split: { head: 40, rows: [120, 120, 120, 120], base: 30, gap: 4 },
+      },
+    ]
+    const pages = paginateFlow(units, 500)
+    expect(pages).toHaveLength(3)
+    expect(pages[0]?.placed.map((p) => p.unitIndex)).toEqual([0])
+    expect(pages[1]?.placed.map((p) => p.unitIndex)).toEqual([1, 2, 3])
+    expect(pages[1]?.placed[2]).toMatchObject({ rowFrom: 0, rowTo: 2, continued: false })
+    expect(pages[2]?.placed[0]).toMatchObject({
+      unitIndex: 3,
+      rowFrom: 2,
+      rowTo: 4,
+      continued: true,
+    })
+  })
+
   it('ensures every unit appears exactly once in order, with no page over bodyHeight', () => {
     const units = [
       makeUnit(150, 10, 1),

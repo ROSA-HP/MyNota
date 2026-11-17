@@ -408,6 +408,35 @@ describe('studypdf components', () => {
     expect(container.textContent).toContain('Energy Transport')
   })
 
+  it('shows accurate +N more badge on CoverPage when chapters or sections overflow', () => {
+    const manyChapters = Array.from({ length: 8 }, (_, idx) => ({
+      number: idx + 1,
+      title: `Chapter ${idx + 1}`,
+      color: 'yellow' as const,
+      dir: 'ltr' as const,
+      sections: [{ label: `${idx + 1}.1`, title: `Sec ${idx + 1}`, dir: 'ltr' as const }],
+    }))
+    const { container: landscapeOverflow } = render(
+      <CoverPage
+        size={{ w: 1123, h: 794 }}
+        tone="mint"
+        dir="ltr"
+        title="Landscape Compendium"
+        kindLabel="Book"
+        stickerLabel="Study notes"
+        stats={[{ n: 8, label: 'Chapters' }]}
+        tabs={[]}
+        outline={manyChapters}
+        outlineLabel="Contents"
+        moreLabel={null}
+        formatMore={(n) => `+${n} more`}
+        madeWith="Made with MyNota"
+      />,
+    )
+    expect(landscapeOverflow.querySelector('[data-outline-more]')?.textContent).toBe('+4 more')
+    expect(landscapeOverflow.textContent).not.toContain('Chapter 5')
+  })
+
   it('aligns nested blocks flush with zero start indent and justifies prose with inline KaTeX', () => {
     const nestedBlock: BlockUnit = {
       kind: 'block',

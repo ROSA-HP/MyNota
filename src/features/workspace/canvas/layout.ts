@@ -19,11 +19,13 @@ export const SIZES = {
   subColGap: 26,
   /** A section's blocks spread into more columns past about this height each. */
   columnTarget: 480,
-  rowGap: 14,
+  rowGap: 24,
   colGap: 28,
   regionPad: 18,
   sectionTop: 128,
-  blocksGap: 30,
+  blocksGap: 34,
+  /** Minimum height for a section card when zoomed out to sections overview. */
+  minExpandedSectionH: 132,
   /** Sections wrap into rows (2026-11-03); this much space between two rows of boxes. */
   sectionRowGap: 84,
   /** Rows aim for a page shape: about this many times wider than the sections are tall. */
@@ -69,11 +71,16 @@ export function blockCard(
   const f = n.details.find((d) => d.kind === 'formula')
   const formula = f && f.kind === 'formula' && f.latex.trim() ? f.latex : null
   const badges = n.importance !== 'supporting' || n.ai_added
+  // Account for pt-0.5 on wrapped titles and taller inline KaTeX / Arabic glyph line-boxes.
+  const titleSlack = titleLines > 1 ? 2 : 0
+  const mathOrRtl = /[$\\^_]|[\u0600-\u06FF]/.test(n.summary)
+  const summarySlack = summaryLines && mathOrRtl ? 6 : 0
   const h =
     10 +
     4 + // padding, border
     Math.max(28, titleLines * 18) +
-    (summaryLines ? 6 + summaryLines * 16 : 0) +
+    titleSlack +
+    (summaryLines ? 6 + summaryLines * 16 + summarySlack : 0) +
     (formula ? 8 + 52 : 0) +
     (badges ? 8 + 18 : 0) +
     10
@@ -161,6 +168,8 @@ export interface LayoutResult {
   /** A section's whole column (section card + its blocks), for the zoomed-out section view. */
   columns: Record<string, Box>
   width: number
+  /** Stable logical auto-layout width used as the RTL mirror origin so dragging never shifts other cards. */
+  mirrorWidth: number
   height: number
   rootId: string | null
   book: boolean
@@ -215,6 +224,7 @@ export function computeLayout(
     regions,
     columns,
     width: 0,
+    mirrorWidth: 0,
     height: 0,
     rootId: null,
     book: false,
@@ -311,32 +321,71 @@ export function computeLayout(
         colBottom = Math.max(colBottom, y - S.rowGap)
         cx += (widths[i] ?? 0) + S.subColGap
       })
-      columns[section.id] = { x: sx, y: 0, w: contentW, h: colBottom }
+      columns[section.id] = {
+        x: sx,
+        y: 0,
+        w: contentW,
+        h: Math.max(colBottom, S.minExpandedSectionH),
+      }
       return { id: section.id, ids, w: contentW + S.regionPad * 2, h: colBottom }
     })
     if (!laid.length) return { width: 0, bottom: top + S.sectionH }
 
-    // 2. Rows in reading order, the same number of sections in each (a tidy grid), as many per
-    //    row as makes the whole closest to a page shape (pageRatio wide to 1 tall).
-    const rowsOf = (perRow: number) => {
+    // 2. Pack sections into width-balanced rows in reading order so wide multi-column sections
+    //    never force adjacent narrow sections into oversized rows.
+    const packByWidth = (maxRowW: number) => {
+      const out: Array<typeof laid> = []
+      let cur: typeof laid = []
+      let curW = 0
+      for (const item of laid) {
+        const nextW = cur.length ? curW + S.colGap + item.w : item.w
+        if (cur.length > 0 && nextW > maxRowW) {
+          out.push(cur)
+          cur = [item]
+          curW = item.w
+        } else {
+          cur.push(item)
+          curW = nextW
+        }
+      }
+      if (cur.length > 0) out.push(cur)
+      return out
+    }
+    const rowsOfCount = (perRow: number) => {
       const out: Array<typeof laid> = []
       for (let i = 0; i < laid.length; i += perRow) out.push(laid.slice(i, i + perRow))
       return out
     }
     const shapeOf = (rs: Array<typeof laid>) => {
-      const w = Math.max(
-        ...rs.map((row) => row.reduce((sum, l) => sum + l.w, 0) + S.colGap * (row.length - 1)),
-      )
+      const rowWidths = rs.map((row) => row.reduce((sum, l) => sum + l.w, 0) + S.colGap * (row.length - 1))
+      const w = Math.max(...rowWidths)
+      const avgW = rowWidths.reduce((a, b) => a + b, 0) / rs.length
+      const variancePenalty =
+        rs.length > 1 ? Math.max(...rowWidths) / Math.max(1, Math.min(...rowWidths)) - 1 : 0
       const h =
         S.sectionTop +
         rs.reduce((sum, row) => sum + Math.max(...row.map((l) => l.h)), 0) +
         S.sectionRowGap * (rs.length - 1)
-      return Math.abs(Math.log(w / h / S.pageRatio))
+      return Math.abs(Math.log(Math.max(1, w) / Math.max(1, h) / S.pageRatio)) +
+        (w - avgW > avgW * 0.45 ? variancePenalty * 0.08 : 0)
     }
-    let rows = rowsOf(laid.length)
+    const totalW = laid.reduce((sum, l) => sum + l.w, 0) + S.colGap * (laid.length - 1)
+    const maxItemW = Math.max(...laid.map((l) => l.w))
+    const candidates: Array<Array<typeof laid>> = [rowsOfCount(laid.length)]
     for (let perRow = laid.length - 1; perRow >= 1; perRow--) {
-      const candidate = rowsOf(perRow)
-      if (shapeOf(candidate) < shapeOf(rows)) rows = candidate
+      candidates.push(rowsOfCount(perRow))
+    }
+    for (let targetRows = 2; targetRows <= laid.length; targetRows++) {
+      candidates.push(packByWidth(Math.max(maxItemW, totalW / targetRows)))
+    }
+    let rows = candidates[0] ?? rowsOfCount(laid.length)
+    let bestScore = shapeOf(rows)
+    for (const candidate of candidates) {
+      const score = shapeOf(candidate)
+      if (score < bestScore) {
+        bestScore = score
+        rows = candidate
+      }
     }
 
     // 3. Move each section to its place; rows are as tall as their tallest box.
@@ -481,12 +530,46 @@ export function computeLayout(
     }
   }
 
+  const autoWidth = width
   if (opts.useSavedPositions !== false) {
+    const origSec = new Map<string, { x: number; y: number }>()
+    for (const id of Object.keys(columns)) {
+      const b = boxes[id]
+      if (b) origSec.set(id, { x: b.x, y: b.y })
+    }
+    const movedIds: string[] = []
     for (const n of nodes) {
       const b = boxes[n.id]
       // Chapter tabs and the book title stay where the book layout puts them.
-      if (b && n.position && n.level !== 'chapter' && n.level !== 'book')
+      if (b && n.position && n.level !== 'chapter' && n.level !== 'book') {
         boxes[n.id] = { ...b, x: n.position.x, y: n.position.y }
+        movedIds.push(n.id)
+      }
+    }
+    // Prevent dragged nodes from overlapping other visible cards.
+    if (movedIds.length > 0) {
+      const allBoxIds = Object.keys(boxes)
+      for (const id of movedIds) {
+        const b = boxes[id]
+        if (!b) continue
+        const resolved = resolveBoxOverlaps(
+          b,
+          allBoxIds
+            .filter((otherId) => otherId !== id)
+            .map((otherId) => boxes[otherId])
+            .filter((x): x is Box => Boolean(x)),
+          S.rowGap,
+        )
+        boxes[id] = { ...b, x: resolved.x, y: resolved.y }
+      }
+    }
+    for (const [secId, orig] of origSec) {
+      const moved = boxes[secId]
+      const col = columns[secId]
+      if (!moved || !col) continue
+      const dx = moved.x - orig.x
+      const dy = moved.y - orig.y
+      if (dx || dy) columns[secId] = { ...col, x: col.x + dx, y: col.y + dy }
     }
   }
 
@@ -509,6 +592,12 @@ export function computeLayout(
     return ids
   }
 
+  const movedIdsSet = new Set(
+    opts.useSavedPositions !== false
+      ? nodes.filter((n) => n.position && n.level !== 'chapter' && n.level !== 'book').map((n) => n.id)
+      : [],
+  )
+
   if (!book) {
     // Regions wrap each section and its visible descendants (after saved positions apply).
     for (const section of root.collapsed ? [] : (kids.get(root.id) ?? []))
@@ -518,15 +607,85 @@ export function computeLayout(
         built: true,
         ...wrap(visibleSubtree(section.id), S.regionPad),
       })
-    // Tidy boxes: every box in a row reaches the row's lowest bottom.
-    const bottoms = new Map<string, number>()
-    for (const r of regions) {
-      const row = rowOf[r.sectionId]
-      if (row) bottoms.set(row, Math.max(bottoms.get(row) ?? 0, r.y + r.h))
+    // Keep moved sections from overlapping adjacent section regions.
+    if (movedIdsSet.size > 0) {
+      for (const r of regions) {
+        if (!movedIdsSet.has(r.sectionId)) continue
+        const others = regions.filter((o) => o.sectionId !== r.sectionId)
+        const resolved = resolveBoxOverlaps(r, others, S.rowGap)
+        const dx = resolved.x - r.x
+        const dy = resolved.y - r.y
+        if (dx || dy) {
+          r.x = resolved.x
+          r.y = resolved.y
+          const col = columns[r.sectionId]
+          if (col) columns[r.sectionId] = { ...col, x: col.x + dx, y: col.y + dy }
+          for (const subId of visibleSubtree(r.sectionId)) {
+            const b = boxes[subId]
+            if (b) boxes[subId] = { ...b, x: b.x + dx, y: b.y + dy }
+          }
+        }
+      }
     }
+    // Push lower rows down and later row neighbors right when dragging expands a section's region.
+    const rowGroups = new Map<string, Region[]>()
     for (const r of regions) {
-      const bottom = bottoms.get(rowOf[r.sectionId] ?? '')
-      if (bottom !== undefined) r.h = bottom - r.y
+      const rk = rowOf[r.sectionId]
+      if (!rk) continue
+      const listForRow = rowGroups.get(rk) ?? []
+      listForRow.push(r)
+      rowGroups.set(rk, listForRow)
+    }
+    const minInterColGap = S.rowGap
+    for (const [, rowRegions] of rowGroups) {
+      let prevRight: number | null = null
+      let prevMinY = 0
+      let prevMaxY = 0
+      for (const r of rowRegions) {
+        if (
+          prevRight !== null &&
+          !movedIdsSet.has(r.sectionId) &&
+          r.x < prevRight + minInterColGap &&
+          r.y < prevMaxY &&
+          prevMinY < r.y + r.h
+        ) {
+          const dx = prevRight + minInterColGap - r.x
+          r.x += dx
+          const col = columns[r.sectionId]
+          if (col) columns[r.sectionId] = { ...col, x: col.x + dx }
+          for (const subId of visibleSubtree(r.sectionId)) {
+            const b = boxes[subId]
+            if (b) boxes[subId] = { ...b, x: b.x + dx }
+          }
+        }
+        prevRight = r.x + r.w
+        prevMinY = r.y
+        prevMaxY = r.y + r.h
+      }
+    }
+    let prevRowBottom: number | null = null
+    const minInterRowGap = S.sectionRowGap - S.regionPad * 2
+    for (const [rk, rowRegions] of rowGroups) {
+      const rowIdx = Number(rk.split(':').at(-1) ?? 0)
+      const rowMinY = Math.min(...rowRegions.map((r) => r.y))
+      if (prevRowBottom !== null && rowMinY < prevRowBottom + minInterRowGap) {
+        const dy = prevRowBottom + minInterRowGap - rowMinY
+        for (const r of rowRegions) {
+          r.y += dy
+          const col = columns[r.sectionId]
+          if (col) columns[r.sectionId] = { ...col, y: col.y + dy }
+          const l = bus[r.sectionId]
+          if (l && rowIdx > 0) bus[r.sectionId] = { ...l, y: l.y + dy }
+          for (const subId of visibleSubtree(r.sectionId)) {
+            const b = boxes[subId]
+            if (b) boxes[subId] = { ...b, y: b.y + dy }
+          }
+        }
+      }
+      // Tidy boxes: every box in a row reaches the row's lowest bottom.
+      const rowBottom = Math.max(...rowRegions.map((r) => r.y + r.h))
+      for (const r of rowRegions) r.h = rowBottom - r.y
+      prevRowBottom = rowBottom
     }
   } else {
     // Built chapters' regions follow blocks the student dragged (never shrink below the tab).
@@ -539,6 +698,49 @@ export function computeLayout(
       Object.assign(r, { ...w, w: Math.max(w.w, tab?.w ?? 0) })
       if (tab) boxes[r.sectionId] = { ...tab, x: w.x, y: w.y - S.tabH }
     }
+    // Keep chapter regions from overlapping if a chapter expanded over a neighbor or lower row.
+    const shiftChapter = (chId: string, r: Region, dx: number, dy: number) => {
+      if (!dx && !dy) return
+      r.x += dx
+      r.y += dy
+      const tab = boxes[chId]
+      if (tab) boxes[chId] = { ...tab, x: tab.x + dx, y: tab.y + dy }
+      for (const [nodeId, ownerCh] of Object.entries(chapterOf)) {
+        if (ownerCh !== chId || nodeId === chId) continue
+        const b = boxes[nodeId]
+        if (b) boxes[nodeId] = { ...b, x: b.x + dx, y: b.y + dy }
+        const c = columns[nodeId]
+        if (c) columns[nodeId] = { ...c, x: c.x + dx, y: c.y + dy }
+        const l = bus[nodeId]
+        if (l)
+          bus[nodeId] = {
+            top: l.top + dy,
+            y: l.y + dy,
+            spineX: l.spineX === null ? null : l.spineX + dx,
+          }
+      }
+    }
+    const chapterRegions = regions.filter((r) => r.kind === 'chapter')
+    for (let i = 0; i < chapterRegions.length; i++) {
+      const cur = chapterRegions[i]
+      if (!cur) continue
+      for (let j = 0; j < i; j++) {
+        const prev = chapterRegions[j]
+        if (!prev) continue
+        const overlapX = cur.x < prev.x + prev.w + S.chapterGapX && prev.x < cur.x + cur.w
+        const overlapY =
+          cur.y - S.tabH < prev.y + prev.h + S.chapterGapY &&
+          prev.y - S.tabH < cur.y + cur.h
+        if (overlapX && overlapY) {
+          // Prefer shifting down if cur started below prev; otherwise push right.
+          if (cur.y > prev.y) {
+            shiftChapter(cur.sectionId, cur, 0, prev.y + prev.h + S.chapterGapY - (cur.y - S.tabH))
+          } else {
+            shiftChapter(cur.sectionId, cur, prev.x + prev.w + S.chapterGapX - cur.x, 0)
+          }
+        }
+      }
+    }
   }
 
   const all = Object.values(boxes)
@@ -550,6 +752,7 @@ export function computeLayout(
     regions,
     columns,
     width: Math.max(width, regionRight, ...all.map((b) => b.x + b.w)),
+    mirrorWidth: Math.max(autoWidth, S.rootW),
     height: Math.max(regionBottom, ...all.map((b) => b.y + b.h)),
     rootId: root.id,
     book,
@@ -557,6 +760,43 @@ export function computeLayout(
     hidden,
     railed,
   }
+}
+
+/**
+ * Resolves overlap between a moved card box and stationary obstacle boxes using minimal
+ * orthogonal displacement plus `gap` clearance. Leaves non-overlapping boxes untouched.
+ */
+export function resolveBoxOverlaps(
+  candidate: Box,
+  obstacles: readonly Box[],
+  gap: number = SIZES.rowGap,
+): Box {
+  let cur = { ...candidate }
+  for (let pass = 0; pass < 8; pass++) {
+    let hit: Box | null = null
+    for (const o of obstacles) {
+      if (
+        cur.x < o.x + o.w + gap * 0.5 &&
+        o.x < cur.x + cur.w + gap * 0.5 &&
+        cur.y < o.y + o.h + gap * 0.5 &&
+        o.y < cur.y + cur.h + gap * 0.5
+      ) {
+        hit = o
+        break
+      }
+    }
+    if (!hit) break
+    const pushDown = hit.y + hit.h + gap - cur.y
+    const pushUp = cur.y + cur.h + gap - hit.y
+    const pushRight = hit.x + hit.w + gap - cur.x
+    const pushLeft = cur.x + cur.w + gap - hit.x
+    const best = Math.min(pushDown, pushUp, pushRight, pushLeft)
+    if (best === pushDown) cur = { ...cur, y: cur.y + pushDown }
+    else if (best === pushRight) cur = { ...cur, x: cur.x + pushRight }
+    else if (best === pushUp) cur = { ...cur, y: cur.y - pushUp }
+    else cur = { ...cur, x: cur.x - pushLeft }
+  }
+  return cur
 }
 
 /**

@@ -17,7 +17,7 @@ export type Cubic = readonly [Pt, Pt, Pt, Pt]
 /** Points sampled per cubic curve (enough for a smooth outline at any zoom). */
 const STEPS = 20
 
-function point([a, b, c, d]: Cubic, t: number): Pt {
+export function point([a, b, c, d]: Cubic, t: number): Pt {
   const u = 1 - t
   const k0 = u * u * u
   const k1 = 3 * u * u * t
@@ -295,3 +295,99 @@ export function arrowHead(segs: readonly Cubic[], length = 11, width = 10): stri
   const r = { x: base.x - n.x * half, y: base.y - n.y * half }
   return `M${fmt(tip)} L${fmt(l)} L${fmt(notch)} L${fmt(r)} Z`
 }
+
+/**
+ * Fallback route from a full-width section heading down a grouped column's 22px rail gap
+ * without crossing the heading itself or adjacent columns.
+ */
+export function railBracket(s: Box, t: Box, rtl: boolean): [Cubic, Cubic] {
+  const gapX = rtl ? t.x + t.w + 12 : t.x - 12
+  const startX = clamp(gapX, s.x + 8, s.x + s.w - 8)
+  const from = { x: startX, y: s.y + s.h }
+  const end = { x: rtl ? t.x + t.w : t.x, y: t.y + Math.min(t.h / 2, 24) }
+  return bracket(from, gapX, end)
+}
+
+function relationHits(curve: Cubic, obstacles: readonly Box[]): number {
+  if (!obstacles.length) return 0
+  let hits = 0
+  for (let i = 1; i < 16; i++) {
+    const p = point(curve, i / 16)
+    if (obstacles.some((o) => inside(p, o))) hits++
+  }
+  return hits
+}
+
+function baseRelationCubic(a: Box, b: Box, rtl: boolean, extraBulge = 0, arcLift = 0): Cubic {
+  const ac = { x: a.x + a.w / 2, y: a.y + a.h / 2 }
+  const bc = { x: b.x + b.w / 2, y: b.y + b.h / 2 }
+  const dx = bc.x - ac.x
+  const dy = bc.y - ac.y
+  let p1: Pt
+  let p2: Pt
+  let c1: Pt
+  let c2: Pt
+  if (Math.abs(dx) > Math.abs(dy) * 0.8 && Math.abs(dx) > (a.w + b.w) / 2) {
+    const sa = dx > 0 ? 1 : -1
+    p1 = { x: ac.x + (sa * a.w) / 2, y: ac.y }
+    p2 = { x: bc.x - (sa * b.w) / 2, y: bc.y }
+    const gap = Math.abs(p2.x - p1.x)
+    const k = Math.max(40, gap / 2)
+    const lift = arcLift || (gap < 140 ? 46 : 0)
+    c1 = { x: p1.x + sa * k, y: p1.y - lift }
+    c2 = { x: p2.x - sa * k, y: p2.y - lift }
+  } else if (Math.abs(dx) < (a.w + b.w) / 2 && Math.abs(dy) < 260) {
+    const out = rtl ? -1 : 1
+    p1 = { x: rtl ? a.x : a.x + a.w, y: ac.y }
+    p2 = { x: rtl ? b.x : b.x + b.w, y: bc.y }
+    const edge = rtl ? Math.min(p1.x, p2.x) : Math.max(p1.x, p2.x)
+    const bulge = edge + out * (40 + extraBulge + Math.abs(dy) / 6)
+    c1 = { x: bulge, y: p1.y }
+    c2 = { x: bulge, y: p2.y }
+  } else {
+    const sa = dy > 0 ? 1 : -1
+    p1 = { x: ac.x, y: ac.y + (sa * a.h) / 2 }
+    p2 = { x: bc.x, y: bc.y - (sa * b.h) / 2 }
+    const k = Math.max(40, Math.abs(p2.y - p1.y) / 2)
+    c1 = { x: p1.x + arcLift, y: p1.y + sa * k }
+    c2 = { x: p2.x + arcLift, y: p2.y - sa * k }
+  }
+  return oneBend([p1, c1, c2, p2])
+}
+
+/**
+ * Picks a smooth single-bend cubic for a relation link between `a` and `b`, routing around
+ * intermediate card `obstacles` when the direct curve would cut through them.
+ */
+export function clearRelationCurve(
+  a: Box,
+  b: Box,
+  rtl: boolean,
+  obstacles: readonly Box[],
+): Cubic {
+  const initial = baseRelationCubic(a, b, rtl)
+  if (!obstacles.length || relationHits(initial, obstacles) === 0) return initial
+
+  const candidates: Cubic[] = [initial]
+  const clearSides = nearestSides(a, b, obstacles)
+  if (clearSides) candidates.push(sideCurve(a, clearSides[0], b, clearSides[1]))
+  for (const lift of [-90, 90, -160, 160, -240, 240]) {
+    candidates.push(baseRelationCubic(a, b, rtl, 0, lift))
+  }
+  for (const extra of [60, 130, 210]) {
+    candidates.push(baseRelationCubic(a, b, rtl, extra, 0))
+  }
+
+  let best = initial
+  let bestHits = relationHits(initial, obstacles)
+  for (const c of candidates) {
+    const h = relationHits(c, obstacles)
+    if (h === 0) return c
+    if (h < bestHits) {
+      bestHits = h
+      best = c
+    }
+  }
+  return best
+}
+

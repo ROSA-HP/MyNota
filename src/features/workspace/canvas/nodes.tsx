@@ -463,90 +463,92 @@ export function BlockNode({ data, selected }: NodeProps<BlockNodeT>) {
         ...(selected ? { outlineColor: c.strong } : {}),
       }}
     >
-      <div className="flex min-w-0 items-start gap-2">
-        {step !== null ? (
-          <span
-            className="flex size-7 shrink-0 items-center justify-center rounded-full bg-selected font-mono text-xs font-bold text-selected-ink"
-            title={t('ws.step', { n: step })}
-          >
-            {step}
-          </span>
-        ) : Icon ? (
-          <span
-            className="flex size-7 shrink-0 items-center justify-center rounded-[7px] border-[1.5px] border-line bg-paper-sunken"
-            title={typeLabel ?? undefined}
-          >
-            <Icon size={15} role="img" aria-label={typeLabel ?? undefined} />
-          </span>
-        ) : null}
-        {covered ? (
-          <span
-            className="flex min-w-0 flex-1 flex-col gap-1.5 pt-1"
-            aria-label={t('ws.studyView.covered')}
-          >
-            <span aria-hidden className="h-2.5 w-4/5 rounded-full bg-line-soft" />
-            <span aria-hidden className="h-2.5 w-1/2 rounded-full bg-line-soft" />
-          </span>
-        ) : (
-          <span
-            dir="auto"
-            className={cn(
-              'min-w-0 flex-1 pt-0.5 text-sm leading-[18px]',
-              CLAMP[Math.min(3, titleLines) as 1 | 2 | 3],
-              node.importance === 'core'
-                ? 'font-bold'
-                : node.importance === 'extra'
-                  ? 'font-medium text-ink-muted'
-                  : 'font-semibold',
-            )}
-          >
-            {node.title}
-          </span>
-        )}
-      </div>
-      {/* Formulas come first: for a block about a formula, the formula is the point. */}
-      {!open && !covered && card.formula && <CardFormula latex={card.formula} accent={c.strong} />}
-      {!open && !covered && card.summaryLines > 0 && (
-        <p
-          dir="auto"
-          className={cn('text-[12.5px] leading-4 text-ink-muted', CLAMP[card.summaryLines])}
-        >
-          <RichMathText text={node.summary} />
-        </p>
-      )}
-      {open && (
-        <div className="mynota-reveal nowheel flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto pe-0.5">
-          <DetailList details={node.details.filter((d) => d.kind === 'formula')} compact />
-          {node.summary && (
-            <p dir="auto" className="text-justify text-[12.5px] leading-4 text-ink-muted">
-              <RichMathText text={node.summary} />
-            </p>
-          )}
-          <DetailList details={node.details.filter((d) => d.kind !== 'formula')} compact />
-        </div>
-      )}
-
-      {card.badges && (
-        <span className="mt-auto flex h-[18px] items-center gap-1.5">
-          {node.importance === 'core' && (
-            <span className="rounded-[5px] border-[1.5px] border-line bg-brand-soft px-1 text-[11px] leading-tight font-semibold">
-              {t('ws.core')}
+      <div className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-hidden">
+        <div className="flex min-w-0 items-start gap-2">
+          {step !== null ? (
+            <span
+              className="flex size-7 shrink-0 items-center justify-center rounded-full bg-selected font-mono text-xs font-bold text-selected-ink"
+              title={t('ws.step', { n: step })}
+            >
+              {step}
+            </span>
+          ) : Icon ? (
+            <span
+              className="flex size-7 shrink-0 items-center justify-center rounded-[7px] border-[1.5px] border-line bg-paper-sunken"
+              title={typeLabel ?? undefined}
+            >
+              <Icon size={15} role="img" aria-label={typeLabel ?? undefined} />
+            </span>
+          ) : null}
+          {covered ? (
+            <span
+              className="flex min-w-0 flex-1 flex-col gap-1.5 pt-1"
+              aria-label={t('ws.studyView.covered')}
+            >
+              <span aria-hidden className="h-2.5 w-4/5 rounded-full bg-line-soft" />
+              <span aria-hidden className="h-2.5 w-1/2 rounded-full bg-line-soft" />
+            </span>
+          ) : (
+            <span
+              dir="auto"
+              className={cn(
+                'min-w-0 flex-1 pt-0.5 text-sm leading-[18px]',
+                CLAMP[Math.min(3, titleLines) as 1 | 2 | 3],
+                node.importance === 'core'
+                  ? 'font-bold'
+                  : node.importance === 'extra'
+                    ? 'font-medium text-ink-muted'
+                    : 'font-semibold',
+              )}
+            >
+              {node.title}
             </span>
           )}
-          {node.importance === 'extra' && (
-            <span className="text-[11px] text-ink-faint">{t('ws.extra')}</span>
-          )}
-          {node.ai_added && (
-            <Sparkles
-              size={12}
-              className="text-ink-muted"
-              role="img"
-              aria-label={t('ws.aiAddedBadge')}
-            />
-          )}
-        </span>
-      )}
-      {open && <CardActions />}
+        </div>
+        {/* Formulas come first: for a block about a formula, the formula is the point. */}
+        {!open && !covered && card.formula && <CardFormula latex={card.formula} accent={c.strong} />}
+        {!open && !covered && card.summaryLines > 0 && (
+          <p
+            dir="auto"
+            className={cn('text-[12.5px] leading-4 text-ink-muted', CLAMP[card.summaryLines])}
+          >
+            <RichMathText text={node.summary} />
+          </p>
+        )}
+        {open && (
+          <div className="mynota-reveal nowheel flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto pe-0.5">
+            <DetailList details={node.details.filter((d) => d.kind === 'formula')} compact />
+            {node.summary && (
+              <p dir="auto" className="text-justify text-[12.5px] leading-4 text-ink-muted">
+                <RichMathText text={node.summary} />
+              </p>
+            )}
+            <DetailList details={node.details.filter((d) => d.kind !== 'formula')} compact />
+          </div>
+        )}
+
+        {card.badges && (
+          <span className="mt-auto flex h-[18px] shrink-0 items-center gap-1.5">
+            {node.importance === 'core' && (
+              <span className="rounded-[5px] border-[1.5px] border-line bg-brand-soft px-1 text-[11px] leading-tight font-semibold">
+                {t('ws.core')}
+              </span>
+            )}
+            {node.importance === 'extra' && (
+              <span className="text-[11px] text-ink-faint">{t('ws.extra')}</span>
+            )}
+            {node.ai_added && (
+              <Sparkles
+                size={12}
+                className="text-ink-muted"
+                role="img"
+                aria-label={t('ws.aiAddedBadge')}
+              />
+            )}
+          </span>
+        )}
+        {open && <CardActions />}
+      </div>
       {data.number && step === null && <NumberTag n={data.number} color={c.strong} />}
       {Boolean(data.links?.length) && !covered && (
         <LinkChips links={data.links ?? []} color={c.strong} />
