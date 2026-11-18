@@ -533,19 +533,19 @@ describe('studypdf components', () => {
     )
 
     const outer = pageContainer.firstElementChild as HTMLElement
-    // Header wrapper, Body slot, Footer wrapper share exact 4px SHADOW_GUTTER right inset in LTR.
+    // Header and Footer match body.w - SHADOW_GUTTER (688 - 4 = 684px); FlowUnitView reserves 4px paddingRight in LTR.
     const bands = Array.from(outer.children) as HTMLElement[]
-    expect(bands[0]?.style.paddingRight).toBe('4px')
-    expect(bands[2]?.style.paddingRight).toBe('4px')
-    const flowOuter = bands[1]?.querySelector('[data-unit-id="b_wave"]') as HTMLElement
+    expect(bands[0]?.style.width).toBe('684px')
+    expect(bands[2]?.style.width).toBe('684px')
+    const flowOuter = bands[1]?.firstElementChild as HTMLElement
     expect(flowOuter.style.paddingRight).toBe('4px')
 
     // All three legend variables (I, c, \mu_0) plus the display formula render via KaTeX.
     expect(flowOuter.querySelectorAll('.katex').length).toBe(4)
 
-    // Link row text spans justify cleanly without ragged text.
+    // Link row text span justifies cleanly without ragged text.
     const linkRow = flowOuter.querySelector('[data-row="1"]')?.firstElementChild as HTMLElement
-    expect(linkRow.style.textAlign).toBe('justify')
+    expect((linkRow.children[1] as HTMLElement).style.textAlign).toBe('justify')
 
     // Compact CoverPage renders summaries when portrait outline has <= 3 chapters / <= 8 sections.
     const { container: coverContainer } = render(

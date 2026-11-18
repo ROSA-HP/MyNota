@@ -779,6 +779,13 @@ label,
 .mynota-flow.export-light .react-flow__node-chapterRegion > div {
   background: #fff !important;
 }
+/* Snap horizontal export relayout immediately without waiting 480ms glide transitions. */
+.mynota-flow.is-exporting *,
+.mynota-flow.is-exporting *::before,
+.mynota-flow.is-exporting *::after {
+  transition: none !important;
+  animation: none !important;
+}
 /* Block under the pointer while dragging a new link. */
 .mynota-flow .react-flow__node.is-link-target > * {
   outline: 3px solid var(--brand);

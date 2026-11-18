@@ -276,8 +276,8 @@ describe('the owner’s physical optics notes (the map that repeated and lost fo
           details: [
             {
               kind: 'formula',
-              text: '\u000bec{S} = \frac{1}{\\mu_0} \u000bec{E} \times \u000bec{B}',
-              extra: '\u000bec{S} = Poynting vector; \theta = angle',
+              text: 'Flux \u000bec{S} = \frac{1}{\\mu_0} \u000bec{E} \times \u000bec{B}',
+              extra: 'Vector \u000bec{S} = Poynting vector; \theta = angle',
             },
             {
               kind: 'bullet',
@@ -299,7 +299,7 @@ describe('the owner’s physical optics notes (the map that repeated and lost fo
     expect(blk.summary).toBe('Describes energy flow via \\vec{E} \\times \\vec{B}.')
     expect(blk.details[0]).toMatchObject({
       kind: 'formula',
-      extra: '\\vec{S} = Poynting vector; \\theta = angle',
+      extra: 'Vector \\vec{S} = Poynting vector; \\theta = angle',
     })
     expect(blk.details[1]).toMatchObject({
       kind: 'bullet',

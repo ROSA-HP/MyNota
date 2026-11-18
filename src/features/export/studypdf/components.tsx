@@ -646,17 +646,22 @@ export function CoverPage({
                             boxSizing: 'border-box',
                             margin: 0,
                             flex: isCompactOutline && visibleOutline.length === 1 ? 1 : undefined,
-                            display: 'grid',
+                            display:
+                              isCompactOutline && visibleOutline.length === 1 ? 'flex' : 'grid',
+                            flexDirection:
+                              isCompactOutline && visibleOutline.length === 1 ? 'column' : undefined,
+                            justifyContent:
+                              isCompactOutline &&
+                              visibleOutline.length === 1 &&
+                              ch.sections.length <= 2
+                                ? 'center'
+                                : undefined,
                             gridTemplateColumns: isCompactOutline
                               ? 'minmax(0, 1fr)'
                               : ch.sections.length > 6 || (isLandscape && ch.sections.length > 2)
                                 ? 'repeat(2, minmax(0, 1fr))'
                                 : 'minmax(0, 1fr)',
-                            alignContent:
-                              isCompactOutline && visibleOutline.length === 1
-                                ? 'space-evenly'
-                                : 'start',
-                            gap: isLandscape ? '6px 14px' : isCompactOutline ? '10px 14px' : '8px 14px',
+                            gap: isLandscape ? '6px 14px' : isCompactOutline ? 10 : '8px 14px',
                             paddingInlineStart:
                               ch.number !== null && !isCompactOutline ? 38 : 0,
                           }}
@@ -668,10 +673,18 @@ export function CoverPage({
                               style={{
                                 boxSizing: 'border-box',
                                 margin: 0,
+                                flex:
+                                  isCompactOutline &&
+                                  visibleOutline.length === 1 &&
+                                  ch.sections.length >= 3 &&
+                                  ch.sections.length <= 6
+                                    ? 1
+                                    : undefined,
                                 display: 'flex',
                                 flexDirection: 'column',
-                                gap: isCompactOutline ? 4 : 0,
-                                padding: isCompactOutline ? '10px 12px' : 0,
+                                justifyContent: isCompactOutline ? 'center' : undefined,
+                                gap: isCompactOutline ? 5 : 0,
+                                padding: isCompactOutline ? '12px 14px' : 0,
                                 borderRadius: isCompactOutline ? RADIUS.tile : 0,
                                 border: isCompactOutline
                                   ? `1.5px solid ${COLORS.ink}`

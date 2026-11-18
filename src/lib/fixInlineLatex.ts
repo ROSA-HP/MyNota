@@ -160,19 +160,19 @@ export function fixInlineLatex(s: string): string {
   return (
     s
       .replace(
-        /\t(?=(?:heta|artheta|imes|au|ilde|frac|binom|riangle)\b|ext(?=\{)|anh?(?=[(\s\\{])|o(?=\s+[A-Za-z0-9\\({]))/g,
+        /\t(?=(?:heta|artheta|imes|au|ilde|frac|binom|riangle)(?![A-Za-z])|ext(?=\{)|anh?(?=[(\s\\{])|o(?=\s+[A-Za-z0-9\\({]))/g,
         '\\t',
       )
-      .replace(/\f(?=(?:rac(?=\{)|orall\b|lat\b))/g, '\\f')
+      .replace(/\f(?=(?:rac(?=\{)|(?:orall|lat)(?![A-Za-z])))/g, '\\f')
       // eslint-disable-next-line no-control-regex -- restoring mangled JSON \b / \v escapes
-      .replace(/\u0008(?=(?:eta|mod|ig|ig[gl]|ot|ullet)\b|(?:ar|inom|oldsymbol)(?=\{))/g, '\\b')
-      .replace(/\r(?=(?:ho|ight|ightarrow|angle|ceil|floor|m)\b|ight(?=[\\(\s|[{]))/g, '\\r')
-      // eslint-disable-next-line no-control-regex -- vertical tab produced by unescaped \vec / \varphi
+      .replace(/\u0008(?=(?:eta|mod|ig|ig[gl]|ot|ullet)(?![A-Za-z])|(?:ar|inom|oldsymbol)(?=\{))/g, '\\b')
+      .replace(/\r(?=(?:ho|ight|ightarrow|angle|ceil|floor|m)(?![A-Za-z])|ight(?=[\\(\s|[{]))/g, '\\r')
       .replace(
-        /\u000b(?=(?:ar(?:theta|phi|epsilon|pi|rho|sigma)|dash|dots|ee|ert)\b|ec(?=\{))/g,
+        // eslint-disable-next-line no-control-regex -- vertical tab produced by unescaped \vec / \varphi
+        /\u000b(?=(?:ar(?:theta|phi|epsilon|pi|rho|sigma)|dash|dots|ee|ert)(?![A-Za-z])|ec(?=\{))/g,
         '\\v',
       )
-      .replace(/\n(?=(?:abla|u|eq|otin|leq|geq)\b|e(?=[}\s=0-9(\\]|$))/g, '\\n')
+      .replace(/\n(?=(?:abla|u|eq|otin|leq|geq)(?![A-Za-z])|e(?=[}\s=0-9(\\]|$))/g, '\\n')
       .replace(/\\\\([A-Za-z]+)/g, (m, cmd: string) =>
         COLLAPSIBLE_LATEX_COMMANDS.has(cmd) ? `\\${cmd}` : m,
       )
