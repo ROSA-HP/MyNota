@@ -1,6 +1,6 @@
 import { useNodeSource } from './useNodeSource'
 import { BlockReader } from './BlockReader'
-import { MathFormula, RichMathText } from '@/components/ui/MathFormula'
+import { FormulaLegendView, MathFormula, RichMathText } from '@/components/ui/MathFormula'
 import { Plus, Trash, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { BlockCards } from '@/features/study/BlockCards'
@@ -15,6 +15,7 @@ import type {
   RelationRow,
   RelationType,
 } from '@/lib/database.types'
+import { resolveFormulaLegend } from '@/lib/formulaLegend'
 import { supabase } from '@/lib/supabase'
 import { useCanvasUi } from '../canvas/canvasUi'
 import { TYPE_ICON } from '../canvas/visuals'
@@ -100,22 +101,28 @@ function DetailRow({
           {remove}
         </li>
       )
-    case 'formula':
+    case 'formula': {
+      const { entries, fallbackText } = resolveFormulaLegend(d)
       return (
         <li className="flex items-start gap-1 rounded-neo bg-surface-muted p-2 text-sm">
           <span className="min-w-0 flex-1">
-            <span className="block overflow-x-auto py-1 text-[15px]">
+            <span className="block overflow-x-auto py-1 text-center text-[15px]">
               <MathFormula latex={d.latex} display />
             </span>
-            {d.variables && (
-              <span className="block text-justify text-ink-muted" dir="auto">
-                <RichMathText text={d.variables} legend />
+            {(entries.length > 0 || fallbackText) && (
+              <span className="block text-justify text-ink" dir="auto">
+                {entries.length > 0 ? (
+                  <FormulaLegendView entries={entries} />
+                ) : (
+                  <RichMathText text={fallbackText ?? ''} legend />
+                )}
               </span>
             )}
           </span>
           {remove}
         </li>
       )
+    }
     case 'question':
       return (
         <li className="flex items-start gap-1 rounded-neo border-2 border-dashed border-line-soft p-2 text-sm">
@@ -152,7 +159,7 @@ function RelationRowView({ r, self, canEdit }: { r: RelationRow; self: string; c
           <span className="inline-block text-ink-muted rtl:-scale-x-100">→</span>
         ) : null}
         <span dir="auto" className="font-semibold">
-          {other?.title}
+          {other?.title ? <RichMathText text={other.title} /> : null}
         </span>
         <span
           className={cn(
@@ -162,7 +169,7 @@ function RelationRowView({ r, self, canEdit }: { r: RelationRow; self: string; c
               : 'border-brand',
           )}
         >
-          {label}
+          <RichMathText text={label} />
         </span>
         {r.to_node === self ? (
           <span className="inline-block text-ink-muted rtl:-scale-x-100">→</span>

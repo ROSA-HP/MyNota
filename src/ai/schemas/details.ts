@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import type { DetailBlock } from '@/lib/database.types'
+import { parseFormulaLegend } from '@/lib/formulaLegend'
 import {
   DetailKindSchema,
   ImportanceSchema,
@@ -16,10 +17,16 @@ import {
  * content; `extra` depends on kind: translation (example), meaning (vocab), what the variables
  * mean (formula), answer (question). Converted to typed DetailBlocks by toDetailBlock().
  */
+export const AiLegendEntrySchema = z.object({
+  symbol: z.string().trim().min(1).max(300),
+  meaning: z.string().trim().min(1).max(600),
+})
+
 export const AiDetailSchema = z.object({
   kind: DetailKindSchema,
   text: z.string().trim().min(1).max(LIMITS.detailChars),
   extra: z.string().trim().max(LIMITS.detailChars).optional(),
+  legend: z.array(AiLegendEntrySchema).max(30).optional(),
   article: z.string().trim().max(20).optional(),
   plural: z.string().trim().max(80).optional(),
 })
@@ -197,10 +204,15 @@ export function toDetailBlock(d: AiDetail): DetailBlock {
         ...(d.article ? { article: d.article } : {}),
         ...(d.plural ? { plural: d.plural } : {}),
       }
-    case 'formula':
-      return d.extra
-        ? { kind: 'formula', latex: d.text, variables: d.extra }
-        : { kind: 'formula', latex: d.text }
+    case 'formula': {
+      const parsedLegend = parseFormulaLegend(d.extra, d.legend)
+      return {
+        kind: 'formula',
+        latex: d.text,
+        ...(d.extra ? { variables: d.extra } : {}),
+        ...(parsedLegend.length > 0 ? { legend: parsedLegend } : {}),
+      }
+    }
     case 'question':
       return { kind: 'question', front: d.text, back: d.extra ?? '' }
   }

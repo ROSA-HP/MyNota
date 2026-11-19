@@ -533,10 +533,10 @@ describe('studypdf components', () => {
     )
 
     const outer = pageContainer.firstElementChild as HTMLElement
-    // Header and Footer match body.w - SHADOW_GUTTER (688 - 4 = 684px); FlowUnitView reserves 4px paddingRight in LTR.
+    // Header and Footer span the full body.w (688px); cards reserve 4px paddingRight so shadows never protrude past rules.
     const bands = Array.from(outer.children) as HTMLElement[]
-    expect(bands[0]?.style.width).toBe('684px')
-    expect(bands[2]?.style.width).toBe('684px')
+    expect(bands[0]?.style.width).toBe('688px')
+    expect(bands[2]?.style.width).toBe('688px')
     const flowOuter = bands[1]?.firstElementChild as HTMLElement
     expect(flowOuter.style.paddingRight).toBe('4px')
 

@@ -453,6 +453,23 @@ const OP_REGEX =
 const REL_OP_REGEX =
   /^(?:=|≈|×|·|÷|±|≤|≥|≠|∝|\\approx\b|\\times\b|\\cdot\b|\\propto\b|\\le\b|\\ge\b|\\leq\b|\\geq\b|\\neq\b)/
 
+function readScientificNotation(s: string, start: number): number {
+  if (start > 0 && /[A-Za-z0-9_.]/.test(s[start - 1] ?? '')) return -1
+  const m =
+    /^\d+(?:\.\d+)?\s*(?:\\times|\\cdot|×|·)\s*10(?:\^\{?[+-]?\d+\}?|[⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻]+)/.exec(
+      s.slice(start),
+    )
+  return m ? start + m[0].length : -1
+}
+
+function readScriptedUnit(s: string, start: number): number {
+  if (!isWordBoundaryBefore(s, start)) return -1
+  const m = /^[A-Za-z]{1,4}(?:\s*\/\s*[A-Za-z]{1,4})+\^(?:\{[+-]?[A-Za-z0-9]+\}|[0-9]+)/.exec(
+    s.slice(start),
+  )
+  return m ? start + m[0].length : -1
+}
+
 function skipSpaces(s: string, i: number): number {
   let k = i
   while (k < s.length && (s[k] === ' ' || s[k] === '\t')) k++
@@ -585,6 +602,9 @@ function tryReadEquationRun(s: string, start: number): number {
   if (!relM) return -1
 
   cur = skipSpaces(s, afterSp + relM[0].length)
+  if (s[cur] === '-' || s[cur] === '+') {
+    cur = skipSpaces(s, cur + 1)
+  }
   // RHS must look mathematical (start with a math term, not a prose word)
   const firstRhs = readMathTerm(s, cur, {
     allowSingleVar: true,
@@ -617,7 +637,13 @@ function extendMathRun(
     const sp = skipSpaces(s, cur)
     const opM = OP_REGEX.exec(s.slice(sp))
     if (opM) {
-      const afterOp = skipSpaces(s, sp + opM[0].length)
+      let afterOp = skipSpaces(s, sp + opM[0].length)
+      const isRelOp = /^(?:=|≈|≤|≥|≠|∝|\\approx|\\le|\\ge|\\leq|\\geq|\\neq|\\propto)/.test(
+        opM[0],
+      )
+      if (isRelOp && (s[afterOp] === '-' || s[afterOp] === '+')) {
+        afterOp = skipSpaces(s, afterOp + 1)
+      }
       const eqContext = inEquation || opM[0] === '='
       // An operator continues ONLY if followed by a valid math term (never a prose word!)
       const rhs = readMathTerm(s, afterOp, {
@@ -783,29 +809,41 @@ function splitBareMath(segment: string, options: SplitInlineMathOptions = {}): I
     if (latexStart !== -1) {
       runEnd = extendMathRun(segment, latexStart.end, PREFIX_COMMANDS.has(latexStart.command))
     } else {
-      // 2. Scripted variable (u_E, I_{0}, E_rms^2, theta_B, n_1, 10^8, I₀)
-      const scriptStart = readScriptedVar(segment, i, false)
-      if (scriptStart !== -1) {
-        runEnd = extendMathRun(segment, scriptStart, false)
+      // 2. Scientific notation (e.g. 3.0 \times 10^{8})
+      const sciStart = readScientificNotation(segment, i)
+      if (sciStart !== -1) {
+        runEnd = extendMathRun(segment, sciStart, false)
       } else {
-        // 3. Function call (arctan(n_2 / n_1), sin(theta))
-        const funcStart = readFuncCall(segment, i)
-        if (funcStart !== -1) {
-          runEnd = extendMathRun(segment, funcStart, false)
+        // 3. Explicit superscript ratio unit (e.g. W/m^2, m/s^2)
+        const unitStart = readScriptedUnit(segment, i)
+        if (unitStart !== -1) {
+          runEnd = unitStart
         } else {
-          // 4. Bare equation starting with short symbol (c = E_m / B_m, I = E_rms² / (c μ₀), Δp = 2ΔU / c)
-          const eqStart = tryReadEquationRun(segment, i)
-          if (eqStart !== -1) {
-            runEnd = eqStart
+          // 4. Scripted variable (u_E, I_{0}, E_rms^2, theta_B, n_1, 10^8, I₀)
+          const scriptStart = readScriptedVar(segment, i, false)
+          if (scriptStart !== -1) {
+            runEnd = extendMathRun(segment, scriptStart, false)
           } else {
-            // 5. Standalone Δp / ΔU or legend variable (`L = inductance; C = capacitance`)
-            const deltaEnd = readUnicodeDeltaVar(segment, i)
-            if (deltaEnd !== -1) {
-              runEnd = extendMathRun(segment, deltaEnd, false)
-            } else if (options.legend) {
-              const legendEnd = readLegendSymbol(segment, i)
-              if (legendEnd !== -1) {
-                runEnd = legendEnd
+            // 5. Function call (arctan(n_2 / n_1), sin(theta))
+            const funcStart = readFuncCall(segment, i)
+            if (funcStart !== -1) {
+              runEnd = extendMathRun(segment, funcStart, false)
+            } else {
+              // 6. Bare equation starting with short symbol (c = E_m / B_m, I = E_rms² / (c μ₀), Δp = 2ΔU / c)
+              const eqStart = tryReadEquationRun(segment, i)
+              if (eqStart !== -1) {
+                runEnd = eqStart
+              } else {
+                // 7. Standalone Δp / ΔU or legend variable (`L = inductance; C = capacitance`)
+                const deltaEnd = readUnicodeDeltaVar(segment, i)
+                if (deltaEnd !== -1) {
+                  runEnd = extendMathRun(segment, deltaEnd, false)
+                } else if (options.legend) {
+                  const legendEnd = readLegendSymbol(segment, i)
+                  if (legendEnd !== -1) {
+                    runEnd = legendEnd
+                  }
+                }
               }
             }
           }

@@ -94,7 +94,12 @@ export type DetailBlock =
       plural?: string
       lang?: string
     }
-  | { kind: 'formula'; latex: string; variables?: string }
+  | {
+      kind: 'formula'
+      latex: string
+      variables?: string
+      legend?: Array<{ symbol: string; meaning: string }>
+    }
   | { kind: 'question'; front: string; back: string }
   | { kind: 'cloze'; text: string }
 

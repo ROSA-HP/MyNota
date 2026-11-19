@@ -4,7 +4,11 @@ export const TOC_TITLE_BLOCK = 64
 export const TOC_ROW_CHAPTER = 32
 export const TOC_ROW_SECTION = 26
 
-export function paginateFlow(units: MeasuredUnit[], bodyHeight: number): NotesPage[] {
+export function paginateFlow(
+  units: MeasuredUnit[],
+  bodyHeight: number,
+  flow?: FlowUnit[],
+): NotesPage[] {
   const pages: NotesPage[] = []
   let current: Placed[] = []
   let used = 0
@@ -24,7 +28,7 @@ export function paginateFlow(units: MeasuredUnit[], bodyHeight: number): NotesPa
 
   const flush = () => {
     if (current.length > 0) {
-      pages.push({ placed: current })
+      pages.push({ placed: current, usedHeight: used })
       current = []
       used = 0
     }
@@ -111,7 +115,9 @@ export function paginateFlow(units: MeasuredUnit[], bodyHeight: number): NotesPa
       continue
     }
 
-    // 8. Otherwise split it (first slice uses remaining page space when continuing below a heading)
+    // 8. Otherwise split it (keeping atomic pairs like cardsHead + first card together)
+    const flowUnit = flow?.[i]
+    const blockRows = flowUnit && flowUnit.kind === 'block' ? flowUnit.rows : null
     let from = 0
     let continued = false
     while (from < totalRows) {
@@ -119,6 +125,10 @@ export function paginateFlow(units: MeasuredUnit[], bodyHeight: number): NotesPa
       let to = from + 1
       while (to < totalRows && partHeight(unit, from, to + 1) <= avail) {
         to++
+      }
+      // Prevent stranding a section/cardsHead label right at the bottom of a slice
+      if (to < totalRows && to - from > 1 && blockRows?.[to - 1]?.kind === 'cardsHead') {
+        to--
       }
 
       current.push({

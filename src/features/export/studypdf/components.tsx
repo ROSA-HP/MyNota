@@ -1,12 +1,16 @@
 import React, { useLayoutEffect, useRef } from 'react'
-import { MathFormula, RichMathText } from '@/components/ui/MathFormula'
+import { FormulaLegendView, MathFormula, RichMathText } from '@/components/ui/MathFormula'
+import { resolveFormulaLegend } from '@/lib/formulaLegend'
 import { TYPE_ICON } from '@/features/workspace/canvas/visuals'
 import type { ChapterColor } from '@/lib/database.types'
+import { VectorMapSvg, type VectorMapPageData } from '../mindmapSvg'
+import { proseTypographyStyle } from './cleanup'
 import { arrowFor, clip, splitCloze } from './model'
 import {
   BORDER,
   CHAPTER_FILL,
   COLORS,
+  COMPACT_PAD,
   COVER_SHADOW_GUTTER,
   FONT_MONO,
   PAD,
@@ -24,6 +28,7 @@ import type {
   CoverOutlineChapter,
   FlowUnit,
   PaperTone,
+  StatKey,
   StudyLabels,
 } from './types'
 
@@ -86,14 +91,14 @@ export function ContentPage({
 }) {
   return (
     <PageShell w={size.w} h={size.h} tone={tone} dir={dir}>
-      {/* Header */}
+      {/* Header: spans full body width so shadows & cards stay flush inside L/R rule edges */}
       <div
         style={{
           boxSizing: 'border-box',
           margin: 0,
           position: 'absolute',
-          left: dir === 'ltr' ? body.x : body.x + SHADOW_GUTTER,
-          width: body.w - SHADOW_GUTTER,
+          left: body.x,
+          width: body.w,
           top: mmToPx(10),
           height: mmToPx(8),
           display: 'flex',
@@ -113,7 +118,7 @@ export function ContentPage({
             overflow: 'hidden',
           }}
         >
-          {clip(headerTitle, 60)}
+          <RichMathText text={clip(headerTitle, 60)} />
         </span>
         <div
           style={{
@@ -150,7 +155,7 @@ export function ContentPage({
                   textOverflow: 'ellipsis',
                 }}
               >
-                {headerChapter.label} . {clip(headerChapter.title, 40)}
+                {headerChapter.label} · <RichMathText text={clip(headerChapter.title, 40)} />
               </span>
             </>
           ) : headerTag ? (
@@ -185,14 +190,14 @@ export function ContentPage({
         {children}
       </div>
 
-      {/* Footer */}
+      {/* Footer: spans full body width flush with Header & Cards */}
       <div
         style={{
           boxSizing: 'border-box',
           margin: 0,
           position: 'absolute',
-          left: dir === 'ltr' ? body.x : body.x + SHADOW_GUTTER,
-          width: body.w - SHADOW_GUTTER,
+          left: body.x,
+          width: body.w,
           bottom: mmToPx(10),
           height: mmToPx(8),
           display: 'flex',
@@ -219,12 +224,15 @@ export function CoverPage({
   kindLabel,
   stickerLabel,
   stats,
+  statLabel,
   tabs,
   outline,
   outlineLabel,
   moreLabel,
   formatMore,
   madeWith,
+  dateLabel,
+  docLang = 'en',
 }: {
   size: { w: number; h: number }
   tone: PaperTone
@@ -232,48 +240,105 @@ export function CoverPage({
   title: string
   kindLabel: string
   stickerLabel: string
-  stats: Array<{ n: number; label: string }>
+  stats: Array<{ key?: StatKey; n: number; label: string }>
+  statLabel?: (key: StatKey, count: number) => string
   tabs: Array<{ number: number; title: string; color: ChapterColor }>
   outline?: CoverOutlineChapter[]
   outlineLabel?: string
   moreLabel: string | null
   formatMore?: (count: number) => string
   madeWith: string
+  dateLabel?: string
+  docLang?: 'en' | 'de' | 'ar'
 }) {
   const isLandscape = size.w > size.h
+  const marginMm = isLandscape ? 12 : 20
+  const coverInnerRef = useRef<HTMLDivElement>(null)
+  const titleRef = useRef<HTMLDivElement>(null)
+
   const visibleStats = stats.filter((s) => s.n > 0)
   const visibleTabs = tabs.slice(0, 12)
   const hasOutline = Boolean(outline && outline.length > 0)
+
+  // Limit displayed chapters & global section rows to max 8 main sections on the cover
   const maxChapters = isLandscape ? 4 : 6
-  const visibleOutline = outline ? outline.slice(0, maxChapters) : []
-  const maxSections = isLandscape
-    ? visibleOutline.length <= 2
-      ? 8
-      : 4
-    : visibleOutline.length <= 2
-      ? 14
-      : visibleOutline.length <= 4
-        ? 8
-        : 4
-  const hiddenChapters = outline && outline.length > maxChapters ? outline.length - maxChapters : 0
-  const hiddenSections = visibleOutline.reduce(
-    (sum, ch) => sum + Math.max(0, ch.sections.length - maxSections),
-    0,
+  const rawOutline = outline ?? []
+  const slicedChapters = rawOutline.slice(0, maxChapters)
+  const totalSectionsAll = rawOutline.reduce((sum, ch) => sum + ch.sections.length, 0)
+
+  const { visibleOutline } = slicedChapters.reduce<{
+    visibleOutline: CoverOutlineChapter[]
+    budget: number
+  }>(
+    (acc, ch) => {
+      const perChapterCap = isLandscape
+        ? slicedChapters.length <= 2
+          ? 8
+          : 4
+        : slicedChapters.length <= 2
+          ? 8
+          : slicedChapters.length <= 4
+            ? 4
+            : 2
+      const take = Math.min(ch.sections.length, perChapterCap, acc.budget)
+      return {
+        visibleOutline: [...acc.visibleOutline, { ...ch, sections: ch.sections.slice(0, take) }],
+        budget: Math.max(0, acc.budget - take),
+      }
+    },
+    { visibleOutline: [], budget: 8 },
   )
+
+  const shownSectionsCount = visibleOutline.reduce((sum, ch) => sum + ch.sections.length, 0)
+  const hiddenChapters = rawOutline.length > maxChapters ? rawOutline.length - maxChapters : 0
+  const hiddenSections = Math.max(0, totalSectionsAll - shownSectionsCount)
+  const overflowCount = hiddenChapters > 0 && rawOutline.every((c) => c.sections.length <= 1)
+    ? hiddenChapters
+    : hiddenSections > 0
+      ? hiddenSections
+      : hiddenChapters
   const hasTruncatedOutline = hiddenChapters > 0 || hiddenSections > 0
   const resolvedOutlineMore = hasTruncatedOutline
-    ? (formatMore
-        ? formatMore(hiddenChapters > 0 ? hiddenChapters : hiddenSections)
-        : moreLabel)
+    ? (formatMore ? formatMore(overflowCount) : moreLabel)
     : null
+
   const coverShadow = dir === 'rtl' ? `-6px 6px 0 ${COLORS.ink}` : SHADOW.cover
   const cardShadow = dir === 'rtl' ? `-2px 2px 0 ${COLORS.ink}` : SHADOW.card
 
-  const totalVisibleSections = visibleOutline.reduce(
-    (sum, ch) => sum + Math.min(ch.sections.length, maxSections),
-    0,
-  )
-  const isCompactOutline = !isLandscape && visibleOutline.length <= 3 && totalVisibleSections <= 8
+  const isCompactOutline = !isLandscape && visibleOutline.length <= 3 && shownSectionsCount <= 8
+  const titleTypo = proseTypographyStyle(title, docLang)
+
+  // Auto-shrink title font size from 36pt (48px) down to 24pt (32px) so it stays <= 2 lines
+  // and run dev assertion ensuring the entire cover fits on 1 A4 page with zero overflow.
+  useLayoutEffect(() => {
+    const titleEl = titleRef.current
+    if (titleEl) {
+      const startSize = isLandscape ? 36 : 48 // 27pt..36pt -> shrink to min 32px (24pt)
+      const minSize = 32
+      let curSize = startSize
+      titleEl.style.fontSize = `${curSize}px`
+      titleEl.style.lineHeight = `${Math.round(curSize * (dir === 'rtl' ? 1.24 : 1.15))}px`
+      while (curSize > minSize) {
+        const lineH = Math.round(curSize * (dir === 'rtl' ? 1.24 : 1.15))
+        if (titleEl.scrollHeight <= lineH * 2 + 4) break
+        curSize -= 2
+        titleEl.style.fontSize = `${curSize}px`
+        titleEl.style.lineHeight = `${Math.round(curSize * (dir === 'rtl' ? 1.24 : 1.15))}px`
+      }
+    }
+
+    const inner = coverInnerRef.current
+    if (inner) {
+      const overflows = inner.scrollHeight > inner.clientHeight + 2
+      inner.setAttribute('data-cover-overflow', overflows ? 'true' : 'false')
+      if (overflows && typeof import.meta !== 'undefined' && import.meta.env?.DEV) {
+        console.error(
+          `[MyNota Cover Overflow] scrollHeight=${inner.scrollHeight} > clientHeight=${inner.clientHeight} for "${title}"`,
+        )
+      }
+    }
+  }, [title, isLandscape, dir, visibleOutline.length, shownSectionsCount])
+
   const coverGutter = (style?: React.CSSProperties): React.CSSProperties => ({
     boxSizing: 'border-box',
     margin: 0,
@@ -285,20 +350,22 @@ export function CoverPage({
   return (
     <PageShell w={size.w} h={size.h} tone={tone} dir={dir}>
       <div
+        ref={coverInnerRef}
+        data-cover-frame=""
         style={{
           boxSizing: 'border-box',
           margin: 0,
           position: 'absolute',
-          top: mmToPx(isLandscape ? 10 : 14),
-          bottom: mmToPx(isLandscape ? 10 : 14),
-          left: mmToPx(14),
-          right: mmToPx(14),
+          top: mmToPx(marginMm),
+          bottom: mmToPx(marginMm),
+          left: mmToPx(marginMm),
+          right: mmToPx(marginMm),
           display: 'flex',
           flexDirection: 'column',
-          gap: isLandscape ? 12 : 18,
+          gap: isLandscape ? 10 : 14,
         }}
       >
-        {/* Top bar (flush left to right with hero and outline borders) */}
+        {/* Top Brand Bar */}
         <div style={coverGutter({ flexShrink: 0 })}>
           <div
             style={{
@@ -308,7 +375,7 @@ export function CoverPage({
               flexDirection: 'row',
               justifyContent: 'space-between',
               alignItems: 'center',
-              paddingBottom: 12,
+              paddingBottom: 10,
               borderBottom: BORDER,
             }}
           >
@@ -338,7 +405,7 @@ export function CoverPage({
           </div>
         </div>
 
-        {/* Main Hero & Outline */}
+        {/* Main Hero (Upper Third) & What's Inside */}
         <div
           style={{
             boxSizing: 'border-box',
@@ -347,17 +414,17 @@ export function CoverPage({
             minHeight: 0,
             display: 'flex',
             flexDirection: 'column',
-            gap: isLandscape ? 12 : 18,
+            gap: isLandscape ? 10 : 14,
           }}
         >
-          {/* Full-width Hero Title Card */}
+          {/* Hero Title Card in upper third */}
           <div
             style={{
               boxSizing: 'border-box',
               margin: 0,
-              paddingRight: dir === 'ltr' ? 6 : 0,
-              paddingLeft: dir === 'rtl' ? 6 : 0,
-              paddingBottom: 6,
+              paddingRight: dir === 'ltr' ? COVER_SHADOW_GUTTER : 0,
+              paddingLeft: dir === 'rtl' ? COVER_SHADOW_GUTTER : 0,
+              paddingBottom: COVER_SHADOW_GUTTER,
               flexShrink: 0,
             }}
           >
@@ -381,7 +448,7 @@ export function CoverPage({
                   flexDirection: 'row',
                   justifyContent: 'space-between',
                   alignItems: 'center',
-                  padding: isLandscape ? '8px 20px' : '12px 24px',
+                  padding: isLandscape ? '7px 18px' : '10px 22px',
                   background: COLORS.bioSlate,
                   borderBottom: BORDER,
                 }}
@@ -410,7 +477,7 @@ export function CoverPage({
                     background: CHAPTER_FILL.yellow,
                     border: BORDER,
                     borderRadius: 8,
-                    padding: '4px 12px',
+                    padding: '3px 11px',
                     ...textStyle('mono', dir),
                     boxShadow: cardShadow,
                   }}
@@ -419,37 +486,39 @@ export function CoverPage({
                 </div>
               </div>
 
-              {/* Hero Title */}
+              {/* Hero Title (36pt -> 24pt auto-shrink, max 2 lines) */}
               <div
                 style={{
                   boxSizing: 'border-box',
                   margin: 0,
-                  padding: isLandscape ? '16px 22px' : '30px 26px',
+                  padding: isLandscape ? '14px 20px' : '22px 24px',
                 }}
               >
                 <div
+                  ref={titleRef}
+                  data-cover-title=""
+                  lang={titleTypo.lang}
+                  dir="auto"
                   style={{
                     boxSizing: 'border-box',
                     margin: 0,
-                    fontFamily: fontFor(dir),
-                    fontSize: isLandscape ? 30 : 40,
-                    lineHeight: isLandscape
-                      ? dir === 'rtl'
-                        ? '40px'
-                        : '36px'
-                      : dir === 'rtl'
-                        ? '50px'
-                        : '46px',
+                    fontFamily: titleTypo.lang === 'ar' ? fontFor('rtl') : fontFor(dir),
+                    fontSize: isLandscape ? 36 : 48,
+                    lineHeight: isLandscape ? '42px' : dir === 'rtl' ? '58px' : '54px',
                     fontWeight: 700,
-                    letterSpacing: dir === 'rtl' ? undefined : '-0.025em',
+                    letterSpacing: titleTypo.lang === 'ar' ? 'normal' : '-0.025em',
                     overflowWrap: 'anywhere',
+                    display: '-webkit-box',
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: 'vertical',
+                    overflow: 'hidden',
                   }}
                 >
-                  {clip(title, 140)}
+                  <RichMathText text={title} />
                 </div>
               </div>
 
-              {/* Integrated Flush Stats Strip */}
+              {/* Integrated Flush Stats Strip (plural-aware) */}
               {visibleStats.length > 0 && (
                 <div
                   style={{
@@ -461,53 +530,56 @@ export function CoverPage({
                     background: COLORS.white,
                   }}
                 >
-                  {visibleStats.map((s, idx) => (
-                    <div
-                      key={idx}
-                      style={{
-                        boxSizing: 'border-box',
-                        margin: 0,
-                        padding: '14px 16px',
-                        borderInlineEnd: idx < visibleStats.length - 1 ? BORDER : undefined,
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: 2,
-                      }}
-                    >
-                      <span
+                  {visibleStats.map((s, idx) => {
+                    const resolvedLabel = s.key && statLabel ? statLabel(s.key, s.n) : s.label
+                    return (
+                      <div
+                        key={idx}
                         style={{
-                          fontFamily: FONT_MONO,
-                          fontSize: 22,
-                          lineHeight: '26px',
-                          fontWeight: 700,
-                          fontVariantNumeric: 'tabular-nums',
+                          boxSizing: 'border-box',
+                          margin: 0,
+                          padding: isLandscape ? '10px 12px' : '11px 14px',
+                          borderInlineEnd: idx < visibleStats.length - 1 ? BORDER : undefined,
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: 2,
                         }}
                       >
-                        {s.n}
-                      </span>
-                      <span
-                        style={{
-                          ...textStyle('monoSmall', dir),
-                          color: COLORS.charcoal,
-                        }}
-                      >
-                        {s.label}
-                      </span>
-                    </div>
-                  ))}
+                        <span
+                          style={{
+                            fontFamily: FONT_MONO,
+                            fontSize: 20,
+                            lineHeight: '24px',
+                            fontWeight: 700,
+                            fontVariantNumeric: 'tabular-nums',
+                          }}
+                        >
+                          {s.n}
+                        </span>
+                        <span
+                          style={{
+                            ...textStyle('monoSmall', dir),
+                            color: COLORS.charcoal,
+                          }}
+                        >
+                          {resolvedLabel}
+                        </span>
+                      </div>
+                    )
+                  })}
                 </div>
               )}
             </div>
           </div>
 
-          {/* Chapter & Section Outline Panel */}
+          {/* What's Inside / Section Outline Panel */}
           {hasOutline ? (
             <div
               style={{
                 ...coverGutter(),
-                flex: 1,
+                flex: '0 1 auto',
                 minHeight: 0,
-                paddingBottom: 6,
+                paddingBottom: COVER_SHADOW_GUTTER,
                 display: 'flex',
                 flexDirection: 'column',
               }}
@@ -516,7 +588,7 @@ export function CoverPage({
                 style={{
                   boxSizing: 'border-box',
                   margin: 0,
-                  flex: 1,
+                  flex: '0 1 auto',
                   minHeight: 0,
                   background: COLORS.white,
                   border: BORDER,
@@ -531,7 +603,7 @@ export function CoverPage({
                   style={{
                     boxSizing: 'border-box',
                     margin: 0,
-                    padding: '10px 18px',
+                    padding: '9px 16px',
                     background: COLORS.bioSlate,
                     borderBottom: BORDER,
                     display: 'flex',
@@ -540,9 +612,9 @@ export function CoverPage({
                     flexShrink: 0,
                   }}
                 >
-                  <span style={{ ...textStyle('mono', dir) }}>{outlineLabel ?? 'Contents'}</span>
+                  <span style={{ ...textStyle('mono', dir) }}>{outlineLabel ?? "What's inside"}</span>
                   <span style={{ ...textStyle('monoSmall', dir), color: COLORS.charcoal }}>
-                    {outline?.reduce((sum, ch) => sum + Math.max(1, ch.sections.length), 0) ?? 0}
+                    {totalSectionsAll || rawOutline.length}
                   </span>
                 </div>
 
@@ -552,11 +624,11 @@ export function CoverPage({
                     margin: 0,
                     flex: 1,
                     minHeight: 0,
-                    padding: isLandscape ? '12px 16px' : isCompactOutline ? '20px 22px' : '16px 18px',
+                    padding: isLandscape ? '10px 14px' : isCompactOutline ? '14px 16px' : '12px 14px',
                     display: 'flex',
                     flexDirection: 'column',
-                    justifyContent: isCompactOutline ? 'space-between' : 'flex-start',
-                    gap: isLandscape ? 8 : isCompactOutline ? 16 : 14,
+                    justifyContent: 'flex-start',
+                    gap: isLandscape ? 8 : isCompactOutline ? 10 : 10,
                     overflow: 'hidden',
                   }}
                 >
@@ -570,9 +642,9 @@ export function CoverPage({
                         flex: isCompactOutline && visibleOutline.length === 1 ? 1 : undefined,
                         display: 'flex',
                         flexDirection: 'column',
-                        gap: isLandscape ? 6 : isCompactOutline ? 12 : 8,
+                        gap: isLandscape ? 5 : isCompactOutline ? 8 : 6,
                         paddingBottom:
-                          cIdx < visibleOutline.length - 1 ? (isLandscape ? 8 : 12) : 0,
+                          cIdx < visibleOutline.length - 1 ? (isLandscape ? 6 : 8) : 0,
                         borderBottom:
                           cIdx < visibleOutline.length - 1
                             ? `1.5px dashed ${COLORS.charcoal}`
@@ -594,8 +666,8 @@ export function CoverPage({
                             style={{
                               boxSizing: 'border-box',
                               margin: 0,
-                              width: 28,
-                              height: 28,
+                              width: 26,
+                              height: 26,
                               background: CHAPTER_FILL[ch.color],
                               border: BORDER,
                               borderRadius: RADIUS.tile,
@@ -604,7 +676,7 @@ export function CoverPage({
                               justifyContent: 'center',
                               flexShrink: 0,
                               fontFamily: FONT_MONO,
-                              fontSize: 13,
+                              fontSize: 12,
                               fontWeight: 700,
                             }}
                           >
@@ -619,143 +691,165 @@ export function CoverPage({
                               overflowWrap: 'anywhere',
                             }}
                           >
-                            {ch.title}
+                            <RichMathText text={ch.title} />
                           </div>
                         </div>
                       )}
 
-                      {isCompactOutline && ch.summary && (
-                        <div
-                          style={{
-                            boxSizing: 'border-box',
-                            margin: 0,
-                            ...textStyle('detail', ch.dir),
-                            color: COLORS.charcoal,
-                            textAlign: 'justify',
-                            textJustify: 'inter-word',
-                            paddingInlineStart: ch.number !== null ? 38 : 0,
-                          }}
-                        >
-                          <RichMathText text={clip(ch.summary, 220)} />
-                        </div>
-                      )}
+                      {isCompactOutline && ch.summary && (() => {
+                        const sTypo = proseTypographyStyle(ch.summary, docLang)
+                        return (
+                          <div
+                            lang={sTypo.lang}
+                            dir={sTypo.dir}
+                            style={{
+                              boxSizing: 'border-box',
+                              margin: 0,
+                              ...textStyle('detail', ch.dir),
+                              ...sTypo.style,
+                              color: COLORS.charcoal,
+                            }}
+                          >
+                            <RichMathText text={clip(ch.summary, 200)} />
+                          </div>
+                        )
+                      })()}
 
                       {ch.sections.length > 0 && (
                         <div
                           style={{
                             boxSizing: 'border-box',
                             margin: 0,
-                            flex: isCompactOutline && visibleOutline.length === 1 ? 1 : undefined,
                             display:
                               isCompactOutline && visibleOutline.length === 1 ? 'flex' : 'grid',
                             flexDirection:
                               isCompactOutline && visibleOutline.length === 1 ? 'column' : undefined,
-                            justifyContent:
-                              isCompactOutline &&
-                              visibleOutline.length === 1 &&
-                              ch.sections.length <= 2
-                                ? 'center'
-                                : undefined,
+                            justifyContent: 'flex-start',
                             gridTemplateColumns: isCompactOutline
                               ? 'minmax(0, 1fr)'
                               : ch.sections.length > 6 || (isLandscape && ch.sections.length > 2)
                                 ? 'repeat(2, minmax(0, 1fr))'
                                 : 'minmax(0, 1fr)',
-                            gap: isLandscape ? '6px 14px' : isCompactOutline ? 10 : '8px 14px',
-                            paddingInlineStart:
-                              ch.number !== null && !isCompactOutline ? 38 : 0,
+                            gap: isLandscape ? '5px 12px' : isCompactOutline ? 7 : '6px 12px',
                           }}
                         >
-                          {ch.sections.slice(0, maxSections).map((sec, sIdx) => (
-                            <div
-                              key={sIdx}
-                              dir={sec.dir}
-                              style={{
-                                boxSizing: 'border-box',
-                                margin: 0,
-                                flex:
-                                  isCompactOutline &&
-                                  visibleOutline.length === 1 &&
-                                  ch.sections.length >= 3 &&
-                                  ch.sections.length <= 6
-                                    ? 1
-                                    : undefined,
-                                display: 'flex',
-                                flexDirection: 'column',
-                                justifyContent: isCompactOutline ? 'center' : undefined,
-                                gap: isCompactOutline ? 5 : 0,
-                                padding: isCompactOutline ? '12px 14px' : 0,
-                                borderRadius: isCompactOutline ? RADIUS.tile : 0,
-                                border: isCompactOutline
-                                  ? `1.5px solid ${COLORS.ink}`
-                                  : undefined,
-                                background: isCompactOutline ? COLORS.mintFrost : undefined,
-                                minWidth: 0,
-                              }}
-                            >
+                          {ch.sections.map((sec, sIdx) => {
+                            const secSummaryTypo =
+                              isCompactOutline && sec.summary
+                                ? proseTypographyStyle(sec.summary, docLang)
+                                : null
+                            return (
                               <div
+                                key={sIdx}
+                                data-toc-page={sec.page}
+                                dir={sec.dir}
                                 style={{
                                   boxSizing: 'border-box',
                                   margin: 0,
+                                  flex:
+                                    isCompactOutline &&
+                                    visibleOutline.length === 1 &&
+                                    ch.sections.length >= 3 &&
+                                    ch.sections.length <= 6
+                                      ? 1
+                                      : undefined,
                                   display: 'flex',
-                                  flexDirection: 'row',
-                                  alignItems: isCompactOutline ? 'flex-start' : 'center',
-                                  gap: 8,
+                                  flexDirection: 'column',
+                                  justifyContent: isCompactOutline ? 'center' : undefined,
+                                  gap: isCompactOutline ? 3 : 0,
+                                  padding: isCompactOutline ? '7px 12px' : '2px 0',
+                                  borderRadius: isCompactOutline ? RADIUS.tile : 0,
+                                  border: isCompactOutline
+                                    ? `1.5px solid ${COLORS.ink}`
+                                    : undefined,
+                                  background: isCompactOutline ? COLORS.mintFrost : undefined,
                                   minWidth: 0,
                                 }}
                               >
-                                <span
-                                  style={{
-                                    boxSizing: 'border-box',
-                                    margin: 0,
-                                    fontFamily: FONT_MONO,
-                                    fontSize: 10,
-                                    lineHeight: '14px',
-                                    fontWeight: 700,
-                                    direction: 'ltr',
-                                    background: CHAPTER_FILL[ch.color],
-                                    border: BORDER,
-                                    borderRadius: RADIUS.pill,
-                                    padding: '1px 8px',
-                                    flexShrink: 0,
-                                    marginTop: isCompactOutline ? 1 : 0,
-                                  }}
-                                >
-                                  {sec.label}
-                                </span>
-                                <span
-                                  style={{
-                                    ...textStyle(isCompactOutline ? 'blockTitle' : 'detail', sec.dir),
-                                    minWidth: 0,
-                                    ...(isCompactOutline
-                                      ? { overflowWrap: 'anywhere' }
-                                      : {
-                                          overflow: 'hidden',
-                                          textOverflow: 'ellipsis',
-                                          whiteSpace: 'nowrap',
-                                        }),
-                                  }}
-                                >
-                                  {sec.title}
-                                </span>
-                              </div>
-                              {isCompactOutline && sec.summary && (
                                 <div
                                   style={{
                                     boxSizing: 'border-box',
                                     margin: 0,
-                                    ...textStyle('small', sec.dir),
-                                    color: COLORS.charcoal,
-                                    textAlign: 'justify',
-                                    textJustify: 'inter-word',
-                                    paddingInlineStart: 36,
+                                    display: 'flex',
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    gap: 8,
+                                    minWidth: 0,
                                   }}
                                 >
-                                  <RichMathText text={clip(sec.summary, 180)} />
+                                  <span
+                                    style={{
+                                      boxSizing: 'border-box',
+                                      margin: 0,
+                                      fontFamily: FONT_MONO,
+                                      fontSize: 10,
+                                      lineHeight: '14px',
+                                      fontWeight: 700,
+                                      direction: 'ltr',
+                                      background: CHAPTER_FILL[ch.color],
+                                      border: BORDER,
+                                      borderRadius: RADIUS.pill,
+                                      padding: '1px 8px',
+                                      flexShrink: 0,
+                                    }}
+                                  >
+                                    {sec.label}
+                                  </span>
+                                  <span
+                                    style={{
+                                      ...textStyle(
+                                        isCompactOutline ? 'blockTitle' : 'detail',
+                                        sec.dir,
+                                      ),
+                                      flex: 1,
+                                      minWidth: 0,
+                                      ...(isCompactOutline
+                                        ? { overflowWrap: 'anywhere' }
+                                        : {
+                                            overflow: 'hidden',
+                                            textOverflow: 'ellipsis',
+                                            whiteSpace: 'nowrap',
+                                          }),
+                                    }}
+                                  >
+                                    <RichMathText text={sec.title} />
+                                  </span>
+                                  {sec.page !== undefined && (
+                                    <span
+                                      style={{
+                                        fontFamily: FONT_MONO,
+                                        fontSize: 11,
+                                        lineHeight: '14px',
+                                        fontWeight: 700,
+                                        fontVariantNumeric: 'tabular-nums',
+                                        color: COLORS.surgicalTeal,
+                                        flexShrink: 0,
+                                        marginInlineStart: 6,
+                                      }}
+                                    >
+                                      {sec.page}
+                                    </span>
+                                  )}
                                 </div>
-                              )}
-                            </div>
-                          ))}
+                                {isCompactOutline && sec.summary && secSummaryTypo && (
+                                  <div
+                                    lang={secSummaryTypo.lang}
+                                    dir={secSummaryTypo.dir}
+                                    style={{
+                                      boxSizing: 'border-box',
+                                      margin: 0,
+                                      ...textStyle('small', sec.dir),
+                                      ...secSummaryTypo.style,
+                                      color: COLORS.charcoal,
+                                      paddingInlineStart: 32,
+                                    }}
+                                  >
+                                    <RichMathText text={clip(sec.summary, 140)} />
+                                  </div>
+                                )}
+                              </div>
+                            )
+                          })}
                         </div>
                       )}
                     </div>
@@ -829,7 +923,7 @@ export function CoverPage({
                         overflow: 'hidden',
                       }}
                     >
-                      {t.title}
+                      <RichMathText text={t.title} />
                     </span>
                   </div>
                 ))}
@@ -854,7 +948,7 @@ export function CoverPage({
           )}
         </div>
 
-        {/* Bottom Footer Strip */}
+        {/* Bottom Footer Strip (locale date e.g. 18 Nov 2026) */}
         <div style={coverGutter({ flexShrink: 0 })}>
           <div
             style={{
@@ -869,7 +963,9 @@ export function CoverPage({
             }}
           >
             <span style={{ ...textStyle('footer', dir), color: COLORS.charcoal }}>{madeWith}</span>
-            <span style={{ ...textStyle('footer', dir), color: COLORS.charcoal }}>MyNota</span>
+            <span style={{ ...textStyle('footer', dir), color: COLORS.charcoal }}>
+              {dateLabel && dateLabel !== madeWith ? dateLabel : 'MyNota'}
+            </span>
           </div>
         </div>
       </div>
@@ -1002,7 +1098,7 @@ export function TocPage({
                 overflow: 'hidden',
               }}
             >
-              {row.title}
+              <RichMathText text={row.title} />
             </span>
 
             <div
@@ -1034,11 +1130,15 @@ export function TocPage({
 export function FormulaBox({
   latex,
   variables,
+  legend,
   dir,
+  docLang = 'en',
 }: {
   latex: string
   variables?: string
+  legend?: Array<{ symbol: string; meaning: string }>
   dir: 'ltr' | 'rtl'
+  docLang?: 'en' | 'de' | 'ar'
 }) {
   const boxRef = useRef<HTMLDivElement>(null)
   const wrapRef = useRef<HTMLDivElement>(null)
@@ -1061,6 +1161,12 @@ export function FormulaBox({
       if (naturalH > 0) wrap.style.height = `${Math.ceil(naturalH * scale)}px`
     }
   }, [latex])
+
+  const entries = resolveFormulaLegend({ kind: 'formula', latex, variables, legend }).entries
+  const legendTextSample = entries.length
+    ? entries.map((e) => e.meaning).join(' ')
+    : (variables ?? '')
+  const legendTypo = legendTextSample ? proseTypographyStyle(legendTextSample, docLang) : null
 
   return (
     <div
@@ -1092,21 +1198,24 @@ export function FormulaBox({
           <MathFormula latex={latex} display />
         </span>
       </div>
-      {variables && (
+      {(entries.length > 0 || variables) && legendTypo && (
         <div
-          dir={dir}
+          lang={legendTypo.lang}
+          dir={legendTypo.dir}
           style={{
             boxSizing: 'border-box',
             margin: 0,
             marginTop: 6,
-            textAlign: 'justify',
-            textJustify: 'inter-word',
-            direction: dir,
-            ...textStyle('small', dir),
-            color: COLORS.charcoal,
+            ...textStyle('small', legendTypo.lang === 'ar' ? 'rtl' : dir),
+            ...legendTypo.style,
+            color: COLORS.legendText,
           }}
         >
-          <RichMathText text={variables} legend />
+          {entries.length > 0 ? (
+            <FormulaLegendView entries={entries} />
+          ) : (
+            variables && <RichMathText text={variables} legend />
+          )}
         </div>
       )}
     </div>
@@ -1117,47 +1226,58 @@ function RenderRow({
   row,
   dir,
   labels,
+  docLang = 'en',
 }: {
   row: BlockRow
   dir: 'ltr' | 'rtl'
   labels: StudyLabels
+  docLang?: 'en' | 'de' | 'ar'
 }) {
   switch (row.kind) {
-    case 'summary':
+    case 'summary': {
+      const typo = proseTypographyStyle(row.text, docLang)
       return (
         <div
+          lang={typo.lang}
+          dir={typo.dir}
           style={{
             boxSizing: 'border-box',
             margin: 0,
-            ...textStyle('summary', dir),
+            ...textStyle('summary', typo.lang === 'ar' ? 'rtl' : dir),
+            ...typo.style,
             color: COLORS.ink,
-            textAlign: 'justify',
-            textJustify: 'inter-word',
           }}
         >
           <RichMathText text={row.text} />
         </div>
       )
+    }
     case 'detail': {
       const d = row.detail
       switch (d.kind) {
-        case 'text':
+        case 'text': {
+          const typo = proseTypographyStyle(d.text, docLang)
           return (
             <div
+              lang={typo.lang}
+              dir={typo.dir}
               style={{
                 boxSizing: 'border-box',
                 margin: 0,
-                ...textStyle('detail', dir),
-                textAlign: 'justify',
-                textJustify: 'inter-word',
+                ...textStyle('detail', typo.lang === 'ar' ? 'rtl' : dir),
+                ...typo.style,
               }}
             >
               <RichMathText text={d.text} />
             </div>
           )
-        case 'bullet':
+        }
+        case 'bullet': {
+          const typo = proseTypographyStyle(d.text, docLang)
           return (
             <div
+              lang={typo.lang}
+              dir={typo.dir}
               style={{
                 boxSizing: 'border-box',
                 margin: 0,
@@ -1185,16 +1305,18 @@ function RenderRow({
                   margin: 0,
                   flex: 1,
                   minWidth: 0,
-                  ...textStyle('detail', dir),
-                  textAlign: 'justify',
-                  textJustify: 'inter-word',
+                  ...textStyle('detail', typo.lang === 'ar' ? 'rtl' : dir),
+                  ...typo.style,
                 }}
               >
                 <RichMathText text={d.text} />
               </div>
             </div>
           )
-        case 'example':
+        }
+        case 'example': {
+          const typo = proseTypographyStyle(d.text, docLang)
+          const trTypo = d.translation ? proseTypographyStyle(d.translation, docLang) : null
           return (
             <div
               style={{
@@ -1205,26 +1327,28 @@ function RenderRow({
               }}
             >
               <div
+                lang={typo.lang}
+                dir={typo.dir}
                 style={{
                   boxSizing: 'border-box',
                   margin: 0,
-                  ...textStyle('detail', dir),
-                  textAlign: 'justify',
-                  textJustify: 'inter-word',
+                  ...textStyle('detail', typo.lang === 'ar' ? 'rtl' : dir),
+                  ...typo.style,
                 }}
               >
                 <RichMathText text={d.text} />
               </div>
-              {d.translation && (
+              {d.translation && trTypo && (
                 <div
+                  lang={trTypo.lang}
+                  dir={trTypo.dir}
                   style={{
                     boxSizing: 'border-box',
                     margin: 0,
-                    ...textStyle('small', dir),
+                    ...textStyle('small', trTypo.lang === 'ar' ? 'rtl' : dir),
+                    ...trTypo.style,
                     color: COLORS.charcoal,
                     marginTop: 2,
-                    textAlign: 'justify',
-                    textJustify: 'inter-word',
                   }}
                 >
                   <RichMathText text={d.translation} />
@@ -1232,15 +1356,18 @@ function RenderRow({
               )}
             </div>
           )
-        case 'cloze':
+        }
+        case 'cloze': {
+          const typo = proseTypographyStyle(d.text, docLang)
           return (
             <div
+              lang={typo.lang}
+              dir={typo.dir}
               style={{
                 boxSizing: 'border-box',
                 margin: 0,
-                ...textStyle('detail', dir),
-                textAlign: 'justify',
-                textJustify: 'inter-word',
+                ...textStyle('detail', typo.lang === 'ar' ? 'rtl' : dir),
+                ...typo.style,
               }}
             >
               {splitCloze(d.text).map((seg, idx) => (
@@ -1253,21 +1380,30 @@ function RenderRow({
               ))}
             </div>
           )
-        case 'vocab':
+        }
+        case 'vocab': {
+          const vocabText = [d.article, d.term, d.meaning].filter(Boolean).join(' ')
+          const typo = proseTypographyStyle(vocabText, docLang)
           return (
             <div
+              lang={typo.lang}
+              dir={typo.dir}
               style={{
                 boxSizing: 'border-box',
                 margin: 0,
-                ...textStyle('detail', dir),
-                textAlign: 'justify',
-                textJustify: 'inter-word',
+                ...textStyle('detail', typo.lang === 'ar' ? 'rtl' : dir),
+                ...typo.style,
               }}
             >
               <span style={{ fontWeight: 700 }}>
-                {[d.article, d.term].filter(Boolean).join(' ')}
+                <RichMathText text={[d.article, d.term].filter(Boolean).join(' ')} />
               </span>
-              {d.plural && <span> ({d.plural})</span>}
+              {d.plural && (
+                <span>
+                  {' '}
+                  (<RichMathText text={d.plural} />)
+                </span>
+              )}
               {d.meaning && (
                 <span style={{ color: COLORS.charcoal }}>
                   {' '}
@@ -1276,9 +1412,20 @@ function RenderRow({
               )}
             </div>
           )
+        }
         case 'formula':
-          return <FormulaBox latex={d.latex} variables={d.variables} dir={dir} />
-        case 'question':
+          return (
+            <FormulaBox
+              latex={d.latex}
+              variables={d.variables}
+              legend={d.legend}
+              dir={dir}
+              docLang={docLang}
+            />
+          )
+        case 'question': {
+          const qTypo = proseTypographyStyle(d.front, docLang)
+          const aTypo = proseTypographyStyle(d.back, docLang)
           return (
             <div
               style={{
@@ -1307,13 +1454,14 @@ function RenderRow({
                   {labels.q}
                 </span>
                 <span
+                  lang={qTypo.lang}
+                  dir={qTypo.dir}
                   style={{
-                    ...textStyle('detail', dir),
+                    ...textStyle('detail', qTypo.lang === 'ar' ? 'rtl' : dir),
+                    ...qTypo.style,
                     fontWeight: 700,
                     flex: 1,
                     minWidth: 0,
-                    textAlign: 'justify',
-                    textJustify: 'inter-word',
                   }}
                 >
                   <RichMathText text={d.front} />
@@ -1337,12 +1485,13 @@ function RenderRow({
                   {labels.a}
                 </span>
                 <span
+                  lang={aTypo.lang}
+                  dir={aTypo.dir}
                   style={{
-                    ...textStyle('detail', dir),
+                    ...textStyle('detail', aTypo.lang === 'ar' ? 'rtl' : dir),
+                    ...aTypo.style,
                     flex: 1,
                     minWidth: 0,
-                    textAlign: 'justify',
-                    textJustify: 'inter-word',
                   }}
                 >
                   <RichMathText text={d.back} />
@@ -1350,10 +1499,12 @@ function RenderRow({
               </div>
             </div>
           )
+        }
       }
       break
     }
-    case 'link':
+    case 'link': {
+      const linkTypo = proseTypographyStyle(`${row.label}: ${row.other}`, docLang)
       return (
         <div
           style={{
@@ -1369,12 +1520,13 @@ function RenderRow({
             {arrowFor(row.outgoing, dir)}
           </span>
           <span
+            lang={linkTypo.lang}
+            dir={linkTypo.dir}
             style={{
-              ...textStyle('small', dir),
+              ...textStyle('small', linkTypo.lang === 'ar' ? 'rtl' : dir),
+              ...linkTypo.style,
               flex: 1,
               minWidth: 0,
-              textAlign: 'justify',
-              textJustify: 'inter-word',
             }}
           >
             <span style={{ fontWeight: 700 }}>
@@ -1386,6 +1538,7 @@ function RenderRow({
           </span>
         </div>
       )
+    }
     case 'source':
       return (
         <div
@@ -1414,7 +1567,9 @@ function RenderRow({
           {labels.flashcards}
         </div>
       )
-    case 'card':
+    case 'card': {
+      const qTypo = proseTypographyStyle(row.front, docLang)
+      const aTypo = proseTypographyStyle(row.back, docLang)
       return (
         <div
           style={{
@@ -1430,20 +1585,29 @@ function RenderRow({
           }}
         >
           <div
+            lang={qTypo.lang}
+            dir={qTypo.dir}
             style={{
-              ...textStyle('small', dir),
+              ...textStyle('small', qTypo.lang === 'ar' ? 'rtl' : dir),
+              ...qTypo.style,
               fontWeight: 700,
-              textAlign: 'justify',
-              textJustify: 'inter-word',
             }}
           >
             {labels.q} <RichMathText text={row.front} />
           </div>
-          <div style={{ ...textStyle('small', dir), textAlign: 'justify', textJustify: 'inter-word' }}>
+          <div
+            lang={aTypo.lang}
+            dir={aTypo.dir}
+            style={{
+              ...textStyle('small', aTypo.lang === 'ar' ? 'rtl' : dir),
+              ...aTypo.style,
+            }}
+          >
             {labels.a} <RichMathText text={row.back} />
           </div>
         </div>
       )
+    }
   }
 }
 
@@ -1456,6 +1620,8 @@ export function FlowUnitView({
   rowFrom = 0,
   rowTo,
   continued = false,
+  compact = false,
+  docLang = 'en',
 }: {
   unit: FlowUnit
   dir: 'ltr' | 'rtl'
@@ -1465,19 +1631,24 @@ export function FlowUnitView({
   rowFrom?: number
   rowTo?: number
   continued?: boolean
+  compact?: boolean
+  docLang?: 'en' | 'de' | 'ar'
 }) {
+  const pad = compact ? COMPACT_PAD : PAD
+
   if (unit.kind === 'chapter') {
     const chapterShadow = dir === 'rtl' ? `-4px 4px 0 ${COLORS.ink}` : SHADOW.chapter
+    const sumTypo = unit.summary ? proseTypographyStyle(unit.summary, docLang) : null
     return (
       <div
         dir={dir}
         style={{
           boxSizing: 'border-box',
           margin: 0,
-          paddingTop: atTop ? 0 : PAD.chapterTop,
-          paddingBottom: PAD.chapterBottom + 4,
-          paddingRight: dir === 'ltr' ? 4 : 0,
-          paddingLeft: dir === 'rtl' ? 4 : 0,
+          paddingTop: atTop ? 0 : pad.chapterTop,
+          paddingBottom: pad.chapterBottom + 4,
+          paddingRight: dir === 'ltr' ? SHADOW_GUTTER : 0,
+          paddingLeft: dir === 'rtl' ? SHADOW_GUTTER : 0,
         }}
       >
         <div
@@ -1533,18 +1704,19 @@ export function FlowUnitView({
             }}
           >
             <div style={{ boxSizing: 'border-box', margin: 0, ...textStyle('h1', unit.dir) }}>
-              {unit.title}
+              <RichMathText text={unit.title} />
             </div>
-            {unit.summary && (
+            {unit.summary && sumTypo && (
               <div
+                lang={sumTypo.lang}
+                dir={sumTypo.dir}
                 style={{
                   boxSizing: 'border-box',
                   margin: 0,
                   ...textStyle('detail', unit.dir),
+                  ...sumTypo.style,
                   color: COLORS.charcoal,
                   marginTop: 4,
-                  textAlign: 'justify',
-                  textJustify: 'inter-word',
                 }}
               >
                 <RichMathText text={unit.summary} />
@@ -1557,16 +1729,17 @@ export function FlowUnitView({
   }
 
   if (unit.kind === 'section') {
+    const sumTypo = unit.summary ? proseTypographyStyle(unit.summary, docLang) : null
     return (
       <div
         dir={dir}
         style={{
           boxSizing: 'border-box',
           margin: 0,
-          paddingTop: atTop ? 0 : PAD.sectionTop,
-          paddingBottom: PAD.sectionBottom,
-          paddingRight: dir === 'ltr' ? SHADOW_GUTTER : 0,
-          paddingLeft: dir === 'rtl' ? SHADOW_GUTTER : 0,
+          paddingTop: atTop ? 0 : pad.sectionTop,
+          paddingBottom: pad.sectionBottom,
+          paddingRight: 0,
+          paddingLeft: 0,
         }}
       >
         <div
@@ -1608,7 +1781,7 @@ export function FlowUnitView({
               ...textStyle('h2', unit.dir),
             }}
           >
-            {unit.title}
+            <RichMathText text={unit.title} />
           </div>
         </div>
 
@@ -1622,18 +1795,17 @@ export function FlowUnitView({
           }}
         />
 
-        {unit.summary && (
+        {unit.summary && sumTypo && (
           <div
-            dir={unit.dir}
+            lang={sumTypo.lang}
+            dir={sumTypo.dir}
             style={{
               boxSizing: 'border-box',
               margin: 0,
-              direction: unit.dir,
               ...textStyle('summary', unit.dir),
+              ...sumTypo.style,
               color: COLORS.charcoal,
               paddingTop: 6,
-              textAlign: 'justify',
-              textJustify: 'inter-word',
             }}
           >
             <RichMathText text={unit.summary} />
@@ -1643,12 +1815,13 @@ export function FlowUnitView({
     )
   }
 
-  // Block unit (aligned flush left and right to match chapter, section, header, and footer gutters)
+  // Block unit (equal left and right edges, nested hierarchy shown with colored left rail & breadcrumb)
   const totalRows = unit.rows.length
   const to = rowTo ?? totalRows
   const visibleRows = unit.rows.slice(rowFrom, to)
   const IconComponent = unit.type ? TYPE_ICON[unit.type] : null
   const blockShadow = dir === 'rtl' ? `-2px 2px 0 ${COLORS.ink}` : SHADOW.card
+  const isNested = unit.relDepth > 0
 
   return (
     <div
@@ -1660,11 +1833,12 @@ export function FlowUnitView({
         paddingInlineStart: 0,
         paddingRight: dir === 'ltr' ? SHADOW_GUTTER : 0,
         paddingLeft: dir === 'rtl' ? SHADOW_GUTTER : 0,
-        paddingBottom: PAD.blockBottom + 2,
+        paddingBottom: pad.blockBottom + 2,
       }}
     >
       <div
         dir={unit.dir}
+        data-nested={isNested ? 'true' : 'false'}
         style={{
           boxSizing: 'border-box',
           margin: 0,
@@ -1675,8 +1849,33 @@ export function FlowUnitView({
           borderRadius: RADIUS.card,
           boxShadow: blockShadow,
           overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'row',
         }}
       >
+        {isNested && (
+          <div
+            data-left-rail=""
+            style={{
+              boxSizing: 'border-box',
+              margin: 0,
+              width: 6,
+              flexShrink: 0,
+              background: CHAPTER_FILL[unit.color],
+              borderInlineEnd: BORDER,
+            }}
+          />
+        )}
+        <div
+          style={{
+            boxSizing: 'border-box',
+            margin: 0,
+            flex: 1,
+            minWidth: 0,
+            display: 'flex',
+            flexDirection: 'column',
+          }}
+        >
         {/* Head */}
         <div
           data-part="head"
@@ -1722,7 +1921,20 @@ export function FlowUnitView({
               ...textStyle('blockTitle', unit.dir),
             }}
           >
-            {unit.title}
+            {isNested && unit.parentTitle && (
+              <div
+                style={{
+                  ...textStyle('monoSmall', unit.dir),
+                  color: COLORS.charcoal,
+                  fontSize: 8.5,
+                  lineHeight: '11px',
+                  marginBottom: 1,
+                }}
+              >
+                ↳ <RichMathText text={unit.parentTitle} />
+              </div>
+            )}
+            <RichMathText text={unit.title} />
           </div>
 
           <div
@@ -1813,10 +2025,10 @@ export function FlowUnitView({
             style={{
               boxSizing: 'border-box',
               margin: 0,
-              padding: '8px 10px',
+              padding: compact ? '6px 12px' : '8px 12px',
               display: 'flex',
               flexDirection: 'column',
-              gap: PAD.rowGap,
+              gap: pad.rowGap,
             }}
           >
             {visibleRows.map((row, idx) => {
@@ -1827,12 +2039,13 @@ export function FlowUnitView({
                   data-row={realIndex}
                   style={{ boxSizing: 'border-box', margin: 0 }}
                 >
-                  <RenderRow row={row} dir={unit.dir} labels={labels} />
+                  <RenderRow row={row} dir={unit.dir} labels={labels} docLang={docLang} />
                 </div>
               )
             })}
           </div>
         )}
+        </div>
       </div>
     </div>
   )
@@ -1843,13 +2056,17 @@ export function CardTileView({
   mode,
   labels,
   width,
+  docLang = 'en',
 }: {
   tile: CardTile
   mode: 'full' | 'front' | 'answer'
   labels: StudyLabels
   width: number
+  docLang?: 'en' | 'de' | 'ar'
 }) {
   const tileShadow = tile.dir === 'rtl' ? `-2px 2px 0 ${COLORS.ink}` : SHADOW.card
+  const qTypo = proseTypographyStyle(tile.front, docLang)
+  const aTypo = proseTypographyStyle(tile.back, docLang)
   return (
     <div
       dir={tile.dir}
@@ -1897,7 +2114,7 @@ export function CardTileView({
             overflow: 'hidden',
           }}
         >
-          {tile.title}
+          <RichMathText text={tile.title} />
         </span>
       </div>
 
@@ -1932,13 +2149,14 @@ export function CardTileView({
                 {labels.q}
               </span>
               <span
+                lang={qTypo.lang}
+                dir={qTypo.dir}
                 style={{
                   ...textStyle('summary', tile.dir),
+                  ...qTypo.style,
                   fontWeight: 700,
                   flex: 1,
                   minWidth: 0,
-                  textAlign: 'justify',
-                  textJustify: 'inter-word',
                 }}
               >
                 <RichMathText text={tile.front} />
@@ -1972,12 +2190,13 @@ export function CardTileView({
                 {labels.a}
               </span>
               <span
+                lang={aTypo.lang}
+                dir={aTypo.dir}
                 style={{
                   ...textStyle('detail', tile.dir),
+                  ...aTypo.style,
                   flex: 1,
                   minWidth: 0,
-                  textAlign: 'justify',
-                  textJustify: 'inter-word',
                 }}
               >
                 <RichMathText text={tile.back} />
@@ -2005,13 +2224,14 @@ export function CardTileView({
               {labels.q}
             </span>
             <span
+              lang={qTypo.lang}
+              dir={qTypo.dir}
               style={{
                 ...textStyle('summary', tile.dir),
+                ...qTypo.style,
                 fontWeight: 700,
                 flex: 1,
                 minWidth: 0,
-                textAlign: 'justify',
-                textJustify: 'inter-word',
               }}
             >
               <RichMathText text={tile.front} />
@@ -2038,12 +2258,13 @@ export function CardTileView({
               {labels.a}
             </span>
             <span
+              lang={aTypo.lang}
+              dir={aTypo.dir}
               style={{
                 ...textStyle('detail', tile.dir),
+                ...aTypo.style,
                 flex: 1,
                 minWidth: 0,
-                textAlign: 'justify',
-                textJustify: 'inter-word',
               }}
             >
               <RichMathText text={tile.back} />
@@ -2126,7 +2347,7 @@ export function MapSlot({
           ...textStyle('mono', 'ltr'),
         }}
       >
-        {clip(caption, 90)}
+        <RichMathText text={clip(caption, 90)} />
       </div>
       <div
         data-slot="picture"
@@ -2138,5 +2359,139 @@ export function MapSlot({
         }}
       />
     </div>
+  )
+}
+
+export function VectorMapPage({
+  size,
+  body,
+  tone,
+  dir,
+  pageNo,
+  total,
+  pageData,
+  coreLabel,
+  extraLabel,
+}: {
+  size: { w: number; h: number }
+  body: { x: number; y: number; w: number; h: number }
+  tone: PaperTone
+  dir: 'ltr' | 'rtl'
+  pageNo: number
+  total: number
+  pageData: VectorMapPageData
+  coreLabel: string
+  extraLabel: string
+}) {
+  const cardShadow = dir === 'rtl' ? `-4px 4px 0 ${COLORS.ink}` : SHADOW.chapter
+  return (
+    <PageShell w={size.w} h={size.h} tone={tone} dir={dir}>
+      <div
+        style={{
+          boxSizing: 'border-box',
+          margin: 0,
+          position: 'absolute',
+          left: body.x,
+          top: body.y,
+          width: body.w - SHADOW_GUTTER,
+          height: body.h - SHADOW_GUTTER,
+          background: COLORS.white,
+          border: BORDER,
+          borderRadius: RADIUS.big,
+          boxShadow: cardShadow,
+          padding: 10,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 8,
+          overflow: 'hidden',
+        }}
+      >
+        {/* Map Title Bar & Legend */}
+        <div
+          style={{
+            boxSizing: 'border-box',
+            margin: 0,
+            display: 'flex',
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            gap: 10,
+            paddingBottom: 6,
+            borderBottom: BORDER,
+            flexShrink: 0,
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, flex: 1 }}>
+            <div
+              style={{
+                background: COLORS.cyanGlow,
+                border: BORDER,
+                borderRadius: RADIUS.pill,
+                padding: '2px 10px',
+                ...textStyle('monoSmall', dir),
+                flexShrink: 0,
+              }}
+            >
+              MyNota
+            </div>
+            <span
+              style={{
+                ...textStyle('blockTitle', dir),
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+              }}
+            >
+              <RichMathText text={pageData.caption} />
+            </span>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, ...textStyle('monoSmall', dir) }}>
+              <span
+                style={{
+                  display: 'inline-block',
+                  width: 8,
+                  height: 8,
+                  borderRadius: 99,
+                  background: COLORS.ink,
+                }}
+              />
+              {coreLabel}
+            </span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, ...textStyle('monoSmall', dir) }}>
+              <span
+                style={{
+                  display: 'inline-block',
+                  width: 8,
+                  height: 8,
+                  borderRadius: 99,
+                  border: `1.5px dashed ${COLORS.ink}`,
+                  background: COLORS.white,
+                }}
+              />
+              {extraLabel}
+            </span>
+            <span style={{ ...textStyle('footer', 'ltr'), direction: 'ltr', color: COLORS.charcoal }}>
+              {pageNo} / {total}
+            </span>
+          </div>
+        </div>
+
+        {/* Full-bleed Horizontal Vector SVG Diagram */}
+        <div
+          style={{
+            boxSizing: 'border-box',
+            margin: 0,
+            flex: 1,
+            minHeight: 0,
+            width: '100%',
+            height: '100%',
+          }}
+        >
+          <VectorMapSvg model={pageData.model} width="100%" height="100%" />
+        </div>
+      </div>
+    </PageShell>
   )
 }

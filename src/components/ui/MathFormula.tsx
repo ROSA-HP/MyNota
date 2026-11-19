@@ -1,9 +1,27 @@
-import { Fragment, useLayoutEffect, useRef } from 'react'
+import { createContext, Fragment, useContext, useLayoutEffect, useRef } from 'react'
 import katex from 'katex'
 import 'katex/dist/katex.min.css'
 import { cn } from '@/lib/cn'
 import { fixInlineLatex } from '@/lib/fixInlineLatex'
+import { parseFormulaLegend, type FormulaLegendEntry } from '@/lib/formulaLegend'
 import { splitInlineMath } from './inlineMath'
+
+export interface MathErrorReport {
+  latex: string
+  message: string
+}
+
+const MathErrorReporterContext = createContext<((report: MathErrorReport) => void) | null>(null)
+
+export function MathErrorProvider({
+  onError,
+  children,
+}: {
+  onError: (report: MathErrorReport) => void
+  children: React.ReactNode
+}) {
+  return <MathErrorReporterContext.Provider value={onError}>{children}</MathErrorReporterContext.Provider>
+}
 
 /**
  * Makes AI-written LaTeX read like a textbook equation (only for display; stored text is kept):
@@ -41,14 +59,27 @@ export function standardLatex(latex: string): string {
   })
 }
 
+/** Validates a LaTeX string against KaTeX without touching the DOM; returns null if valid or error message if invalid. */
+export function validateLatex(latex: string, display = false): string | null {
+  try {
+    katex.renderToString(standardLatex(latex.slice(0, 2000)), {
+      displayMode: display,
+      throwOnError: true,
+      trust: false,
+      strict: 'ignore',
+      maxSize: 10,
+      maxExpand: 200,
+    })
+    return null
+  } catch (err) {
+    return err instanceof Error ? err.message : String(err)
+  }
+}
+
 /**
  * A formula typeset with KaTeX. The LaTeX comes from the AI, so it is untrusted:
- * - KaTeX builds DOM nodes (katex.render); nothing goes through innerHTML, and styles are set
- *   through the DOM, which the strict Content Security Policy allows.
- * - trust: false turns off \href, \url, \includegraphics and \html…; sizes and macro expansion
- *   are capped so a formula cannot freeze the page.
- * - Anything KaTeX cannot read is shown as the plain LaTeX text.
- * Display style by default: fractions and sums at full size, like a textbook equation.
+ * - KaTeX builds DOM nodes (katex.render); nothing goes through innerHTML.
+ * - Anything KaTeX cannot read is rendered in a highlighted warning box and reported via MathErrorProvider.
  */
 export function MathFormula({
   latex,
@@ -60,8 +91,14 @@ export function MathFormula({
   className?: string
 }) {
   const ref = useRef<HTMLSpanElement>(null)
+  const reportError = useContext(MathErrorReporterContext)
+  const parseError = validateLatex(latex, display)
 
   useLayoutEffect(() => {
+    if (parseError) {
+      reportError?.({ latex, message: parseError })
+      return
+    }
     const el = ref.current
     if (!el) return
     try {
@@ -74,10 +111,36 @@ export function MathFormula({
         maxExpand: 200,
         output: 'html',
       })
-    } catch {
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
       el.textContent = latex
+      reportError?.({ latex, message })
     }
-  }, [latex, display])
+  }, [latex, display, parseError, reportError])
+
+  if (parseError) {
+    return (
+      <span
+        dir="ltr"
+        title={parseError}
+        data-katex-error="true"
+        style={{
+          display: 'inline-block',
+          unicodeBidi: 'isolate',
+          border: '1.5px solid #C2261D',
+          backgroundColor: '#FDE2DF',
+          color: '#7F1D1D',
+          borderRadius: 4,
+          padding: '1px 5px',
+          fontFamily: "'Space Mono', Menlo, Consolas, monospace",
+          fontSize: '0.88em',
+        }}
+        className={cn('mynota-math mynota-math-error', className)}
+      >
+        {latex}
+      </span>
+    )
+  }
 
   // Formulas read left to right in every language.
   return (
@@ -90,23 +153,50 @@ export function MathFormula({
   )
 }
 
-/**
- * Renders prose containing delimited ($...$, \(...\)) or bare LaTeX expressions
- * (\vec{S}, \mu_0, \frac{1}{\sqrt{LC}}, u_E, theta_B) with inline KaTeX math.
- */
-export function RichMathText({
-  text,
+/** Renders structured legend entries `{ symbol, meaning }` separated by semicolons. */
+export function FormulaLegendView({
+  entries,
   className,
-  legend = false,
 }: {
-  text: string
+  entries: ReadonlyArray<FormulaLegendEntry>
   className?: string
-  legend?: boolean
 }) {
-  const segments = splitInlineMath(text, legend ? { legend: true } : undefined)
+  if (entries.length === 0) return null
+  const nodes = entries.map((entry, idx) => (
+    <Fragment key={idx}>
+      {idx > 0 && '; '}
+      <MathFormula latex={entry.symbol} display={false} />
+      {' = '}
+      {renderRichText(entry.meaning)}
+    </Fragment>
+  ))
+  return className ? <span className={className}>{nodes}</span> : <>{nodes}</>
+}
+
+/**
+ * Shared rich-text renderer used for EVERY text field in the PDF and web app:
+ * renders embedded/bare LaTeX with KaTeX and leaves prose as normal text.
+ */
+export function renderRichText(
+  text: string,
+  options?: { legend?: boolean; className?: string },
+): React.ReactNode {
+  if (!text) return null
+  if (options?.legend) {
+    const parsed = parseFormulaLegend(text)
+    if (parsed.length > 0) {
+      return <FormulaLegendView entries={parsed} className={options.className} />
+    }
+  }
+
+  const segments = splitInlineMath(text, options?.legend ? { legend: true } : undefined)
   if (segments.length === 0) return null
   if (segments.length === 1 && segments[0]?.kind === 'text') {
-    return className ? <span className={className}>{segments[0].text}</span> : <>{segments[0].text}</>
+    return options?.className ? (
+      <span className={options.className}>{segments[0].text}</span>
+    ) : (
+      <>{segments[0].text}</>
+    )
   }
 
   const content = segments.map((seg, idx) =>
@@ -117,6 +207,18 @@ export function RichMathText({
     ),
   )
 
-  return className ? <span className={className}>{content}</span> : <>{content}</>
+  return options?.className ? <span className={options.className}>{content}</span> : <>{content}</>
 }
 
+/** React component wrapper around `renderRichText`. */
+export function RichMathText({
+  text,
+  className,
+  legend = false,
+}: {
+  text: string
+  className?: string
+  legend?: boolean
+}) {
+  return <>{renderRichText(text, { legend, className })}</>
+}

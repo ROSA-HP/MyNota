@@ -1,7 +1,8 @@
 import { toPng } from 'html-to-image'
-import type React from 'react'
+import React from 'react'
 import { flushSync } from 'react-dom'
 import { createRoot } from 'react-dom/client'
+import { MathErrorProvider, type MathErrorReport } from '@/components/ui/MathFormula'
 import { COLORS, PX_PER_MM } from './tokens'
 import type { PaperTone } from './types'
 
@@ -18,13 +19,15 @@ const FALLBACK_PNG =
 
 /**
  * Mounts a React page component into an offscreen container, extracts link/slot positions,
- * and captures it to a high-resolution PNG data URL with pixelRatio: 2.
+ * and captures it to a crisp PNG data URL.
  */
 export async function capturePageElement(
   element: React.ReactElement,
   sizePx: { w: number; h: number },
   tone: PaperTone,
   signal?: AbortSignal,
+  onMathError?: (e: MathErrorReport) => void,
+  pixelRatio = 2.5,
 ): Promise<RenderPageResult> {
   if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
 
@@ -43,7 +46,12 @@ export async function capturePageElement(
   const root = createRoot(container)
   try {
     flushSync(() => {
-      root.render(element)
+      root.render(
+        React.createElement(MathErrorProvider, {
+          onError: onMathError ?? (() => {}),
+          children: element,
+        }),
+      )
     })
 
     if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
@@ -51,7 +59,7 @@ export async function capturePageElement(
     const pageEl = (container.firstElementChild as HTMLElement) || container
     const pageRect = pageEl.getBoundingClientRect()
 
-    // 1. Clickable TOC link targets
+    // 1. Clickable TOC / Cover link targets
     const links: Array<{ x: number; y: number; w: number; h: number; page: number }> = []
     const tocRows = pageEl.querySelectorAll('[data-toc-page]')
     for (const row of Array.from(tocRows)) {
@@ -86,7 +94,7 @@ export async function capturePageElement(
     let dataUrl = ''
     try {
       dataUrl = await toPng(pageEl, {
-        pixelRatio: 2,
+        pixelRatio,
         backgroundColor: bg,
         cacheBust: false,
       })

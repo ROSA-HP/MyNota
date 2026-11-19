@@ -52,8 +52,12 @@ export function detailLine(d: DetailBlock): string {
       ]
         .filter(Boolean)
         .join(' ')
-    case 'formula':
-      return `$${d.latex}$${d.variables ? ` — ${d.variables}` : ''}`
+    case 'formula': {
+      const legendText = d.legend?.length
+        ? d.legend.map((e) => `${e.symbol} = ${e.meaning}`).join('; ')
+        : d.variables
+      return `$${d.latex}$${legendText ? ` — ${legendText}` : ''}`
+    }
     case 'question':
       return `${d.front} → ${d.back}`
   }

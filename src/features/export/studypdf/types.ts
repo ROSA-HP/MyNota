@@ -1,5 +1,7 @@
 import type { ChapterColor, DetailBlock, Importance, NodeType } from '@/lib/database.types'
+import type { VectorMapPageData } from '../mindmapSvg'
 import type { OutlineItem } from '../outline'
+import type { ExportWarning } from './cleanup'
 
 export type Paper =
   | 'a4-mixed'
@@ -22,9 +24,12 @@ export interface StudyInclude {
   aiTags: boolean
 }
 
+export type StatKey = 'chapters' | 'sections' | 'blocks' | 'formulas' | 'cards'
+
 export interface StudyLabels {
   madeWith: string
   contents: string
+  whatsInside?: string
   chapter: string
   chapterShort: (n: number) => string
   continued: string
@@ -39,6 +44,7 @@ export interface StudyLabels {
   kind: { book: string; notes: string; blank: string }
   sticker: { notes: string; summary: string; cards: string; maps: string }
   stats: { chapters: string; sections: string; blocks: string; formulas: string; cards: string }
+  statLabel?: (key: StatKey, count: number) => string
   types: Record<NodeType, string>
   empty: string
 }
@@ -51,13 +57,16 @@ export interface StudyPdfInput {
   paper: Paper
   tone: PaperTone
   dir: 'ltr' | 'rtl'
+  lang?: 'en' | 'de' | 'ar'
   items: OutlineItem[]
   pictures: Array<{ dataUrl: string; width: number; height: number; caption: string }>
+  mapPages?: VectorMapPageData[]
   include: StudyInclude
   answersAtEnd: boolean
   labels: StudyLabels
   signal?: AbortSignal
   onProgress?: (p: { phase: 'prepare' | 'page'; done: number; total: number }) => void
+  onWarnings?: (warnings: ExportWarning[]) => void
 }
 
 export type BlockRow =
@@ -92,6 +101,7 @@ export interface BlockUnit {
   kind: 'block'
   id: string
   relDepth: 0 | 1 | 2 | 3
+  parentTitle?: string
   title: string
   type: NodeType | null
   importance: Importance
@@ -127,7 +137,14 @@ export interface CoverOutlineChapter {
   summary?: string
   color: ChapterColor
   dir: 'ltr' | 'rtl'
-  sections: Array<{ label: string; title: string; summary?: string; dir: 'ltr' | 'rtl' }>
+  sections: Array<{
+    label: string
+    title: string
+    summary?: string
+    dir: 'ltr' | 'rtl'
+    unitIndex?: number
+    page?: number
+  }>
 }
 
 export interface StudyDoc {
@@ -135,6 +152,7 @@ export interface StudyDoc {
   kind: 'book' | 'notes' | 'blank'
   preset: StudyPreset
   dir: 'ltr' | 'rtl'
+  singleChapterCollapsed: boolean
   flow: FlowUnit[]
   toc: TocEntry[]
   tiles: CardTile[]
@@ -159,4 +177,5 @@ export interface Placed {
 
 export interface NotesPage {
   placed: Placed[]
+  usedHeight?: number
 }

@@ -1,7 +1,8 @@
 import React from 'react'
 import { flushSync } from 'react-dom'
 import { createRoot } from 'react-dom/client'
-import { FONT_LOAD_SPECS, PAD } from './tokens'
+import { MathErrorProvider, type MathErrorReport } from '@/components/ui/MathFormula'
+import { COMPACT_PAD, FONT_LOAD_SPECS, PAD } from './tokens'
 import type { CardTile, FlowUnit, MeasuredUnit, StudyLabels } from './types'
 import { CardRowView, FlowUnitView } from './components'
 
@@ -22,19 +23,20 @@ export async function ensureFontsLoaded(): Promise<void> {
 }
 
 /** Fallback estimation used in headless test environments without DOM layout engine. */
-function fallbackMeasure(u: FlowUnit): MeasuredUnit {
+function fallbackMeasure(u: FlowUnit, compact = false): MeasuredUnit {
+  const pad = compact ? COMPACT_PAD : PAD
   if (u.kind === 'chapter') {
     return {
-      height: PAD.chapterTop + PAD.chapterBottom + 64 + (u.summary ? 32 : 0),
-      padTop: PAD.chapterTop,
+      height: pad.chapterTop + pad.chapterBottom + 64 + (u.summary ? 32 : 0),
+      padTop: pad.chapterTop,
       keepWithNext: 2,
       split: null,
     }
   }
   if (u.kind === 'section') {
     return {
-      height: PAD.sectionTop + PAD.sectionBottom + 32 + (u.summary ? 24 : 0),
-      padTop: PAD.sectionTop,
+      height: pad.sectionTop + pad.sectionBottom + 32 + (u.summary ? 24 : 0),
+      padTop: pad.sectionTop,
       keepWithNext: 1,
       split: null,
     }
@@ -51,7 +53,7 @@ function fallbackMeasure(u: FlowUnit): MeasuredUnit {
   const head = 36
   const rows = u.rows.map(() => 24)
   const base = 16
-  const gap = PAD.rowGap
+  const gap = pad.rowGap
   const height = head + base + rows.reduce((a, b) => a + b, 0) + gap * (rows.length - 1)
   return {
     height,
@@ -71,12 +73,16 @@ export async function measureFlow(
   labels: StudyLabels,
   aiTags: boolean,
   signal?: AbortSignal,
+  options?: { compact?: boolean; docLang?: 'en' | 'de' | 'ar'; onMathError?: (e: MathErrorReport) => void },
 ): Promise<MeasuredUnit[]> {
   if (units.length === 0) return []
   if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
 
+  const compact = Boolean(options?.compact)
+  const pad = compact ? COMPACT_PAD : PAD
+
   if (typeof document === 'undefined') {
-    return units.map((u) => fallbackMeasure(u))
+    return units.map((u) => fallbackMeasure(u, compact))
   }
 
   const host = document.createElement('div')
@@ -91,23 +97,28 @@ export async function measureFlow(
   try {
     flushSync(() => {
       root.render(
-        React.createElement(
-          'div',
-          { style: { width: bodyWidth, boxSizing: 'border-box', margin: 0 } },
-          units.map((u, i) =>
-            React.createElement(
-              'div',
-              { key: i, 'data-unit-index': i, style: { boxSizing: 'border-box', margin: 0 } },
-              React.createElement(FlowUnitView, {
-                unit: u,
-                dir: u.dir,
-                labels,
-                aiTags,
-                atTop: false,
-              }),
+        React.createElement(MathErrorProvider, {
+          onError: options?.onMathError ?? (() => {}),
+          children: React.createElement(
+            'div',
+            { style: { width: bodyWidth, boxSizing: 'border-box', margin: 0 } },
+            units.map((u, i) =>
+              React.createElement(
+                'div',
+                { key: i, 'data-unit-index': i, style: { boxSizing: 'border-box', margin: 0 } },
+                React.createElement(FlowUnitView, {
+                  unit: u,
+                  dir: u.dir,
+                  labels,
+                  aiTags,
+                  atTop: false,
+                  compact,
+                  docLang: options?.docLang,
+                }),
+              ),
             ),
           ),
-        ),
+        }),
       )
     })
 
@@ -120,21 +131,21 @@ export async function measureFlow(
       const rectH = el ? Math.ceil(el.getBoundingClientRect().height || el.offsetHeight) : 0
 
       if (!el || rectH === 0) {
-        results.push(fallbackMeasure(u))
+        results.push(fallbackMeasure(u, compact))
         continue
       }
 
       if (u.kind === 'chapter') {
         results.push({
           height: rectH,
-          padTop: PAD.chapterTop,
+          padTop: pad.chapterTop,
           keepWithNext: 2,
           split: null,
         })
       } else if (u.kind === 'section') {
         results.push({
           height: rectH,
-          padTop: PAD.sectionTop,
+          padTop: pad.sectionTop,
           keepWithNext: 1,
           split: null,
         })
@@ -156,7 +167,7 @@ export async function measureFlow(
           const rows = Array.from(rowEls).map((r) =>
             Math.ceil(r.getBoundingClientRect().height || (r as HTMLElement).offsetHeight || 24),
           )
-          const gap = PAD.rowGap
+          const gap = pad.rowGap
           const rowSum = rows.reduce((a, b) => a + b, 0)
           const gapTotal = gap * Math.max(0, rows.length - 1)
           const base = Math.max(0, rectH - head - rowSum - gapTotal)

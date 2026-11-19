@@ -45,26 +45,26 @@ everywhere. Two resistors in series split the voltage (a voltage divider)." P3 "
 circuit every branch gets the full voltage; adding a branch lowers the total resistance."
 A good answer:
 {"blocks": [
- {"key": "b1", "parent": null, "title": "Ohm's law", "summary": "Current rises with voltage, falls with resistance.",
+  {"key": "b1", "parent": null, "title": "Ohm's law", "summary": "Current rises with voltage, falls with resistance.",
   "type": "formula", "importance": "core",
-  "details": [{"kind": "formula", "text": "I = \\\\frac{V}{R}", "extra": "I = current; V = voltage; R = resistance"},
-              {"kind": "bullet", "text": "Holds for ohmic conductors at constant temperature."}],
+  "details": [{"kind": "formula", "text": "I = \\\\frac{V}{R}", "legend": [{"symbol": "I", "meaning": "current"}, {"symbol": "V", "meaning": "voltage"}, {"symbol": "R", "meaning": "resistance"}]},
+              {"kind": "bullet", "text": "Holds for ohmic conductors at constant temperature; resistance is $R = V/I$."}],
   "source": [1], "added": false},
  {"key": "b2", "parent": null, "title": "Series circuits", "summary": "One path: resistances add up.",
   "type": "concept", "importance": "core",
-  "details": [{"kind": "formula", "text": "R = R_{1} + R_{2}", "extra": "R = total resistance"},
-              {"kind": "bullet", "text": "The same current flows through every part."}],
+  "details": [{"kind": "formula", "text": "R = R_{1} + R_{2}", "legend": [{"symbol": "R", "meaning": "total resistance"}]},
+              {"kind": "bullet", "text": "The same current $I$ flows through every part."}],
   "source": [2], "added": false},
  {"key": "b3", "parent": "b2", "title": "Voltage divider", "summary": "Series resistors share the voltage.",
   "type": "example", "importance": "supporting",
-  "details": [{"kind": "bullet", "text": "Each resistor takes a share of V in proportion to R."}],
+  "details": [{"kind": "bullet", "text": "Each resistor takes a share of $V$ in proportion to $R$."}],
   "source": [2], "added": false},
  {"key": "b4", "parent": null, "title": "Parallel circuits", "summary": "Many paths, each with the full voltage.",
   "type": "concept", "importance": "supporting",
-  "details": [{"kind": "bullet", "text": "Adding a branch lowers the total resistance."}],
+  "details": [{"kind": "bullet", "text": "Adding a branch lowers the total resistance $R_{\\\\text{eq}}$."}],
   "source": [3], "added": false}],
  "relations": [{"from": "b1", "to": "b3", "type": "leads_to", "label": "sets each share"}],
- "flashcards": [{"block": "b1", "front": "What does Ohm's law say?", "back": "I = V / R"}]}
+ "flashcards": [{"block": "b1", "front": "What does Ohm's law say?", "back": "$I = V / R$"}]}
 Notice: four blocks, not ten; "same current everywhere" is a bullet, not a block; the formula
 is the first detail; one link, with a label that says what it gives.`
 
@@ -161,8 +161,12 @@ FORMULAS (each one exactly once, none left out)
   bullet may explain it; the formula detail holds it.
 - A block about an equation, law or condition with a formula has type
   formula, and its FIRST detail is the formula (kind formula), with
-  what every symbol means in "extra" (for example "m = order number;
-  a = slit width").
+  structured variable meanings in "legend": [{"symbol": "m", "meaning": "order number"},
+  {"symbol": "a", "meaning": "slit width"}]. Keep "symbol" valid LaTeX (without $...$)
+  and "meaning" plain text (never wrap English/prose meanings in \\text{...}).
+- In EVERY prose field (title, summary, bullet, text, question front/back, flashcard front/back,
+  example, vocab meaning), wrap every inline symbol, unit with exponent, Greek letter, vector,
+  or short equation in $...$ valid LaTeX (e.g. "$\\\\vec{S}$", "$\\\\theta_{B}$", "$3.0 \\\\times 10^{8}$ m/s").
 - Write formulas in valid KaTeX LaTeX: \\frac{a}{b}, \\sin\\theta,
   \\lambda, subscripts and superscripts in braces (\\theta_{min}, x^{2}).
   One formula per detail.
@@ -170,6 +174,8 @@ FORMULAS (each one exactly once, none left out)
 RULES
 - Never invent facts. If the source is unclear, keep it unclear and
   mark it.
+- Never add conversational commentary, greetings, or preamble sentences
+  such as "Here is a breakdown..." anywhere in fields or around the JSON.
 - If the shape is "process", order blocks as steps. If "timeline",
   every block needs a date. If "comparison", every compared item uses
   the same attributes.
@@ -186,15 +192,17 @@ SELF-CHECK before you answer (fix anything that fails)
 4. Titles 2-5 words, summaries at most 10 words.
 5. At most 3 relations, none vague, none between a parent and its child.
 6. No block repeats an idea that belongs to another section.
+7. Inline math in bullets, summaries, questions, and answers is wrapped in $...$; formula legends use structured "legend" entries without \\text{...} prose wrappers; zero commentary.
 
 OUTPUT FORMAT
-JSON: {"blocks": [...], "relations": [...], "flashcards": [...]}.
+Output ONLY raw valid JSON (no preamble or explanation): {"blocks": [...], "relations": [...], "flashcards": [...]}.
 - Each block has a short unique "key" ("b1", "b2", ...). "parent" is another block's key,
   or null for blocks directly under the section. List parents before their children.
 - "source" is a list of paragraph numbers as integers (P7 is 7), from ${first} to ${last}.
 - Each detail is {"kind", "text"} with kind one of text, bullet, example, vocab, formula,
-  question, cloze. Optional "extra": the translation (example), the meaning (vocab), what the
-  variables mean (formula) or the answer (question). Vocabulary may add "article" and "plural".
+  question, cloze. Optional "legend" for formula: [{"symbol": "...", "meaning": "..."}].
+  Optional "extra": the translation (example), the meaning (vocab), or the answer (question).
+  Vocabulary may add "article" and "plural".
   Formulas are LaTeX in "text". In the JSON every LaTeX backslash is written twice:
   {"kind": "formula", "text": "a\\\\sin\\\\theta = m\\\\lambda"}.
 - Relations: {"from", "to", "type", "label"} using block keys.

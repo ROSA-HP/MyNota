@@ -91,9 +91,12 @@ export function cardsForBlock(n: NodeRow): CardDraft[] {
     }
     case 'formula': {
       const formula = n.details.find((d) => d.kind === 'formula')
-      const back = formula
-        ? `$${formula.latex}$${formula.variables ? `\n${formula.variables}` : ''}`
-        : answer
+      const legendText = formula
+        ? formula.legend?.length
+          ? formula.legend.map((e) => `${e.symbol} = ${e.meaning}`).join('; ')
+          : formula.variables
+        : ''
+      const back = formula ? `$${formula.latex}$${legendText ? `\n${legendText}` : ''}` : answer
       return back
         ? [
             {

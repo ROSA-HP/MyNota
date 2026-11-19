@@ -37,7 +37,16 @@ const detailSchema: z.ZodType<DetailBlock> = z.union([
     plural: optText,
     lang: optText,
   }),
-  z.object({ kind: z.literal('formula'), latex: z.string().max(4000), variables: optText }),
+  z.object({
+    kind: z.literal('formula'),
+    latex: z.string().max(4000),
+    variables: optText,
+    legend: z
+      .array(z.object({ symbol: z.string().max(500), meaning: z.string().max(1000) }))
+      .max(40)
+      .optional()
+      .catch(undefined),
+  }),
   z.object({
     kind: z.literal('question'),
     front: z.string().max(4000),

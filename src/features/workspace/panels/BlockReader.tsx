@@ -105,7 +105,11 @@ export function BlockReader({ node, onClose }: { node: NodeRow; onClose: () => v
               aria-label={t('ws.reader.path')}
               className="flex flex-wrap items-center gap-1 text-xs text-ink-muted"
             >
-              {section && section.id !== node.id && <span dir="auto">{section.title}</span>}
+              {section && section.id !== node.id && (
+                <span dir="auto">
+                  <RichMathText text={section.title} />
+                </span>
+              )}
               {parent && parent.level === 'block' && (
                 <>
                   <ChevronRight size={12} aria-hidden className="rtl:-scale-x-100" />
@@ -115,14 +119,14 @@ export function BlockReader({ node, onClose }: { node: NodeRow; onClose: () => v
                     dir="auto"
                     onClick={() => go(parent.id)}
                   >
-                    {parent.title}
+                    <RichMathText text={parent.title} />
                   </button>
                 </>
               )}
             </nav>
           )}
           <h2 className="text-2xl leading-tight font-bold text-balance" dir="auto">
-            {node.title}
+            <RichMathText text={node.title} />
           </h2>
         </header>
 
@@ -228,7 +232,7 @@ function Chip({
       className="max-w-full cursor-pointer truncate rounded-full border-2 bg-surface px-2.5 py-1 text-sm font-semibold hover:bg-surface-muted"
       style={{ borderColor: color }}
     >
-      {children}
+      <RichMathText text={children} />
     </button>
   )
 }
@@ -265,10 +269,12 @@ function LinkRow({
           style={{ borderColor: relationColor(r) }}
         >
           <Arrow size={12} aria-hidden className="rtl:-scale-x-100" />
-          <span dir="auto">{label}</span>
+          <span dir="auto">
+            <RichMathText text={label} />
+          </span>
         </span>
         <span className="min-w-0 truncate text-sm font-semibold" dir="auto">
-          {other.title}
+          <RichMathText text={other.title} />
         </span>
       </button>
     </li>

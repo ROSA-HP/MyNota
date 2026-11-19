@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { MathFormula, RichMathText } from '@/components/ui/MathFormula'
+import { FormulaLegendView, MathFormula, RichMathText } from '@/components/ui/MathFormula'
 import { cn } from '@/lib/cn'
 import type { DetailBlock } from '@/lib/database.types'
+import { resolveFormulaLegend } from '@/lib/formulaLegend'
 
 /**
  * A block's details for reading (expanded cards, the details panel): bullets, formulas typeset
@@ -46,7 +47,8 @@ function DetailItem({ d, compact }: { d: DetailBlock; compact: boolean }) {
           <RichMathText text={d.text} />
         </li>
       )
-    case 'formula':
+    case 'formula': {
+      const { entries, fallbackText } = resolveFormulaLegend(d)
       return (
         <li className="rounded-md bg-paper-sunken px-2 py-1.5">
           <div
@@ -57,19 +59,24 @@ function DetailItem({ d, compact }: { d: DetailBlock; compact: boolean }) {
           >
             <MathFormula latex={d.latex} display />
           </div>
-          {d.variables && (
+          {(entries.length > 0 || fallbackText) && (
             <p
               className={cn(
-                'mt-1 text-justify text-ink-muted',
+                'mt-1 text-justify text-ink',
                 compact ? 'text-[12px] leading-4' : 'text-[13px]',
               )}
               dir="auto"
             >
-              <RichMathText text={d.variables} legend />
+              {entries.length > 0 ? (
+                <FormulaLegendView entries={entries} />
+              ) : (
+                <RichMathText text={fallbackText ?? ''} legend />
+              )}
             </p>
           )}
         </li>
       )
+    }
     case 'example':
       return (
         <li
@@ -93,7 +100,7 @@ function DetailItem({ d, compact }: { d: DetailBlock; compact: boolean }) {
         <li className={cn('flex flex-wrap gap-x-1.5', text)}>
           <span className="font-bold" dir="auto">
             {d.article ? `${d.article} ` : ''}
-            {d.term}
+            <RichMathText text={d.term} />
           </span>
           {d.plural && <span className="text-ink-muted">({d.plural})</span>}
           <span aria-hidden className="text-ink-faint">

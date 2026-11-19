@@ -50,6 +50,10 @@ export function arrowFor(outgoing: boolean, dir: 'ltr' | 'rtl'): string {
   return outgoing ? '→' : '←'
 }
 
+function normTitle(s: string): string {
+  return s.trim().toLowerCase().replace(/\s+/g, ' ')
+}
+
 export function buildStudyDoc(input: {
   title: string
   kind: 'book' | 'notes' | 'blank'
@@ -59,6 +63,12 @@ export function buildStudyDoc(input: {
   include: StudyInclude
 }): StudyDoc {
   const { title, kind, preset, dir, items, include } = input
+
+  // Check single-chapter deduplication: if only 1 chapter and its title matches the document title
+  const rawChapters = items.filter((it) => it.level === 'chapter')
+  const singleChapterCollapsed =
+    rawChapters.length === 1 &&
+    normTitle(rawChapters[0]?.title ?? '') === normTitle(title)
 
   // 1. Keep flags
   const keep: boolean[] = new Array(items.length).fill(true)
@@ -87,6 +97,8 @@ export function buildStudyDoc(input: {
   let flow: FlowUnit[] = []
   if (preset !== 'cards' && preset !== 'maps') {
     let headingDepth = -1
+    const blockParentStack: Array<{ depth: number; title: string }> = []
+
     for (let i = 0; i < items.length; i++) {
       if (!keep[i]) continue
       const item = items[i]
@@ -94,11 +106,16 @@ export function buildStudyDoc(input: {
 
       if (item.level === 'book') {
         headingDepth = item.depth
+        blockParentStack.length = 0
         continue
       }
 
       if (item.level === 'chapter') {
         headingDepth = item.depth
+        blockParentStack.length = 0
+        if (singleChapterCollapsed) {
+          continue
+        }
         const chapterUnit: ChapterUnit = {
           kind: 'chapter',
           id: item.id,
@@ -114,6 +131,7 @@ export function buildStudyDoc(input: {
 
       if (item.level === 'section') {
         headingDepth = item.depth
+        blockParentStack.length = 0
         const sectionUnit: SectionUnit = {
           kind: 'section',
           id: item.id,
@@ -130,6 +148,19 @@ export function buildStudyDoc(input: {
       if (item.level === 'block') {
         const rawRel = item.depth - headingDepth - 1
         const relDepth = Math.max(0, Math.min(3, rawRel)) as 0 | 1 | 2 | 3
+
+        while (
+          blockParentStack.length > 0 &&
+          (blockParentStack[blockParentStack.length - 1]?.depth ?? 0) >= item.depth
+        ) {
+          blockParentStack.pop()
+        }
+        const parentTitle =
+          relDepth > 0 ? blockParentStack[blockParentStack.length - 1]?.title : undefined
+
+        const blockTitle = item.title.trim() || '—'
+        blockParentStack.push({ depth: item.depth, title: blockTitle })
+
         const rows: BlockRow[] = []
 
         // (a) summary
@@ -172,7 +203,8 @@ export function buildStudyDoc(input: {
           kind: 'block',
           id: item.id,
           relDepth,
-          title: item.title.trim() || '—',
+          ...(parentTitle ? { parentTitle } : {}),
+          title: blockTitle,
           type: item.type,
           importance: item.importance,
           color: item.color,
@@ -186,7 +218,6 @@ export function buildStudyDoc(input: {
 
     // 4. Pruning (only when preset is 'summary')
     if (preset === 'summary') {
-      // First remove every SectionUnit whose next unit is not a BlockUnit (or that has no next unit)
       const afterSectionPrune: FlowUnit[] = []
       for (let i = 0; i < flow.length; i++) {
         const u = flow[i]
@@ -200,7 +231,6 @@ export function buildStudyDoc(input: {
         afterSectionPrune.push(u)
       }
 
-      // Then remove every ChapterUnit whose next unit is a ChapterUnit or missing
       const afterChapterPrune: FlowUnit[] = []
       for (let i = 0; i < afterSectionPrune.length; i++) {
         const u = afterSectionPrune[i]
@@ -288,7 +318,7 @@ export function buildStudyDoc(input: {
 
   if (flow.length > 0) {
     let standaloneGroup: CoverOutlineChapter | null = null
-    for (const u of flow) {
+    flow.forEach((u, idx) => {
       if (u.kind === 'chapter') {
         coverOutline.push({
           number: u.number,
@@ -300,7 +330,13 @@ export function buildStudyDoc(input: {
         })
       } else if (u.kind === 'section') {
         const lastChapter = coverOutline[coverOutline.length - 1]
-        const secEntry = { label: u.label, title: u.title, summary: u.summary, dir: u.dir }
+        const secEntry = {
+          label: u.label,
+          title: u.title,
+          summary: u.summary,
+          dir: u.dir,
+          unitIndex: idx,
+        }
         if (lastChapter && lastChapter.number !== null) {
           lastChapter.sections.push(secEntry)
         } else {
@@ -317,13 +353,14 @@ export function buildStudyDoc(input: {
           standaloneGroup.sections.push(secEntry)
         }
       }
-    }
+    })
   } else {
     let chNo = 0
     let secNo = 0
     let standaloneGroup: CoverOutlineChapter | null = null
     for (const it of items) {
       if (it.level === 'chapter') {
+        if (singleChapterCollapsed) continue
         chNo++
         secNo = 0
         coverOutline.push({
@@ -384,7 +421,7 @@ export function buildStudyDoc(input: {
     }
   } else {
     for (const it of items) {
-      if (it.level === 'chapter') chapters++
+      if (it.level === 'chapter' && !singleChapterCollapsed) chapters++
       else if (it.level === 'section') sections++
       else if (it.level === 'block') blocks++
       for (const d of it.detailBlocks) {
@@ -399,6 +436,7 @@ export function buildStudyDoc(input: {
     kind,
     preset,
     dir,
+    singleChapterCollapsed,
     flow,
     toc,
     tiles,

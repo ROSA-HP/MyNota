@@ -10,7 +10,8 @@ export const COLORS = {
   surgicalTeal: '#1D635D',
   cyanGlow: '#ADEFE7',
   ink: '#121C1B',
-  charcoal: '#3F4947',
+  charcoal: '#2F3A38',
+  legendText: '#1A2423',
   softPeach: '#FE9572',
 } as const
 
@@ -49,16 +50,16 @@ export const FONT_LOAD_SPECS: Array<[string, string]> = [
 ]
 
 export const TEXT = {
-  coverTitle: { size: 34, line: 40, weight: 700, spacing: '-0.02em' },
+  coverTitle: { size: 36, line: 44, weight: 700, spacing: '-0.02em' },
   h1: { size: 22, line: 26, weight: 700, spacing: '-0.01em' },
   h2: { size: 17, line: 21, weight: 700 },
   blockTitle: { size: 14, line: 18, weight: 700 },
   summary: { size: 13, line: 18, weight: 500 },
   detail: { size: 12, line: 17, weight: 500 },
-  small: { size: 11, line: 15, weight: 500 },
+  small: { size: 11.5, line: 15.5, weight: 500 },
   mono: { size: 10, line: 13, weight: 700, spacing: '0.04em', mono: true },
-  monoSmall: { size: 9, line: 12, weight: 700, spacing: '0.04em', mono: true },
-  footer: { size: 9, line: 12, weight: 400, mono: true },
+  monoSmall: { size: 9.5, line: 12.5, weight: 700, spacing: '0.04em', mono: true },
+  footer: { size: 10, line: 13, weight: 500, mono: true },
 } as const
 
 export const BORDER = '2px solid #121C1B'
@@ -85,10 +86,22 @@ export const PAD = {
   sectionTop: 10,
   sectionBottom: 8,
   blockBottom: 8,
-  blockIndent: 18,
+  blockIndent: 0,
   cardRowBottom: 12,
   cardGap: 12,
   rowGap: 4,
+} as const
+
+export const COMPACT_PAD = {
+  chapterTop: 9,
+  chapterBottom: 6,
+  sectionTop: 7,
+  sectionBottom: 5,
+  blockBottom: 5,
+  blockIndent: 0,
+  cardRowBottom: 8,
+  cardGap: 10,
+  rowGap: 3,
 } as const
 
 export const PX_PER_MM = 96 / 25.4
@@ -106,7 +119,12 @@ export function parsePaper(paper: Paper): {
   size: 'a4' | 'letter'
   layout: 'mixed' | 'portrait' | 'landscape'
 } {
-  const [size, layout] = paper.split('-') as ['a4' | 'letter', 'mixed' | 'portrait' | 'landscape']
+  const [rawSize, rawLayout] = paper.split('-')
+  const size: 'a4' | 'letter' = rawSize === 'letter' ? 'letter' : 'a4'
+  const layout: 'mixed' | 'portrait' | 'landscape' =
+    rawLayout === 'portrait' || rawLayout === 'landscape' || rawLayout === 'mixed'
+      ? rawLayout
+      : 'mixed'
   return { size, layout }
 }
 
@@ -142,7 +160,16 @@ export function bodyBoxPx(
 ): { x: number; y: number; w: number; h: number } {
   const page = pageSizePx(paper, kind)
   if (kind === 'cover') {
-    const m = mmToPx(14)
+    const m = mmToPx(20)
+    return {
+      x: m,
+      y: m,
+      w: page.w - 2 * m,
+      h: page.h - 2 * m,
+    }
+  }
+  if (kind === 'map') {
+    const m = mmToPx(12)
     return {
       x: m,
       y: m,

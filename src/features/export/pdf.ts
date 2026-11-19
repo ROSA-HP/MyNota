@@ -1,9 +1,9 @@
 import type { OutlineItem } from './outline'
 import { buildStudyPdf } from './studypdf'
-import type { Paper, StudyLabels, StudyPdfInput } from './studypdf/types'
+import type { Paper, StatKey, StudyLabels, StudyPdfInput } from './studypdf/types'
 
 export type { Paper } from './studypdf/types'
-export { buildStudyPdf } from './studypdf'
+export { buildStudyPdf, prepareStudyPdf } from './studypdf'
 
 export interface PdfInput {
   title: string
@@ -17,9 +17,38 @@ export interface PdfInput {
 
 function toStudyLabels(labels: PdfInput['labels'], dir: 'ltr' | 'rtl'): StudyLabels {
   const isAr = dir === 'rtl'
+  const singularEn: Record<StatKey, string> = {
+    chapters: 'Chapter',
+    sections: 'Section',
+    blocks: 'Block',
+    formulas: 'Formula',
+    cards: 'Card',
+  }
+  const pluralEn: Record<StatKey, string> = {
+    chapters: 'Chapters',
+    sections: 'Sections',
+    blocks: 'Blocks',
+    formulas: 'Formulas',
+    cards: 'Cards',
+  }
+  const pluralAr: Record<StatKey, string> = {
+    chapters: 'فصول',
+    sections: 'أقسام',
+    blocks: 'كتل',
+    formulas: 'معادلات',
+    cards: 'بطاقات',
+  }
+  const singularAr: Record<StatKey, string> = {
+    chapters: 'فصل',
+    sections: 'قسم',
+    blocks: 'كتلة',
+    formulas: 'معادلة',
+    cards: 'بطاقة',
+  }
   return {
     madeWith: labels.footer || 'MyNota',
     contents: labels.outline || (isAr ? 'المحتويات' : 'Contents'),
+    whatsInside: isAr ? 'محتويات الملخص' : "What's inside",
     chapter: isAr ? 'الفصل' : 'Chapter',
     chapterShort: (n: number) => (isAr ? `فصل ${n}` : `Ch. ${n}`),
     continued: isAr ? 'تابع' : 'Continued',
@@ -52,6 +81,14 @@ function toStudyLabels(labels: PdfInput['labels'], dir: 'ltr' | 'rtl'): StudyLab
       formulas: isAr ? 'معادلات' : 'Formulas',
       cards: isAr ? 'بطاقات' : 'Cards',
     },
+    statLabel: (key, count) =>
+      isAr
+        ? count === 1
+          ? singularAr[key]
+          : pluralAr[key]
+        : count === 1
+          ? singularEn[key]
+          : pluralEn[key],
     types: {
       definition: isAr ? 'تعريف' : 'Definition',
       concept: isAr ? 'مفهوم' : 'Concept',
@@ -70,17 +107,25 @@ function toStudyLabels(labels: PdfInput['labels'], dir: 'ltr' | 'rtl'): StudyLab
 }
 
 /**
- * Builds the Perfusense study PDF by delegating to buildStudyPdf with standard options.
+ * Builds the MyNota study PDF by delegating to buildStudyPdf with standard options.
  */
 export async function buildPdf(input: PdfInput): Promise<Blob> {
+  const locale = input.dir === 'rtl' ? 'ar' : 'en-GB'
+  const dateLabel = new Intl.DateTimeFormat(locale, {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  }).format(new Date())
+
   const studyInput: StudyPdfInput = {
     title: input.title,
     kind: 'book',
-    dateLabel: new Date().toLocaleDateString(input.dir === 'rtl' ? 'ar' : 'en'),
+    dateLabel,
     preset: 'notes',
     paper: input.paper,
     tone: 'mint',
     dir: input.dir,
+    lang: input.dir === 'rtl' ? 'ar' : 'en',
     items: input.outline,
     pictures: input.pictures,
     include: {

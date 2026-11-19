@@ -145,7 +145,7 @@ export function RootNode({ data, selected }: NodeProps<RootNodeT>) {
         </span>
       )}
       <span dir="auto" className="line-clamp-2 text-[17px] leading-tight font-bold">
-        {node.title}
+        <RichMathText text={node.title} />
       </span>
       <EditingTag nodeId={node.id} />
       <Handles linkable={false} />
@@ -327,7 +327,7 @@ export function SectionNode({ data, selected }: NodeProps<SectionNodeT>) {
         style={{ borderColor: selected ? 'var(--line)' : c.strong, outlineColor: c.strong }}
       >
         <span dir="auto" className="zt-title font-bold">
-          {node.title}
+          <RichMathText text={node.title} />
         </span>
         {node.summary && (
           <span dir="auto" className="zt-body text-ink-muted">
@@ -347,7 +347,7 @@ export function SectionNode({ data, selected }: NodeProps<SectionNodeT>) {
               </span>
             ) : (
               <span key={i} dir="auto" className="zt-body block truncate font-semibold">
-                {title}
+                <RichMathText text={title} />
               </span>
             ),
           )}
@@ -373,7 +373,7 @@ export function SectionNode({ data, selected }: NodeProps<SectionNodeT>) {
     >
       {data.number && <NumberTag n={data.number} color={c.strong} big />}
       <span dir="auto" className="min-w-0 flex-1 truncate text-[16px] font-bold">
-        {node.title}
+        <RichMathText text={node.title} />
       </span>
       <span className="shrink-0 text-[11.5px] font-semibold whitespace-nowrap text-ink-muted">
         {t(`ws.shapes.${node.branch_view}`)} · {t('ws.blocks', { count: childCount })}
@@ -501,7 +501,7 @@ export function BlockNode({ data, selected }: NodeProps<BlockNodeT>) {
                     : 'font-semibold',
               )}
             >
-              {node.title}
+              <RichMathText text={node.title} />
             </span>
           )}
         </div>
@@ -662,7 +662,7 @@ export function ChapterTabNode({ data, selected }: NodeProps<ChapterTabNodeT>) {
         {chapter.number}
       </span>
       <span dir="auto" className="tab-title min-w-0 truncate font-bold">
-        {chapter.title}
+        <RichMathText text={chapter.title} />
       </span>
       <span className="ms-auto flex shrink-0 items-center gap-2">
         <ChapterStatus chapter={chapter} />
@@ -745,7 +745,7 @@ export function ChapterRegionNode({ data }: NodeProps<ChapterRegionNodeT>) {
             {chapter.number}
           </span>
           <span dir="auto" className="zt-chapter line-clamp-2 min-w-0 font-bold break-words">
-            {chapter.title}
+            <RichMathText text={chapter.title} />
           </span>
         </span>
       )}
@@ -775,7 +775,7 @@ export function ChapterRegionNode({ data }: NodeProps<ChapterRegionNodeT>) {
                 style={{ borderColor: c.strong }}
               >
                 <span dir="auto" className="truncate">
-                  {sec.title}
+                  <RichMathText text={sec.title} />
                 </span>
                 <span className="ms-auto font-mono text-ink-muted">{sec.count}</span>
               </span>

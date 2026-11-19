@@ -54,10 +54,11 @@ describe('studypdf tokens', () => {
     expect(monoSmallLtr.textTransform).toBe('uppercase')
   })
 
-  it('always uses landscape orientation for map pages even on portrait paper settings', () => {
+  it('always uses landscape orientation and 12mm margins for map pages, and 20mm margins for cover pages', () => {
     expect(pageSizePx('a4-portrait', 'map')).toEqual({ w: 1123, h: 794 })
     expect(pageSizePx('letter-portrait', 'map')).toEqual({ w: 1056, h: 816 })
-    expect(bodyBoxPx('a4-portrait', 'map')).toEqual({ x: 53, y: 83, w: 1017, h: 628 })
+    expect(bodyBoxPx('a4-portrait', 'map')).toEqual({ x: 45, y: 45, w: 1033, h: 704 })
+    expect(bodyBoxPx('a4-portrait', 'cover')).toEqual({ x: 76, y: 76, w: 642, h: 971 })
   })
 
   it('includes KaTeX_AMS, KaTeX_Size3, and KaTeX_Size4 in FONT_LOAD_SPECS', async () => {
