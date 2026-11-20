@@ -405,6 +405,23 @@ class LocalQueryBuilder<Row extends Record<string, unknown>> {
         else kept.push(r)
       }
       ;(store[this.table] as unknown as Row[]) = kept
+      if (this.table === 'maps' && deleted.length > 0) {
+        const deletedIds = new Set(deleted.map((r) => String(r.id)))
+        store.nodes = store.nodes.filter((n) => !deletedIds.has(n.map_id))
+        store.relations = store.relations.filter((r) => !deletedIds.has(r.map_id))
+        store.sources = store.sources.filter((s) => !deletedIds.has(s.map_id))
+        store.cards = store.cards.filter((c) => !deletedIds.has(c.map_id))
+        store.card_progress = store.card_progress.filter((p) => !deletedIds.has(p.map_id))
+        store.review_logs = store.review_logs.filter((l) => !deletedIds.has(l.map_id))
+        store.ai_jobs = store.ai_jobs.filter((j) => !deletedIds.has(j.map_id))
+        store.map_members = store.map_members.filter((m) => !deletedIds.has(m.map_id))
+        store.docs = store.docs.filter((d) => !deletedIds.has(d.map_id))
+      } else if (this.table === 'subjects' && deleted.length > 0) {
+        const deletedIds = new Set(deleted.map((r) => String(r.id)))
+        store.maps = store.maps.map((m) =>
+          m.subject_id && deletedIds.has(m.subject_id) ? { ...m, subject_id: null } : m,
+        )
+      }
       saveStore(store)
       if (!this.wantsReturn) return { data: null, error: null }
       return { data: deleted, error: null }

@@ -107,6 +107,7 @@ function MapCard({
   subjects,
   movable,
   onMove,
+  onDelete,
   onLeave,
   onReport,
 }: {
@@ -115,6 +116,7 @@ function MapCard({
   subjects: SubjectRow[]
   movable: boolean
   onMove: (subjectId: string | null) => void
+  onDelete?: () => void
   /** Shared maps (not yours): leave it, or report it. */
   onLeave?: () => void
   onReport?: () => void
@@ -265,6 +267,22 @@ function MapCard({
                     </button>
                   ),
                 )}
+              {movable && onDelete && (
+                <>
+                  <div role="separator" className="my-1 border-t border-line-soft" />
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setMenu(false)
+                      onDelete()
+                    }}
+                    className="flex min-h-10 w-full cursor-pointer items-center gap-2 rounded-lg px-2 text-start text-sm font-semibold text-danger hover:bg-danger-soft"
+                  >
+                    <Trash size={15} aria-hidden /> {t('library.deleteMap')}
+                  </button>
+                </>
+              )}
             </div>
           )}
         </div>
@@ -382,7 +400,8 @@ type Group = { key: string; subject: SubjectRow | null; shared?: boolean; maps: 
 export function LibraryPage() {
   const { t } = useTranslation()
   const userId = useAuth((s) => s.session?.user.id)
-  const { state, reload, createSubject, updateSubject, deleteSubject, moveMap } = useLibrary()
+  const { state, reload, createSubject, updateSubject, deleteSubject, moveMap, deleteMap } =
+    useLibrary()
   const [params, setParams] = useSearchParams()
   const filter = params.get('subject')
   const [editing, setEditing] = useState<{ open: boolean; subject: SubjectRow | null }>({
@@ -390,6 +409,7 @@ export function LibraryPage() {
     subject: null,
   })
   const [deleting, setDeleting] = useState<SubjectRow | null>(null)
+  const [deletingMap, setDeletingMap] = useState<MapRow | null>(null)
   const [leaving, setLeaving] = useState<MapRow | null>(null)
   const [reporting, setReporting] = useState<string | null>(null)
   useEffect(() => {
@@ -644,6 +664,7 @@ export function LibraryPage() {
                           subjects={subjects}
                           movable={own(m)}
                           onMove={(sid) => move(m.id, sid)}
+                          onDelete={own(m) ? () => setDeletingMap(m) : undefined}
                           onLeave={own(m) ? undefined : () => setLeaving(m)}
                           onReport={own(m) ? undefined : () => setReporting(m.id)}
                         />
@@ -704,6 +725,33 @@ export function LibraryPage() {
         }
       >
         <p>{t('library.subject.deleteBody')}</p>
+      </Dialog>
+      <Dialog
+        open={Boolean(deletingMap)}
+        onClose={() => setDeletingMap(null)}
+        title={t('library.deleteMapTitle', { title: deletingMap?.title ?? '' })}
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setDeletingMap(null)}>
+              {t('common.cancel')}
+            </Button>
+            <Button
+              variant="danger"
+              onClick={() => {
+                const m = deletingMap
+                setDeletingMap(null)
+                if (!m) return
+                deleteMap(m.id)
+                  .then(() => toast(t('library.deletedMap', { title: m.title }), 'success'))
+                  .catch(() => toast(t('library.deleteMapFailed'), 'danger'))
+              }}
+            >
+              {t('library.deleteMap')}
+            </Button>
+          </>
+        }
+      >
+        <p>{t('library.deleteMapBody')}</p>
       </Dialog>
       <Dialog
         open={Boolean(leaving)}

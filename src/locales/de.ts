@@ -163,6 +163,12 @@ export const de: Messages = {
     moveTo: 'In Fach verschieben',
     moved: 'Nach {{name}} verschoben.',
     movedNone: 'Aus dem Fach entfernt.',
+    deleteMap: 'Karte löschen',
+    deleteMapTitle: '„{{title}}“ löschen?',
+    deleteMapBody:
+      'Dadurch werden die Karte sowie alle zugehörigen Notizen, Verknüpfungen und Lernkarten dauerhaft gelöscht.',
+    deletedMap: '„{{title}}“ gelöscht.',
+    deleteMapFailed: 'Karte konnte nicht gelöscht werden. Versuche es erneut.',
     subject: {
       name: 'Name',
       color: 'Farbe',

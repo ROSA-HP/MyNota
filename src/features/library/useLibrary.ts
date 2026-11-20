@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { deleteMapById } from '@/features/workspace/mapRepo'
 import type { ChapterColor, MapRow, MapStatsRow, SubjectRow } from '@/lib/database.types'
 import { MAP_COLUMNS, SUBJECT_COLUMNS, supabase } from '@/lib/supabase'
 
@@ -136,5 +137,24 @@ export function useLibrary() {
     [optimistic],
   )
 
-  return { state, reload, createSubject, updateSubject, deleteSubject, moveMap }
+  const deleteMap = useCallback(
+    (mapId: string) =>
+      optimistic(
+        (s) => ({
+          maps: s.maps.filter((m) => m.id !== mapId),
+          stats: Object.fromEntries(Object.entries(s.stats).filter(([id]) => id !== mapId)),
+        }),
+        async () => {
+          try {
+            await deleteMapById(mapId)
+            return { error: null }
+          } catch (error) {
+            return { error }
+          }
+        },
+      ),
+    [optimistic],
+  )
+
+  return { state, reload, createSubject, updateSubject, deleteSubject, moveMap, deleteMap }
 }

@@ -140,6 +140,19 @@ export async function deleteRelations(ids: string[]): Promise<void> {
   if (error) throw error
 }
 
+export async function deleteMapById(mapId: string): Promise<void> {
+  const { error } = await supabase.from('maps').delete().eq('id', mapId)
+  if (error) throw error
+  try {
+    await Promise.all([
+      localDb.maps.delete(mapId),
+      localDb.docs.where('mapId').equals(mapId).delete(),
+    ])
+  } catch {
+    /* IndexedDB cleanup is best-effort */
+  }
+}
+
 /** Saves new numbered paragraphs (merged notes) as another source of a chapter. */
 export async function addSource(
   row: Pick<SourceRow, 'map_id' | 'chapter_node_id' | 'kind' | 'paragraphs'>,

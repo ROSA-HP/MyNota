@@ -167,6 +167,12 @@ export const ar: Messages = {
     moveTo: 'انقل إلى مادة',
     moved: 'نُقلت إلى {{name}}.',
     movedNone: 'أُزيلت من مادتها.',
+    deleteMap: 'حذف الخريطة',
+    deleteMapTitle: 'حذف «{{title}}»؟',
+    deleteMapBody:
+      'سيؤدي هذا إلى حذف الخريطة وكل ملاحظاتها وروابطها وبطاقاتها التعليمية نهائيًا.',
+    deletedMap: 'تم حذف «{{title}}».',
+    deleteMapFailed: 'تعذّر حذف الخريطة. حاول مجددًا.',
     subject: {
       name: 'الاسم',
       color: 'اللون',

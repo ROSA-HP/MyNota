@@ -159,6 +159,12 @@ export const en = {
     moveTo: 'Move to subject',
     moved: 'Moved to {{name}}.',
     movedNone: 'Removed from its subject.',
+    deleteMap: 'Delete map',
+    deleteMapTitle: 'Delete “{{title}}”?',
+    deleteMapBody:
+      'This permanently deletes the map and all its notes, links, and flashcards.',
+    deletedMap: 'Deleted “{{title}}”.',
+    deleteMapFailed: 'Could not delete map. Try again.',
     subject: {
       name: 'Name',
       color: 'Color',
