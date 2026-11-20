@@ -311,4 +311,46 @@ describe('the owner’s physical optics notes (the map that repeated and lost fo
       extra: 'Follows \\nabla \\times \\vec{B}.',
     })
   })
+
+  it('ignores scalar boundary angle values like theta = 0^circ and theta = 90^circ and avoids cross-topic dumping', () => {
+    const malusText =
+      'At $\\theta = 0^{\\circ}$ transmission is maximum, and at $\\theta = 90^{\\circ}$ it vanishes; $I = I_0 \\cos^2\\theta$.'
+    const eqs = findEquations(malusText)
+    expect(eqs).toEqual(['I = I_0 \\cos^2\\theta'])
+
+    const polarizationParagraphs = [
+      { n: 1, text: 'Total reflection transfers double momentum: p_r = 2I / c and F = 2IA / c.' },
+      { n: 2, text: 'Polarizing sheet transmits half of unpolarized intensity: I = I_0 / 2.' },
+    ]
+    const reply = DetailsResponseSchema.parse({
+      blocks: [
+        {
+          key: 'half',
+          parent: null,
+          title: 'One-Half Rule',
+          summary: 'Unpolarized light loses half its intensity.',
+          type: 'concept',
+          importance: 'core',
+          details: [{ kind: 'bullet', text: 'I = I_0 / 2 for unpolarized light.' }],
+          source: [2],
+        },
+        {
+          key: 'comp',
+          parent: 'half',
+          title: 'Transmitted Field Component',
+          summary: 'Only the field component parallel to the axis passes.',
+          type: 'concept',
+          importance: 'supporting',
+          details: [{ kind: 'bullet', text: 'Perpendicular component is absorbed.' }],
+          source: [2],
+        },
+      ],
+    })
+    const repaired = ensureFormulas(reply, polarizationParagraphs)
+    const allLatex = repaired.blocks.flatMap((b) =>
+      b.details.filter((d) => d.kind === 'formula').map((d) => d.text),
+    )
+    expect(allLatex.join(' ')).not.toContain('2I')
+    expect(allLatex.join(' ')).not.toContain('2IA')
+  })
 })

@@ -1227,6 +1227,7 @@ export const en = {
         preamble: 'AI preamble stripped',
         katex: 'KaTeX math error',
         science: 'Scientific check',
+        integrity: 'Content integrity check',
         typo: 'Possible typo',
       },
     },

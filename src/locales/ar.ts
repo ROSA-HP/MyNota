@@ -1487,6 +1487,7 @@ export const ar: Messages = {
         preamble: 'أُزيلت مقدمة ذكاء اصطناعي',
         katex: 'خطأ في صيغة KaTeX',
         science: 'مراجعة علمية',
+        integrity: 'فحص ترابط المحتوى',
         typo: 'خطأ إملائي محتمل',
       },
     },

@@ -1,3 +1,4 @@
+import type { VectorMapPageData } from './mindmapSvg'
 import type { OutlineItem } from './outline'
 import { buildStudyPdf } from './studypdf'
 import type { Paper, StatKey, StudyLabels, StudyPdfInput } from './studypdf/types'
@@ -8,8 +9,7 @@ export { buildStudyPdf, prepareStudyPdf } from './studypdf'
 export interface PdfInput {
   title: string
   paper: Paper
-  /** Map pictures, one page each (the whole map, or one per chapter of a book). */
-  pictures: Array<{ dataUrl: string; width: number; height: number; caption: string }>
+  mapPages?: VectorMapPageData[]
   outline: OutlineItem[]
   dir: 'ltr' | 'rtl'
   labels: { outline: string; cards: string; footer: string }
@@ -127,7 +127,7 @@ export async function buildPdf(input: PdfInput): Promise<Blob> {
     dir: input.dir,
     lang: input.dir === 'rtl' ? 'ar' : 'en',
     items: input.outline,
-    pictures: input.pictures,
+    mapPages: input.mapPages,
     include: {
       links: true,
       cards: true,

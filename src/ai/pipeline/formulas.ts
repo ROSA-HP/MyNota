@@ -276,15 +276,19 @@ function formulaToken(tok: string): boolean {
 }
 
 /**
- * A symbol set to plain numbers is a value, not a formula: m = ±1, ±2, ±3…, n = 1.5,
- * m = \pm1, \pm2 (plain or LaTeX).
+ * A symbol set to plain numbers or scalar angle constants is a value, not a formula:
+ * m = ±1, ±2, ±3…, n = 1.5, θ = 0°, \theta = 90^\circ, m = \pm1, \pm2.
  */
 function isValue(eq: string): boolean {
   const sides = eq.split(/\s*(?:=|≈|≤|≥|∝|≠)\s*/)
   if (sides.length !== 2) return false
   const [lhs = '', rhs = ''] = sides
   if (lhs.replace(/\\[a-zA-Z]+|[{}\s]/g, '').length > 2) return false
-  return rhs.replace(/\\(pm|mp|ldots|dots|cdots)(?![a-zA-Z])|[\s\d.,±+\-−…]/g, '') === ''
+  const strippedRhs = rhs.replace(
+    /\\(pm|mp|ldots|dots|cdots|circ|degree|deg)(?![a-zA-Z])|\\text\{[^{}]*\}|[\^°{}\s\d.,±+\-−…]/g,
+    '',
+  )
+  return strippedRhs === ''
 }
 
 /** A token that closes the formula after it (a comma, or a full stop that is not a decimal). */
@@ -495,9 +499,9 @@ function titleMatch(title: string, line: string | undefined): number {
  */
 function homeScore(b: AiBlock, src: SourceFormula | undefined, order: number): number {
   return (
-    (b.type === 'formula' ? 3 : 0) +
-    2 * titleMatch(b.title, src?.line) +
-    (src && b.source.includes(src.paragraph) ? 2 : 0) -
+    (b.type === 'formula' ? 2 : 0) +
+    4 * titleMatch(b.title, src?.line) +
+    (src && b.source.includes(src.paragraph) ? 3 : 0) -
     order * 0.001
   )
 }
@@ -627,7 +631,9 @@ export function ensureFormulas(
   for (const s of sources) {
     if (known().some((k) => sameFormula(k, s.eq))) continue
     const citing = blocks.filter((b) => b.source.includes(s.paragraph))
-    const pool = citing.length ? citing : blocks
+    const matched = blocks.filter((b) => titleMatch(b.title, s.line) > 0)
+    const pool = citing.length ? citing : matched
+    if (pool.length === 0) continue
     const target = pool.reduce<AiBlock | undefined>(
       (best, b) =>
         !best || homeScore(b, s, blocks.indexOf(b)) > homeScore(best, s, blocks.indexOf(best))

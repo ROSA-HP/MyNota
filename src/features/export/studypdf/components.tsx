@@ -4,6 +4,7 @@ import { resolveFormulaLegend } from '@/lib/formulaLegend'
 import { TYPE_ICON } from '@/features/workspace/canvas/visuals'
 import type { ChapterColor } from '@/lib/database.types'
 import { VectorMapSvg, type VectorMapPageData } from '../mindmapSvg'
+import { EXPORT_BUILD_STAMP } from '../version'
 import { proseTypographyStyle } from './cleanup'
 import { arrowFor, clip, splitCloze } from './model'
 import {
@@ -192,6 +193,7 @@ export function ContentPage({
 
       {/* Footer: spans full body width flush with Header & Cards */}
       <div
+        data-pdf-footer=""
         style={{
           boxSizing: 'border-box',
           margin: 0,
@@ -207,7 +209,9 @@ export function ContentPage({
           borderTop: BORDER,
         }}
       >
-        <span style={{ ...textStyle('footer', dir), color: COLORS.ink }}>MyNota</span>
+        <span style={{ ...textStyle('footer', 'ltr'), direction: 'ltr', fontSize: 9, color: COLORS.charcoal }}>
+          {EXPORT_BUILD_STAMP}
+        </span>
         <span style={{ ...textStyle('footer', 'ltr'), direction: 'ltr', color: COLORS.ink }}>
           {pageNo} / {total}
         </span>
@@ -948,9 +952,10 @@ export function CoverPage({
           )}
         </div>
 
-        {/* Bottom Footer Strip (locale date e.g. 18 Nov 2026) */}
+        {/* Bottom Footer Strip (locale date e.g. 20 Nov 2026 + build stamp) */}
         <div style={coverGutter({ flexShrink: 0 })}>
           <div
+            data-pdf-footer=""
             style={{
               boxSizing: 'border-box',
               margin: 0,
@@ -960,11 +965,20 @@ export function CoverPage({
               flexDirection: 'row',
               justifyContent: 'space-between',
               alignItems: 'center',
+              gap: 12,
             }}
           >
             <span style={{ ...textStyle('footer', dir), color: COLORS.charcoal }}>{madeWith}</span>
-            <span style={{ ...textStyle('footer', dir), color: COLORS.charcoal }}>
-              {dateLabel && dateLabel !== madeWith ? dateLabel : 'MyNota'}
+            <span
+              style={{
+                ...textStyle('footer', 'ltr'),
+                direction: 'ltr',
+                fontSize: 9,
+                color: COLORS.charcoal,
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {dateLabel && dateLabel !== madeWith ? `${dateLabel} · ${EXPORT_BUILD_STAMP}` : EXPORT_BUILD_STAMP}
             </span>
           </div>
         </div>
@@ -2311,57 +2325,6 @@ export function CardRowView({
   )
 }
 
-export function MapSlot({
-  size,
-  caption,
-}: {
-  size: { w: number; h: number; x?: number; y?: number }
-  caption: string
-}) {
-  return (
-    <div
-      style={{
-        boxSizing: 'border-box',
-        margin: 0,
-        width: size.w - SHADOW_GUTTER,
-        height: size.h - SHADOW_GUTTER,
-        background: COLORS.white,
-        border: BORDER,
-        borderRadius: RADIUS.big,
-        boxShadow: SHADOW.chapter,
-        padding: 10,
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 8,
-      }}
-    >
-      <div
-        style={{
-          boxSizing: 'border-box',
-          margin: 0,
-          alignSelf: 'flex-start',
-          background: COLORS.cyanGlow,
-          border: BORDER,
-          borderRadius: RADIUS.pill,
-          padding: '2px 12px',
-          ...textStyle('mono', 'ltr'),
-        }}
-      >
-        <RichMathText text={clip(caption, 90)} />
-      </div>
-      <div
-        data-slot="picture"
-        style={{
-          boxSizing: 'border-box',
-          margin: 0,
-          flex: 1,
-          minHeight: 0,
-        }}
-      />
-    </div>
-  )
-}
-
 export function VectorMapPage({
   size,
   body,
@@ -2384,6 +2347,7 @@ export function VectorMapPage({
   extraLabel: string
 }) {
   const cardShadow = dir === 'rtl' ? `-4px 4px 0 ${COLORS.ink}` : SHADOW.chapter
+  const footerH = 22
   return (
     <PageShell w={size.w} h={size.h} tone={tone} dir={dir}>
       <div
@@ -2394,7 +2358,7 @@ export function VectorMapPage({
           left: body.x,
           top: body.y,
           width: body.w - SHADOW_GUTTER,
-          height: body.h - SHADOW_GUTTER,
+          height: body.h - SHADOW_GUTTER - footerH,
           background: COLORS.white,
           border: BORDER,
           borderRadius: RADIUS.big,
@@ -2472,9 +2436,6 @@ export function VectorMapPage({
               />
               {extraLabel}
             </span>
-            <span style={{ ...textStyle('footer', 'ltr'), direction: 'ltr', color: COLORS.charcoal }}>
-              {pageNo} / {total}
-            </span>
           </div>
         </div>
 
@@ -2491,6 +2452,32 @@ export function VectorMapPage({
         >
           <VectorMapSvg model={pageData.model} width="100%" height="100%" />
         </div>
+      </div>
+
+      {/* Map Page Footer with Build Stamp & Page Number */}
+      <div
+        data-pdf-footer=""
+        style={{
+          boxSizing: 'border-box',
+          margin: 0,
+          position: 'absolute',
+          left: body.x,
+          width: body.w,
+          bottom: Math.max(8, size.h - (body.y + body.h) - 2),
+          height: 18,
+          display: 'flex',
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          paddingTop: 2,
+        }}
+      >
+        <span style={{ ...textStyle('footer', 'ltr'), direction: 'ltr', fontSize: 9, color: COLORS.charcoal }}>
+          {EXPORT_BUILD_STAMP}
+        </span>
+        <span style={{ ...textStyle('footer', 'ltr'), direction: 'ltr', color: COLORS.ink }}>
+          {pageNo} / {total}
+        </span>
       </div>
     </PageShell>
   )

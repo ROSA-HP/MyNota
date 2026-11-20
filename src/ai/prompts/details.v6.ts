@@ -155,15 +155,22 @@ FORMULAS (each one exactly once, none left out)
   branch applies it, link FROM the formula block TO it (type leads_to)
   with a label saying what the equation gives there ("sets dark
   fringes"), within the 3-relation limit.
-- A block's formula must be its own: a grating block shows the grating
-  equation, never the single-slit one.
+- A block's formula must be its own: reflection pressure formulas belong
+  exclusively to Total Reflection, never to Polarization or One-Half Rule;
+  scalar boundary values such as $\\theta = 0^{\\circ}$ or $\\theta = 90^{\\circ}$
+  are plain bullets inside Malus's Law, never standalone formula boxes.
+- Keep details strictly within their block's own topic and section: never
+  place radiation-pressure bullets inside Polarization or energy-density
+  bullets inside Wave Intensity, and never repeat a parent's title on a
+  child block.
 - Never write an equation only inside a bullet, summary or title. A
   bullet may explain it; the formula detail holds it.
 - A block about an equation, law or condition with a formula has type
   formula, and its FIRST detail is the formula (kind formula), with
   structured variable meanings in "legend": [{"symbol": "m", "meaning": "order number"},
   {"symbol": "a", "meaning": "slit width"}]. Keep "symbol" valid LaTeX (without $...$)
-  and "meaning" plain text (never wrap English/prose meanings in \\text{...}).
+  and "meaning" plain text (never wrap English/prose meanings in \\text{...}). Every
+  formula detail MUST include its variable "legend".
 - In EVERY prose field (title, summary, bullet, text, question front/back, flashcard front/back,
   example, vocab meaning), wrap every inline symbol, unit with exponent, Greek letter, vector,
   or short equation in $...$ valid LaTeX (e.g. "$\\\\vec{S}$", "$\\\\theta_{B}$", "$3.0 \\\\times 10^{8}$ m/s").

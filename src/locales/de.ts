@@ -1260,6 +1260,7 @@ export const de: Messages = {
         preamble: 'KI-Einleitung entfernt',
         katex: 'KaTeX-Formelfehler',
         science: 'Fachliche Prüfung',
+        integrity: 'Inhaltsprüfung',
         typo: 'Möglicher Tippfehler',
       },
     },

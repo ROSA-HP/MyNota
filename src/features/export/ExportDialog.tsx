@@ -1,13 +1,11 @@
-import { useReactFlow } from '@xyflow/react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Alert, Button, Dialog, SelectField, toast } from '@/components/ui'
 import { useDeck } from '@/features/study/deckStore'
-import { useCanvasUi } from '@/features/workspace/canvas/canvasUi'
 import { useWorkspace } from '@/features/workspace/workspaceStore'
 import { cn } from '@/lib/cn'
-import type { NodeRow, RelationRow } from '@/lib/database.types'
-import { captureMap, download, fileName } from './capture'
+import type { RelationRow } from '@/lib/database.types'
+import { download, fileName } from './download'
 import { buildVectorMindMapPages, type VectorMapPageData } from './mindmapSvg'
 import { outlineItems, toMarkdown } from './outline'
 import type { Paper } from './pdf'
@@ -15,6 +13,7 @@ import type { PreparedStudyPdf } from './studypdf'
 import type { ExportWarning } from './studypdf/cleanup'
 import { bodyBoxPx, pageSizePx } from './studypdf/tokens'
 import type { PaperTone, StatKey, StudyLabels, StudyPreset } from './studypdf/types'
+import { EXPORT_BUILD_STAMP } from './version'
 
 type Format = 'pdf' | 'png' | 'md'
 type DialogTab = 'settings' | 'preview'
@@ -40,21 +39,6 @@ interface ExportOpts {
   light: boolean
 }
 
-/** Every node under (and including) `id`. */
-function subtree(nodes: Record<string, NodeRow>, id: string): Set<string> {
-  const kids = new Map<string, string[]>()
-  for (const n of Object.values(nodes))
-    if (n.parent_id) kids.set(n.parent_id, [...(kids.get(n.parent_id) ?? []), n.id])
-  const out = new Set<string>()
-  const stack = [id]
-  while (stack.length) {
-    const cur = stack.pop() as string
-    out.add(cur)
-    stack.push(...(kids.get(cur) ?? []))
-  }
-  return out
-}
-
 function formatExportDate(lang: string): string {
   const locale = lang.startsWith('en') ? 'en-GB' : lang
   return new Intl.DateTimeFormat(locale, {
@@ -73,7 +57,6 @@ function resolveDocLang(lang: string, dir: 'ltr' | 'rtl'): 'en' | 'de' | 'ar' {
 /** Export the map: designed Study PDF (with live Preview & Warnings), PNG picture, or Markdown outline. All on the device. */
 export function ExportDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { t, i18n } = useTranslation()
-  const rf = useReactFlow()
   const map = useWorkspace((s) => s.map)
   const nodes = useWorkspace((s) => s.nodes)
   const relations = useWorkspace((s) => s.relations)
@@ -125,14 +108,13 @@ export function ExportDialog({ open, onClose }: { open: boolean; onClose: () => 
   const docLang = resolveDocLang(i18n.language, dir)
   const relationLabel = (r: RelationRow) => r.label || t(`ws.relations.${r.type}`)
 
-  const scopeNode = root ? (scope === 'all' || scope === 'screen' ? root : (nodes[scope] ?? root)) : null
+  const scopeNode = root ? (scope === 'all' ? root : (nodes[scope] ?? root)) : null
   const title =
     map && root && scopeNode
       ? scopeNode.id === root.id
         ? map.title
         : `${map.title} – ${scopeNode.title}`
       : ''
-  const noScreenScope = format === 'md' || (format === 'pdf' && preset === 'cards')
 
   function buildLabels(dateLabel: string): StudyLabels {
     return {
@@ -191,7 +173,7 @@ export function ExportDialog({ open, onClose }: { open: boolean; onClose: () => 
 
   function buildPdfMapPages(): VectorMapPageData[] {
     if (!map || !root || !scopeNode) return []
-    if (preset === 'cards' || scope === 'screen') return []
+    if (preset === 'cards') return []
     const mapBody = bodyBoxPx(paper, 'map')
     // Account for header bar & frame padding inside VectorMapPage (~60px tall, 24px wide)
     const slotSizePx = {
@@ -283,7 +265,6 @@ export function ExportDialog({ open, onClose }: { open: boolean; onClose: () => 
           dir,
           lang: docLang,
           items,
-          pictures: [],
           mapPages,
           include: {
             links: opts.links,
@@ -336,9 +317,6 @@ export function ExportDialog({ open, onClose }: { open: boolean; onClose: () => 
     setFailed(null)
     setProgressPct(format === 'pdf' ? 0 : null)
     setProgress(format === 'pdf' ? t('export.preparing') : null)
-    const ui = useCanvasUi.getState()
-    const ws = useWorkspace.getState()
-    const saved = { focus: ui.focusId, filter: ui.filter, cover: ui.cover, selected: ws.selectedId }
     try {
       const needDetails =
         format === 'md'
@@ -384,35 +362,52 @@ export function ExportDialog({ open, onClose }: { open: boolean; onClose: () => 
         return onClose()
       }
 
-      const pictures: Array<{ dataUrl: string; width: number; height: number; caption: string }> =
-        []
-
-      const needRasterCapture = format === 'png' || (format === 'pdf' && preset !== 'cards' && scope === 'screen')
-      if (needRasterCapture) {
-        ui.setFocus(null)
-        ui.setFilter('')
-        ui.setCover(false)
-        ws.select(null)
-        const shot = async (ids: Set<string> | null, caption: string, screen = false) => {
-          const p = await captureMap(rf, {
-            ids,
-            screen,
-            light: opts.light,
-            links: opts.links,
-            horizontal: format === 'pdf' && !screen,
-          })
-          pictures.push({ ...p, caption })
-        }
-        if (scope === 'screen') await shot(null, map.title, true)
-        else if (scope !== 'all') await shot(subtree(nodes, scope), title)
-        else await shot(null, map.title)
-      }
-
       if (format === 'png') {
-        const p = pictures[0]
-        if (p) download(fileName(title, 'png'), p.dataUrl)
+        const pngPaper: Paper = 'a4-landscape'
+        const mapSize = pageSizePx(pngPaper, 'map')
+        const mapBody = bodyBoxPx(pngPaper, 'map')
+        const pages = buildVectorMindMapPages({
+          nodes,
+          relations,
+          rootId: root.id,
+          ...(scope !== 'all' ? { scopeNodeId: scopeNode.id } : {}),
+          title,
+          slotSizePx: {
+            w: Math.max(400, mapBody.w - 28),
+            h: Math.max(300, mapBody.h - 68),
+          },
+          light: opts.light,
+          links: opts.links,
+          relationLabel,
+        })
+        const firstMap = pages[0]
+        if (!firstMap) throw new Error('Nothing to export.')
+        const [{ VectorMapPage }, { capturePageElement }, { ensureFontsLoaded }] = await Promise.all([
+          import('./studypdf/components'),
+          import('./studypdf/render'),
+          import('./studypdf/measure'),
+        ])
+        await ensureFontsLoaded()
+        const labels = buildLabels(dateLabel)
+        const shot = await capturePageElement(
+          React.createElement(VectorMapPage, {
+            size: mapSize,
+            body: mapBody,
+            tone: 'white',
+            dir,
+            pageNo: 1,
+            total: 1,
+            pageData: firstMap,
+            coreLabel: labels.importance.core,
+            extraLabel: labels.importance.extra,
+          }),
+          mapSize,
+          'white',
+          controller.signal,
+        )
+        download(fileName(title, 'png'), shot.dataUrl)
       } else {
-        const mapPages = scope === 'screen' ? [] : buildPdfMapPages()
+        const mapPages = buildPdfMapPages()
         const { buildStudyPdf } = await import('./pdf')
         const blob = await buildStudyPdf({
           title,
@@ -424,7 +419,6 @@ export function ExportDialog({ open, onClose }: { open: boolean; onClose: () => 
           dir,
           lang: docLang,
           items,
-          pictures,
           mapPages,
           include: {
             links: opts.links,
@@ -455,10 +449,6 @@ export function ExportDialog({ open, onClose }: { open: boolean; onClose: () => 
       setFailed(e instanceof Error ? e.message : String(e))
     } finally {
       abortRef.current = null
-      ui.setFocus(saved.focus)
-      ui.setFilter(saved.filter)
-      if (saved.cover) ui.setCover(true)
-      if (saved.selected) ws.select(saved.selected)
       setProgress(null)
       setProgressPct(null)
       setBusy(false)
@@ -647,6 +637,7 @@ export function ExportDialog({ open, onClose }: { open: boolean; onClose: () => 
                             }
                             formatMore={labels.more}
                             madeWith={labels.madeWith}
+                            dateLabel={formatExportDate(i18n.language)}
                             docLang={prep.docLang}
                           />
                         </div>
@@ -765,9 +756,6 @@ export function ExportDialog({ open, onClose }: { open: boolean; onClose: () => 
                     onChange={() => {
                       setFormat(f)
                       if (f !== 'pdf') setTab('settings')
-                      if ((f === 'md' || (f === 'pdf' && preset === 'cards')) && scope === 'screen') {
-                        setScope('all')
-                      }
                     }}
                     className="mt-1 size-4 accent-[var(--brand)]"
                   />
@@ -800,7 +788,6 @@ export function ExportDialog({ open, onClose }: { open: boolean; onClose: () => 
                         disabled={busy}
                         onChange={() => {
                           setPreset(p)
-                          if (p === 'cards' && scope === 'screen') setScope('all')
                         }}
                         className="mt-1 size-4 accent-[var(--brand)]"
                       />
@@ -826,7 +813,6 @@ export function ExportDialog({ open, onClose }: { open: boolean; onClose: () => 
                     value: p.id,
                     label: `${book ? t('export.scope.chapter', { n: i + 1 }) : t('export.scope.section', { n: i + 1 })} · ${p.title}`,
                   })),
-                  ...(noScreenScope ? [] : [{ value: 'screen', label: t('export.scope.screen') }]),
                 ]}
               />
               {format === 'pdf' && (
@@ -916,7 +902,16 @@ export function ExportDialog({ open, onClose }: { open: boolean; onClose: () => 
           </div>
         )}
         {failed && <Alert tone="danger">{t('export.failed', { error: failed })}</Alert>}
-        <p className="text-sm text-ink-muted">{t('export.local')}</p>
+        <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-ink-muted">
+          <span>{t('export.local')}</span>
+          <span
+            data-testid="export-build-stamp"
+            dir="ltr"
+            className="rounded border border-line-soft bg-surface-muted px-2 py-0.5 font-mono text-[11px] font-semibold text-ink-muted"
+          >
+            {EXPORT_BUILD_STAMP}
+          </span>
+        </div>
       </div>
     </Dialog>
   )

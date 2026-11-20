@@ -655,7 +655,8 @@ function extendMathRun(
       if (!rhs) break
       if (opM[0] === '=' && !rhs.hasVarOrMath) {
         const peekAfterNum = extendMathRunPeek(s, rhs.end)
-        if (!peekAfterNum && !s.slice(afterOp, rhs.end).includes('°')) {
+        const numSlice = s.slice(afterOp, rhs.end)
+        if (!peekAfterNum && !/[°^]|\\(?:circ|degree|deg)\b/.test(numSlice)) {
           break
         }
       }

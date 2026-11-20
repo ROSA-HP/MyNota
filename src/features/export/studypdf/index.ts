@@ -7,7 +7,6 @@ import {
   ContentPage,
   CoverPage,
   FlowUnitView,
-  MapSlot,
   TocPage,
   VectorMapPage,
 } from './components'
@@ -23,7 +22,6 @@ import {
   pageSizeMm,
   pageSizePx,
   PAD,
-  PX_PER_MM,
   SHADOW_GUTTER,
 } from './tokens'
 import type {
@@ -62,7 +60,6 @@ export interface PreparedStudyPdf {
     dir: 'ltr' | 'rtl'
   }>
   vectorMaps: VectorMapPageData[]
-  fallbackPictures: StudyPdfInput['pictures']
   pairedTiles: CardTile[][]
   frontPages: number[][]
   answerPages: number[][]
@@ -129,25 +126,34 @@ export async function prepareStudyPdf(input: StudyPdfInput): Promise<PreparedStu
     )
     notesPages = paginateFlow(measured, notesBody.h, doc.flow)
 
-    // Last-page compaction: avoid a mostly blank tail page (< 25% of body height)
-    if (notesPages.length >= 2) {
-      const lastPage = notesPages[notesPages.length - 1]
-      const lastUsed = lastPage?.usedHeight ?? notesBody.h
-      if (lastUsed < notesBody.h * 0.25) {
-        const compactMeasured = await measureFlow(
-          doc.flow,
-          notesBody.w,
-          input.labels,
-          input.include.aiTags,
-          input.signal,
-          { compact: true, docLang, onMathError: recordMathError },
-        )
-        const compactPages = paginateFlow(compactMeasured, notesBody.h, doc.flow)
-        const compactLastUsed = compactPages[compactPages.length - 1]?.usedHeight ?? notesBody.h
-        if (compactPages.length < notesPages.length || compactLastUsed >= notesBody.h * 0.25) {
-          notesPages = compactPages
-          compactNotes = true
-        }
+    // Density optimization: ensure non-final pages have <= 15% empty space (>= 85% filled)
+    // and avoid a mostly blank tail page (< 25% of body height)
+    const countSparseMiddle = (pages: NotesPage[], h: number) =>
+      pages.slice(0, -1).filter((p) => (p.usedHeight ?? h) < h * 0.85).length
+    const isSparseTail = (pages: NotesPage[], h: number) =>
+      pages.length >= 2 && (pages[pages.length - 1]?.usedHeight ?? h) < h * 0.25
+
+    if (
+      notesPages.length >= 2 &&
+      (isSparseTail(notesPages, notesBody.h) || countSparseMiddle(notesPages, notesBody.h) > 0)
+    ) {
+      const compactMeasured = await measureFlow(
+        doc.flow,
+        notesBody.w,
+        input.labels,
+        input.include.aiTags,
+        input.signal,
+        { compact: true, docLang, onMathError: recordMathError },
+      )
+      const compactPages = paginateFlow(compactMeasured, notesBody.h, doc.flow)
+      const normBad =
+        countSparseMiddle(notesPages, notesBody.h) + (isSparseTail(notesPages, notesBody.h) ? 1 : 0)
+      const compactBad =
+        countSparseMiddle(compactPages, notesBody.h) +
+        (isSparseTail(compactPages, notesBody.h) ? 1 : 0)
+      if (compactPages.length < notesPages.length || compactBad < normBad) {
+        notesPages = compactPages
+        compactNotes = true
       }
     }
 
@@ -166,11 +172,9 @@ export async function prepareStudyPdf(input: StudyPdfInput): Promise<PreparedStu
   }
   const tocPageCount = tocPageEntries.length
 
-  // 5. Map pages (prefer vector horizontal SVG maps; fallback to raster pictures if supplied)
+  // 5. Map pages (strictly horizontal vector SVG maps; legacy raster fallback removed)
   const vectorMaps = input.preset === 'cards' ? [] : (input.mapPages ?? [])
-  const fallbackPictures =
-    input.preset === 'cards' || vectorMaps.length > 0 ? [] : input.pictures
-  const mapPageCount = vectorMaps.length > 0 ? vectorMaps.length : fallbackPictures.length
+  const mapPageCount = vectorMaps.length
 
   // 6. Flashcard pages (for preset 'cards')
   const pairedTiles: CardTile[][] = []
@@ -263,7 +267,6 @@ export async function prepareStudyPdf(input: StudyPdfInput): Promise<PreparedStu
     tocPageEntries,
     tocRows,
     vectorMaps,
-    fallbackPictures,
     pairedTiles,
     frontPages,
     answerPages,
@@ -295,7 +298,6 @@ export async function buildStudyPdf(input: StudyPdfInput): Promise<Blob> {
     tocPageEntries,
     tocRows,
     vectorMaps,
-    fallbackPictures,
     pairedTiles,
     frontPages,
     answerPages,
@@ -402,81 +404,35 @@ export async function buildStudyPdf(input: StudyPdfInput): Promise<Blob> {
     input.onProgress?.({ phase: 'page', done: pageNo, total })
   }
 
-  // Render Landscape Vector SVG Map Pages (preferred) or raster fallback
+  // Render Landscape Vector SVG Map Pages (single unified exporter path)
   const mapStartPageNo = pageNo + 1
-  if (vectorMaps.length > 0) {
-    for (const mapPage of vectorMaps) {
-      pageNo++
-      const mapSize = pageSizePx(input.paper, 'map')
-      const mapMm = pageSizeMm(input.paper, 'map')
-      const mapBody = bodyBoxPx(input.paper, 'map')
+  for (const mapPage of vectorMaps) {
+    pageNo++
+    const mapSize = pageSizePx(input.paper, 'map')
+    const mapMm = pageSizeMm(input.paper, 'map')
+    const mapBody = bodyBoxPx(input.paper, 'map')
 
-      const res = await capturePageElement(
-        React.createElement(VectorMapPage, {
-          size: mapSize,
-          body: mapBody,
-          tone: input.tone,
-          dir: input.dir,
-          pageNo,
-          total,
-          pageData: mapPage,
-          coreLabel: input.labels.importance.core,
-          extraLabel: input.labels.importance.extra,
-        }),
-        mapSize,
-        input.tone,
-        input.signal,
-        recordMathError,
-      )
+    const res = await capturePageElement(
+      React.createElement(VectorMapPage, {
+        size: mapSize,
+        body: mapBody,
+        tone: input.tone,
+        dir: input.dir,
+        pageNo,
+        total,
+        pageData: mapPage,
+        coreLabel: input.labels.importance.core,
+        extraLabel: input.labels.importance.extra,
+      }),
+      mapSize,
+      input.tone,
+      input.signal,
+      recordMathError,
+    )
 
-      pdfDoc.addPage([mapMm.w, mapMm.h], orientationOf(input.paper, 'map'))
-      pdfDoc.addImage(res.dataUrl, 'PNG', 0, 0, mapMm.w, mapMm.h)
-      input.onProgress?.({ phase: 'page', done: pageNo, total })
-    }
-  } else {
-    for (const pic of fallbackPictures) {
-      pageNo++
-      const mapSize = pageSizePx(input.paper, 'map')
-      const mapMm = pageSizeMm(input.paper, 'map')
-      const mapBody = bodyBoxPx(input.paper, 'map')
-
-      const res = await capturePageElement(
-        React.createElement(ContentPage, {
-          size: mapSize,
-          body: mapBody,
-          tone: input.tone,
-          dir: input.dir,
-          headerTitle: input.title,
-          headerChapter: null,
-          headerTag: null,
-          pageNo,
-          total,
-          children: React.createElement(MapSlot, { size: mapBody, caption: pic.caption }),
-        }),
-        mapSize,
-        input.tone,
-        input.signal,
-        recordMathError,
-      )
-
-      pdfDoc.addPage([mapMm.w, mapMm.h], orientationOf(input.paper, 'map'))
-      pdfDoc.addImage(res.dataUrl, 'PNG', 0, 0, mapMm.w, mapMm.h)
-
-      const slot = res.mapSlot ?? {
-        x: mapBody.x / PX_PER_MM,
-        y: mapBody.y / PX_PER_MM,
-        w: mapBody.w / PX_PER_MM,
-        h: mapBody.h / PX_PER_MM,
-      }
-      const scale = Math.min(slot.w / pic.width, slot.h / pic.height)
-      const fitW = pic.width * scale
-      const fitH = pic.height * scale
-      const fitX = slot.x + (slot.w - fitW) / 2
-      const fitY = slot.y + (slot.h - fitH) / 2
-      pdfDoc.addImage(pic.dataUrl, 'PNG', fitX, fitY, fitW, fitH)
-
-      input.onProgress?.({ phase: 'page', done: pageNo, total })
-    }
+    pdfDoc.addPage([mapMm.w, mapMm.h], orientationOf(input.paper, 'map'))
+    pdfDoc.addImage(res.dataUrl, 'PNG', 0, 0, mapMm.w, mapMm.h)
+    input.onProgress?.({ phase: 'page', done: pageNo, total })
   }
 
   // Render Study Notes Pages
@@ -711,10 +667,6 @@ export async function buildStudyPdf(input: StudyPdfInput): Promise<Blob> {
     let mNo = mapStartPageNo
     for (const vm of vectorMaps) {
       pdfDoc.outline.add(null, vm.caption || 'Map', { pageNumber: mNo })
-      mNo++
-    }
-    for (const pic of fallbackPictures) {
-      pdfDoc.outline.add(null, pic.caption || 'Map', { pageNumber: mNo })
       mNo++
     }
     type OutlineNode = ReturnType<typeof pdfDoc.outline.add>

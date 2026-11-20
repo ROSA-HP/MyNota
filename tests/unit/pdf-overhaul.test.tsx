@@ -246,7 +246,6 @@ describe('PDF Overhaul: Problem 1-6 Comprehensive Verification', () => {
       dir: 'ltr',
       lang: 'en',
       items,
-      pictures: [],
       include: { links: true, cards: false, sources: true, aiTags: true },
       answersAtEnd: false,
       labels: testLabels,
@@ -385,5 +384,98 @@ describe('PDF Overhaul: Problem 1-6 Comprehensive Verification', () => {
 
     expect(pages.length).toBeGreaterThanOrEqual(50)
     expect(elapsed).toBeLessThan(1000)
+  })
+
+  it('renders all 10 real focus-document strings with KaTeX and zero raw backslashes', () => {
+    const realStrings = [
+      '\\omega = angular frequency; L = inductance; C = capacitance',
+      '\\omega = 1 / \\sqrt{LC}',
+      'the electric field (\\vec{E}) and magnetic field (\\vec{B})',
+      'approximately 3.0 \\times 10^{8}\\text{ m/s}',
+      'c = \\frac{1}{\\sqrt{\\mu_{0} \\epsilon_{0}}}',
+      'E_m = electric field amplitude; B_m = magnetic field amplitude',
+      '\\text{W/m}^2',
+      'I = \\frac{1}{c\\mu_{0}} E_{\\text{rms}}^{2}',
+      'p_{r} = \\frac{I}{c}',
+      '\\theta_B + \\theta_r = 90^\\circ',
+    ]
+
+    for (const s of realStrings) {
+      const isLegend = s.includes(';')
+      const { container } = render(<RichMathText text={s} legend={isLegend} />)
+      expect(container.querySelectorAll('.katex').length, s).toBeGreaterThanOrEqual(1)
+      expect(container.textContent, s).not.toContain('\\')
+      expect(container.querySelector('[data-katex-error]'), s).toBeNull()
+    }
+  })
+
+  it('flags missing formula legends, scalar angle formulas, misplaced formulas/bullets, duplicates, and repeated parent titles while normalizing saved LaTeX', () => {
+    const items: OutlineItem[] = [
+      makeOutlineItem('ch1', 0, 'chapter', { title: 'Electromagnetic Waves' }),
+      makeOutlineItem('sec2', 1, 'section', { title: '1.2 Energy Transport and Radiation Pressure' }),
+      makeOutlineItem('refl', 2, 'block', {
+        title: 'Total Reflection',
+        detailBlocks: [
+          {
+            kind: 'formula',
+            latex: 'p_r = \\frac{2I}{c}',
+            variables: 'p_r = radiation pressure; I = intensity; c = speed of light',
+          },
+        ],
+      }),
+      makeOutlineItem('wave-int', 2, 'block', {
+        title: 'Wave Intensity',
+        detailBlocks: [
+          {
+            kind: 'bullet',
+            text: 'Electric energy density u_E = B^2 / (2\\mu_0) inside intensity block.',
+          },
+        ],
+      }),
+      makeOutlineItem('sec3', 1, 'section', { title: 'Polarization of Light' }),
+      makeOutlineItem('pol-repeat', 2, 'block', {
+        title: 'Polarization of Light',
+        detailBlocks: [
+          {
+            kind: 'bullet',
+            text: 'Radiation pressure and reflection force belong to the preceding chapter section.',
+          },
+        ],
+      }),
+      makeOutlineItem('transmitted', 2, 'block', {
+        title: 'Transmitted Field Component',
+        detailBlocks: [
+          {
+            kind: 'formula',
+            latex: 'p_r = \\frac{2I}{c}',
+            variables: 'p_r = radiation pressure; I = intensity; c = speed of light',
+          },
+          {
+            kind: 'formula',
+            latex: 'F = \\frac{2IA}{c}',
+          },
+        ],
+      }),
+      makeOutlineItem('malus', 2, 'block', {
+        title: "Malus's Law",
+        detailBlocks: [
+          {
+            kind: 'formula',
+            latex: '\\theta = 0^\\circ',
+          },
+        ],
+      }),
+    ]
+
+    const { cleanedItems, warnings } = cleanAndAnalyzeOutline(items)
+    const msgs = warnings.map((w) => `${w.title} ${w.detail}`).join('\n')
+
+    expect(warnings.some((w) => w.kind === 'integrity' && /repeats its parent/i.test(w.title + ' ' + w.detail))).toBe(true)
+    expect(warnings.some((w) => w.kind === 'integrity' && /missing variable legend/i.test(w.title + ' ' + w.detail))).toBe(true)
+    expect(warnings.some((w) => w.kind === 'integrity' && /scalar angle\/value/i.test(w.title + ' ' + w.detail))).toBe(true)
+    expect(warnings.some((w) => w.kind === 'integrity' && /appears under/i.test(w.title + ' ' + w.detail))).toBe(true)
+    expect(warnings.some((w) => w.kind === 'integrity' && /radiation pressure|energy density/i.test(w.title + ' ' + w.detail))).toBe(true)
+    expect(msgs).toContain('Transmitted Field Component')
+    expect(cleanedItems.length).toBe(items.length)
   })
 })

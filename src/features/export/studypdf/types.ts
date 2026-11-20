@@ -59,7 +59,6 @@ export interface StudyPdfInput {
   dir: 'ltr' | 'rtl'
   lang?: 'en' | 'de' | 'ar'
   items: OutlineItem[]
-  pictures: Array<{ dataUrl: string; width: number; height: number; caption: string }>
   mapPages?: VectorMapPageData[]
   include: StudyInclude
   answersAtEnd: boolean

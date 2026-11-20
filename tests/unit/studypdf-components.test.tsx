@@ -6,9 +6,10 @@ import {
   ContentPage,
   CoverPage,
   FlowUnitView,
-  MapSlot,
   TocPage,
+  VectorMapPage,
 } from '@/features/export/studypdf/components'
+import { EXPORT_BUILD_STAMP } from '@/features/export/version'
 import type { BlockUnit, StudyLabels } from '@/features/export/studypdf/types'
 
 const testLabels: StudyLabels = {
@@ -593,13 +594,72 @@ describe('studypdf components', () => {
     expect(coverContainer.textContent).toContain('Malus law and Brewster angle.')
   })
 
-  it('contains exactly one data-slot element in MapSlot and it has no children', () => {
-    const { container } = render(
-      <MapSlot size={{ x: 53, y: 83, w: 1017, h: 628 }} caption="Whole Map" />,
+  it('prints EXPORT_BUILD_STAMP in CoverPage, ContentPage, and VectorMapPage footers', () => {
+    const { container: coverEl } = render(
+      <CoverPage
+        size={{ w: 794, h: 1123 }}
+        tone="mint"
+        dir="ltr"
+        title="Electromagnetic Waves"
+        kindLabel="Notes"
+        stickerLabel="Study notes"
+        stats={[{ n: 1, label: 'Chapter' }]}
+        tabs={[]}
+        outline={[]}
+        outlineLabel="Contents"
+        moreLabel={null}
+        madeWith="Made with MyNota"
+      />,
     )
-    const slotEls = container.querySelectorAll('[data-slot="picture"]')
-    expect(slotEls).toHaveLength(1)
-    expect(slotEls[0]?.children).toHaveLength(0)
+    expect(coverEl.textContent).toContain(EXPORT_BUILD_STAMP)
+
+    const { container: contentEl } = render(
+      <ContentPage
+        size={{ w: 794, h: 1123 }}
+        body={{ x: 53, y: 76, w: 688, h: 970 }}
+        tone="mint"
+        dir="ltr"
+        headerTitle="Electromagnetic Waves"
+        headerChapter={{ label: 'Ch.1', title: 'Waves', color: 'sky' }}
+        headerTag={null}
+        pageNo={2}
+        total={3}
+      >
+        <div>Body</div>
+      </ContentPage>,
+    )
+    expect(contentEl.textContent).toContain(EXPORT_BUILD_STAMP)
+
+    const { container: mapEl } = render(
+      <VectorMapPage
+        size={{ w: 1123, h: 794 }}
+        body={{ x: 53, y: 53, w: 1017, h: 688 }}
+        tone="mint"
+        dir="ltr"
+        pageNo={2}
+        total={3}
+        pageData={{
+          id: 'map-1',
+          caption: 'Horizontal map',
+          subtitle: '1 chapter',
+          nodeCount: 0,
+          relationCount: 0,
+          isOverview: true,
+          model: {
+            viewBoxW: 800,
+            viewBoxH: 400,
+            nodes: [],
+            treeEdges: [],
+            relationEdges: [],
+            minRenderedFontPt: 10,
+            light: false,
+          },
+        }}
+        coreLabel="Core"
+        extraLabel="Extra"
+      />,
+    )
+    expect(mapEl.textContent).toContain(EXPORT_BUILD_STAMP)
   })
 
   it('contains no dangerouslySetInnerHTML in source files', () => {

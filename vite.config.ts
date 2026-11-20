@@ -132,6 +132,9 @@ export default defineConfig(({ mode }) => ({
         }
       ).version,
     ),
+    'import.meta.env.VITE_EXPORT_BUILD_TIME': JSON.stringify(
+      `${new Date().toISOString().slice(0, 16).replace('T', ' ')}Z`,
+    ),
   },
   build: {
     rolldownOptions: {

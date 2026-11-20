@@ -10,15 +10,13 @@ export interface RenderPageResult {
   dataUrl: string
   /** Clickable link areas on the page (in mm). */
   links: Array<{ x: number; y: number; w: number; h: number; page: number }>
-  /** Map picture slot (in mm) if this is a map page. */
-  mapSlot?: { x: number; y: number; w: number; h: number }
 }
 
 const FALLBACK_PNG =
   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=='
 
 /**
- * Mounts a React page component into an offscreen container, extracts link/slot positions,
+ * Mounts a React page component into an offscreen container, extracts link positions,
  * and captures it to a crisp PNG data URL.
  */
 export async function capturePageElement(
@@ -59,7 +57,7 @@ export async function capturePageElement(
     const pageEl = (container.firstElementChild as HTMLElement) || container
     const pageRect = pageEl.getBoundingClientRect()
 
-    // 1. Clickable TOC / Cover link targets
+    // Clickable TOC / Cover link targets
     const links: Array<{ x: number; y: number; w: number; h: number; page: number }> = []
     const tocRows = pageEl.querySelectorAll('[data-toc-page]')
     for (const row of Array.from(tocRows)) {
@@ -76,20 +74,7 @@ export async function capturePageElement(
       }
     }
 
-    // 2. Map picture slot
-    let mapSlot: { x: number; y: number; w: number; h: number } | undefined
-    const slotEl = pageEl.querySelector('[data-slot="picture"]')
-    if (slotEl) {
-      const sRect = slotEl.getBoundingClientRect()
-      mapSlot = {
-        x: (sRect.left - pageRect.left) / PX_PER_MM,
-        y: (sRect.top - pageRect.top) / PX_PER_MM,
-        w: sRect.width / PX_PER_MM,
-        h: sRect.height / PX_PER_MM,
-      }
-    }
-
-    // 3. Render page node to PNG
+    // Render page node to PNG
     const bg = tone === 'mint' ? COLORS.mintFrost : COLORS.white
     let dataUrl = ''
     try {
@@ -102,7 +87,7 @@ export async function capturePageElement(
       dataUrl = FALLBACK_PNG
     }
 
-    return { dataUrl, links, mapSlot }
+    return { dataUrl, links }
   } finally {
     root.unmount()
     host.remove()
